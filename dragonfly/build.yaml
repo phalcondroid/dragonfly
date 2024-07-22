@@ -1,0 +1,20 @@
+targets:
+  $default:
+    builders:
+      dragonfly:
+        enabled: true
+
+builders:
+  dragonfly:
+    import: "package:dragonfly/builder.dart"
+    builder_factories: [
+      "repositoryGenerator"
+    ]
+    build_extensions: {
+      ".dart": [ 
+        ".g.part"
+      ] 
+    }
+    auto_apply: dependents
+    build_to: cache
+    applies_builders: ["source_gen|combining_builder"]
