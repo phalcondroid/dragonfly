@@ -4,4 +4,4 @@ import 'package:source_gen/source_gen.dart';
 
 Builder repositoryGenerator(BuilderOptions options) =>
     SharedPartBuilder([RepositoryGenerator()], 'repositoryBuilder',
-        additionalOutputExtensions: [".dragonfly"]);
+        additionalOutputExtensions: [".g"]);

@@ -1,1 +1,1 @@
-enum NetworkAdapter { http }
+enum NetworkAdapter { http, udp, socket }

@@ -1,4 +1,11 @@
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:dragonfly/core/builder/types/enums/http_annotations.dart';
+import 'package:dragonfly_annotations/annotations/get.dart';
+import 'package:dragonfly_annotations/annotations/post.dart';
+import 'package:dragonfly_annotations/annotations/patch.dart';
+import 'package:dragonfly_annotations/annotations/delete.dart';
+import 'package:dragonfly_annotations/annotations/put.dart';
 import 'package:source_gen/source_gen.dart';
 
 class MedatadaExtractor {
@@ -12,75 +19,58 @@ class MedatadaExtractor {
           .annotationsOf(method, throwOnUnresolved: false)
           .map(ConstantReader.new);
 
+  static dynamic castResultByType(DartObject? object) {
+    if (object!.type!.isDartCoreString) {
+      return object.toStringValue();
+    }
+    if (object.type!.isDartCoreInt) {
+      return object.toIntValue();
+    }
+    if (object.type!.isDartCoreDouble) {
+      return object.toDoubleValue();
+    }
+    if (object.type!.isDartCoreDouble) {
+      return object.toBoolValue();
+    }
+    if (object.type!.isDartCoreMap) {
+      return object.toMapValue() as Map<dynamic, dynamic>;
+    }
+    if (object.type!.isDartCoreList) {
+      return object.toListValue();
+    }
+  }
+
   static dynamic getFromElement(Element element, Type type, String field) {
-    return TypeChecker.fromRuntime(type)
-            .annotationsOf(element)
-            .first
-            .getField(field)
-            ?.toStringValue() ??
-        '';
+    Iterable<DartObject> annotations =
+        TypeChecker.fromRuntime(type).annotationsOf(element);
+    for (DartObject item in annotations) {
+      return castResultByType(item.getField(field));
+    }
   }
 
-  static String getMethodType(MethodElement element) {
-    if (element.metadata.first.toString().contains("@DeleteLocalStorage")) {
-      return "deleteLocalStorage";
+  static HttpAnnotations getMethodType(MethodElement element) {
+    for (final ElementAnnotation item in element.metadata) {
+      if (item.toString().contains("@Get")) {
+        return HttpAnnotations.get;
+      }
+      if (item.toString().contains("@Post")) {
+        return HttpAnnotations.post;
+      }
+      if (item.toString().contains("@Delete")) {
+        return HttpAnnotations.delete;
+      }
+      if (item.toString().contains("@Patch")) {
+        return HttpAnnotations.patch;
+      }
+      if (item.toString().contains("@Put")) {
+        return HttpAnnotations.put;
+      }
     }
-    if (element.metadata.first.toString().contains("@GetLocalStorage")) {
-      return "getLocalStorage";
-    }
-    if (element.metadata.first.toString().contains("@SaveLocalStorage")) {
-      return "saveLocalStorage";
-    }
-    if (element.metadata.first.toString().contains("@PurgeLocalStorage")) {
-      return "purgeLocalStorage";
-    }
-    if (element.metadata.first.toString().contains("@Get")) {
-      return "get";
-    }
-    if (element.metadata.first.toString().contains("@Post")) {
-      return "post";
-    }
-    if (element.metadata.first.toString().contains("@Delete")) {
-      return "delete";
-    }
-    if (element.metadata.first.toString().contains("@Remove")) {
-      return "remove";
-    }
-    return "_no_method";
-  }
-
-  static String cleanModelName(String name) {
-    if (name.contains("AlvicSingleResponse")) {
-      return "AlvicSingleResponse";
-    }
-    if (name.contains("AlvicListResponse")) {
-      return name.replaceAll("Future<", "").replaceAll(">>", ">");
-    }
-    if (name.contains("AlvicResponse")) {
-      return "AlvicResponse";
-    }
-    return name
-        .toString()
-        .replaceAll("Future", "")
-        .replaceAll("List", "")
-        .replaceAll("<", "")
-        .replaceAll(">", "")
-        .replaceAll("?", "")
-        .trim();
+    return HttpAnnotations.unknow;
   }
 
   static String getGenericClassName(String name) {
     String methodClass = "";
-
-    if (name.contains("AlvicSingleResponse")) {
-      methodClass = "AlvicSingleResponse";
-    }
-    if (name.contains("AlvicResponse")) {
-      methodClass = "AlvicResponse";
-    }
-    if (methodClass.isEmpty) {
-      return "";
-    }
     List<String> strList = name.split(methodClass);
     return strList[1]
         .toString()
@@ -92,41 +82,18 @@ class MedatadaExtractor {
         .trim();
   }
 
-  static String getGenericListClassName(String name) {
-    String methodClass = "";
-
-    if (name.contains("AlvicListResponse")) {
-      methodClass = "AlvicListResponse";
-    }
-    if (name.contains("AlvicResponse")) {
-      methodClass = "AlvicResponse";
-    }
-    if (methodClass.isEmpty) {
-      return "";
-    }
-    List<String> strList = name.split(methodClass);
-    return strList[1]
-        .toString()
-        .replaceAll("Future", "")
-        .replaceAll("<", "")
-        .replaceAll(">", "")
-        .replaceAll("?", "")
-        .trim();
-  }
-
-  static String getUrlByType(MethodElement element) {
-    var type = getMethodType(element);
-    if (type == "get") {
-      //return MedatadaExtractor.getFromElement(element, Get, 'path');
-    }
-    if (type == "post") {
-      //return MedatadaExtractor.getFromElement(element, Post, 'path');
-    }
-    if (type == "remove") {
-      //return MedatadaExtractor.getFromElement(element, Put, 'path');
-    }
-    if (type == "delete") {
-      //return MedatadaExtractor.getFromElement(element, Delete, 'path');
+  static dynamic getAnnotationMethodField(MethodElement element, String field) {
+    final HttpAnnotations type = getMethodType(element);
+    Type? method = switch (type) {
+      HttpAnnotations.get => Get,
+      HttpAnnotations.post => Post,
+      HttpAnnotations.patch => Patch,
+      HttpAnnotations.put => Put,
+      HttpAnnotations.delete => Delete,
+      _ => null
+    };
+    if (method is Type) {
+      return MedatadaExtractor.getFromElement(element, method, field);
     }
     return "";
   }

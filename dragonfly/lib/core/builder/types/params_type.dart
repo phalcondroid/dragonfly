@@ -1,0 +1,17 @@
+import 'package:dragonfly/core/builder/types/blank_type.dart';
+import 'package:dragonfly/core/builder/types/enums/params_annotations.dart';
+
+enum ValueType { simple, list }
+
+class ParamsType extends BlankType {
+  final ParamsAnnotations type;
+  final ValueType valueType;
+  final List<Map<String, String>>? valueAsList;
+
+  const ParamsType(
+      {required super.name,
+      required super.value,
+      required this.type,
+      required this.valueType,
+      this.valueAsList});
+}
