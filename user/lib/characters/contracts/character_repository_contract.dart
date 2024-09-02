@@ -1,5 +1,5 @@
 import 'package:user/characters/contracts/character_contract.dart';
 
 abstract interface class CharacterRepositoryContract {
-  Future<List<CharacterContract>> getAll();
+  Future<List<CharacterContract>> getAll(String name, String filter);
 }

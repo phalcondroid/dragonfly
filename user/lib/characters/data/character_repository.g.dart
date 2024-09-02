@@ -7,7 +7,9 @@ part of 'character_repository.dart';
 // **************************************************************************
 
 class _CharacterRepository implements CharacterRepository {
-  void eat() {
-    print('Yum!');
+  Future<List<Character>> getAll() {
+    final ServiceLocator di = new ServiceLocator();
+    final NetworkManager network =
+        di.get<NetworkManager>('dragonflyNetworkManager');
   }
 }
