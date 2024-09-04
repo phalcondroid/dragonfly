@@ -5,12 +5,14 @@ enum ValueType { simple, list }
 
 class ParamsType extends BlankType {
   final ParamsAnnotations type;
+  final String paramDataType;
   final ValueType valueType;
   final List<Map<String, String>>? valueAsList;
 
   const ParamsType(
       {required super.name,
       required super.value,
+      required this.paramDataType,
       required this.type,
       required this.valueType,
       this.valueAsList});

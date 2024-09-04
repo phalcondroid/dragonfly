@@ -8,6 +8,7 @@ class ParameterHelper {
     for (ParameterElement paramElement in parameters) {
       params.add(ParamsType(
           name: paramElement.name,
+          paramDataType: paramElement.type.toString(),
           value: paramElement.metadata.first.toString().split(" ").first,
           type: ParamsAnnotations.path,
           valueType: ValueType.simple));

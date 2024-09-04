@@ -7,9 +7,18 @@ part of 'character_repository.dart';
 // **************************************************************************
 
 class _CharacterRepository implements CharacterRepository {
-  Future<List<Character>> getAll() {
-    final ServiceLocator di = new ServiceLocator();
-    final NetworkManager network =
-        di.get<NetworkManager>('dragonflyNetworkManager');
+  @override
+  Future<List<Character>> getAll(
+    String name,
+    List<String> julian,
+  ) async {
+    final DragonflyNetworkHttpAdapter network =
+        DragonflyInjector.get<DragonflyNetworkHttpAdapter>(
+            '__df_network_default');
+    print(network);
+    final List<Map<String, Object?>> response =
+        await network.callForComplexResultset(
+            HttpAnnotations.post, 'julian/url', null, null);
+    return [Character(id: '', name: '', specie: '')];
   }
 }

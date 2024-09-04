@@ -27,10 +27,6 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
     url = annotation.peek('path')?.stringValue ?? '';
     connection = annotation.peek('connection')?.stringValue ?? '';
 
-    // print('---->' + jsonEncode(visitor.methods));
-
-    // classBuffer.writeln('class _$className implements $className  {');
-
     for (MethodRepositoryType method in visitor.methods) {
       if (method.type == HttpAnnotations.post) {
         return buildPostMethod(className, method);
@@ -40,16 +36,44 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
     return "_no_code";
   }
 
+  String _getHttpMethod(HttpAnnotations http) {
+    return switch (http) {
+      HttpAnnotations.post => "HttpAnnotations.post",
+      HttpAnnotations.patch => "HttpAnnotations.patch",
+      HttpAnnotations.put => "HttpAnnotations.put",
+      HttpAnnotations.delete => "HttpAnnotations.delete",
+      HttpAnnotations.get => "HttpAnnotations.get",
+      _ => ""
+    };
+  }
+
   String buildPostMethod(String className, MethodRepositoryType method) {
+    final methodKind = method.returnType.isList
+        ? "callForComplexResultset"
+        : "callForSimpleResultset";
+    final String httpMethod = _getHttpMethod(method.type);
+    final String returnType = method.returnType.isList
+        ? "List<Map<String, Object?>>"
+        : "Map<String, Object?>";
+
     final animal = Class((b) => b
       ..name = "_$className"
       ..implements.add(refer(className))
       // ..extend = refer('Organism')
       ..methods.add(Method((b) => b
         ..name = method.name
+        ..requiredParameters
+            .addAll(method.params.map((param) => Parameter((p) => p
+              ..name = param.name
+              ..type = refer(param.paramDataType))))
+        ..modifier = MethodModifier.async
+        ..annotations.add(refer('override'))
         ..returns = refer(method.returnType.raw)
-        ..body = const Code("final ServiceLocator di = new ServiceLocator(); \n"
-            "final NetworkManager network = di.get<NetworkManager>('dragonflyNetworkManager'); \n"
+        ..body = Code("final DragonflyNetworkHttpAdapter network = "
+            "DragonflyInjector.get<DragonflyNetworkHttpAdapter>('__df_network_default'); \n"
+            "print(network);"
+            "final $returnType response = await network.$methodKind($httpMethod, '${method.path}', null, null);\n"
+            "return [ ${method.returnType.modelName}(id: '', name: '', specie: '')];\n"
             ""))));
 
     final emitter = DartEmitter();

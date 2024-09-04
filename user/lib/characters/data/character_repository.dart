@@ -6,10 +6,12 @@ import 'package:dragonfly_annotations/enums/network_adapter.dart';
 import 'package:user/characters/contracts/character_repository_contract.dart';
 import 'package:user/characters/factories/character.dart';
 import 'package:dragonfly/dragonfly.dart';
+
 part "character_repository.g.dart";
 
 @Repository(adapter: NetworkAdapter.http)
-abstract class CharacterRepository implements CharacterRepositoryContract {
+abstract class CharacterRepository
+    implements CharacterRepositoryContract<Character> {
   factory CharacterRepository() = _CharacterRepository;
 
   @override

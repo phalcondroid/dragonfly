@@ -1,8 +1,8 @@
 class ReturnType {
-  final String type;
+  final String modelName;
   final String raw;
   final bool isList;
 
   const ReturnType(
-      {required this.type, required this.raw, this.isList = false});
+      {required this.modelName, required this.raw, this.isList = false});
 }

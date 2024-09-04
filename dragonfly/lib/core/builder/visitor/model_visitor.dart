@@ -1,7 +1,6 @@
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/visitor.dart';
-import 'package:dragonfly/core/builder/types/enums/http_annotations.dart';
 import 'package:dragonfly/core/builder/types/method_repository_type.dart';
 import 'package:dragonfly/core/builder/types/return_type.dart';
 import 'package:dragonfly/core/builder/visitor/header_helper.dart';
@@ -47,7 +46,7 @@ class ModelVisitor extends SimpleElementVisitor<void> {
         params: ParameterHelper().parametersResolver(element.parameters),
         path: path,
         returnType: ReturnType(
-            type: ReturnHelper().getTypeFromReturn(returnName),
+            modelName: ReturnHelper().getTypeFromReturn(returnName),
             raw: returnName,
             isList: ReturnHelper().isReturnList(returnName)),
         type: MedatadaExtractor.getMethodType(element),
