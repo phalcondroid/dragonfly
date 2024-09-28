@@ -1,1 +1,1 @@
-class UsersComponent extends DragonflyComponent {}
+// class UsersComponent extends DragonflyComponent {}

@@ -1,13 +1,10 @@
-import 'package:dragonfly_annotations/annotations/post.dart';
-import 'package:dragonfly_annotations/annotations/path.dart';
-import 'package:dragonfly_annotations/annotations/query.dart';
-import 'package:dragonfly_annotations/annotations/repository.dart';
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:dragonfly_annotations/enums/network_adapter.dart';
 import 'package:user/characters/contracts/character_repository_contract.dart';
 import 'package:user/characters/factories/character.dart';
 import 'package:dragonfly/dragonfly.dart';
 
-part "character_repository.g.dart";
+part "character_repository.repository.dart";
 
 @Repository(adapter: NetworkAdapter.http)
 abstract class CharacterRepository

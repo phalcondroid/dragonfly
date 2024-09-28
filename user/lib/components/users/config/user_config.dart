@@ -1,1 +1,2 @@
-class UserConfig extends DragonflyComponentConfig {}
+
+//class UserConfig extends DragonflyComponentConfig {}
