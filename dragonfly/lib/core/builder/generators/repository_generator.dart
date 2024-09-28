@@ -5,13 +5,15 @@ import 'package:dart_style/dart_style.dart';
 import 'package:dragonfly/core/builder/types/enums/http_annotations.dart';
 import 'package:dragonfly/core/builder/types/method_repository_type.dart';
 import 'package:dragonfly/core/builder/visitor/model_visitor.dart';
-import 'package:dragonfly_annotations/annotations/data/repository.dart';
+import 'package:dragonfly_annotations/annotations/component/repositoriy/repository.dart';
 import 'package:source_gen/source_gen.dart';
 
 class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
   String url = '';
   String connection = '';
   bool localMethods = false;
+
+  RepositoryGenerator();
 
   @override
   String generateForAnnotatedElement(

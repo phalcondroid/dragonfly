@@ -1,20 +1,17 @@
 targets:
   $default:
     builders:
-      dragonfly:
+      repository_generator:
         enabled: true
+      source_gen|combining_builder:
+        options:
+          ignore_for_file:
+            - "type=lint"
 
 builders:
-  dragonfly:
+  repository_generator:
     import: "package:dragonfly/builder.dart"
-    builder_factories: [
-      "repositoryGenerator"
-    ]
-    build_extensions: {
-      ".dart": [ 
-        ".g.part"
-      ] 
-    }
+    builder_factories: [ "repositoryGenerator" ]
+    build_extensions: { ".dart": [ ".repository.part" ] }
     auto_apply: dependents
-    build_to: cache
-    applies_builders: ["source_gen|combining_builder"]
+    build_to: source
