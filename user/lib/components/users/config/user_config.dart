@@ -1,0 +1,1 @@
+class UserConfig extends DragonflyComponentConfig {}
