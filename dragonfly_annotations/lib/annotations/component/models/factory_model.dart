@@ -1,0 +1,3 @@
+class FactoryModel {
+  const FactoryModel();
+}

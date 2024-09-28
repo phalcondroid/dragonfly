@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:dragonfly/core/builder/types/enums/http_annotations.dart';
-import 'package:dragonfly/core/config/dragonfly_network_config.dart';
-import 'package:dragonfly/core/network/adapter/dragonfly_base_network_adapter.dart';
-import 'package:dragonfly/core/network/adapter/dragonfly_network_options.dart';
-import 'package:dragonfly/core/network/exceptions/dragonfly_network_invalid_method_exception.dart';
+import 'package:dragonfly/core/framework/config/dragonfly_network_config.dart';
+import 'package:dragonfly/core/framework/network/adapter/dragonfly_base_network_adapter.dart';
+import 'package:dragonfly/core/framework/network/adapter/dragonfly_network_options.dart';
+import 'package:dragonfly/core/framework/network/exceptions/dragonfly_network_invalid_method_exception.dart';
 import 'package:http/http.dart' as http;
 
 class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
@@ -34,7 +34,7 @@ class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
   }
 
   @override
-  Future<List<Map<String, Object?>>> callForComplexResultset(
+  Future<List<Map<String, Object?>>> callForList(
       HttpAnnotations method,
       String path,
       Map<String, dynamic>? params,
@@ -45,7 +45,7 @@ class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
   }
 
   @override
-  Future<Map<String, Object?>> callForSimpleResultset(
+  Future<Map<String, Object?>> callForObject(
       HttpAnnotations method,
       String path,
       Map<String, dynamic>? params,

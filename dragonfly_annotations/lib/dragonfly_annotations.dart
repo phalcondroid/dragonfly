@@ -1,12 +1,15 @@
 library dragonfly_annotations;
 
-export 'annotations/repository.dart';
-export 'annotations/get.dart';
-export 'annotations/path.dart';
-export 'annotations/query.dart';
-export 'annotations/post.dart';
-export 'annotations/patch.dart';
-export 'annotations/delete.dart';
-export 'annotations/put.dart';
-export 'annotations/body.dart';
-export 'annotations/headers.dart';
+export 'annotations/component/domain/business_component.dart';
+export 'annotations/component/models/factory_model.dart';
+export 'annotations/component/models/field.dart';
+export 'annotations/component/repositoriy/repository.dart';
+export 'annotations/network/get.dart';
+export 'annotations/network/path.dart';
+export 'annotations/network/query.dart';
+export 'annotations/network/post.dart';
+export 'annotations/network/patch.dart';
+export 'annotations/network/delete.dart';
+export 'annotations/network/put.dart';
+export 'annotations/network/body.dart';
+export 'annotations/network/headers.dart';
