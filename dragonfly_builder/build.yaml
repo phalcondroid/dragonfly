@@ -1,0 +1,28 @@
+targets:
+  $default:
+    builders:
+      repository_generator:
+        enabled: true
+      factory_model_generator:
+        enabled: true
+      source_gen|combining_builder:
+        options:
+          ignore_for_file:
+            - "type=lint"
+
+builders:
+  repository_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: [ "repositoryGenerator" ]
+    build_extensions: { ".dart": [ ".repository.part" ] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
+
+  factory_model_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: [ "factoryModelGenerator" ]
+    build_extensions: { ".dart": [ ".model.part" ] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]

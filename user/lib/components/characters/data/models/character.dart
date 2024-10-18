@@ -5,7 +5,7 @@ import 'package:user/components/characters/data/models/origin.dart';
 part 'character.model.dart';
 
 @FactoryModel()
-abstract interface class Character {
+abstract interface class Character implements _$CharacterContract {
   factory Character(
       {@Field(field: "id", value: 123) required int id,
       required String name,

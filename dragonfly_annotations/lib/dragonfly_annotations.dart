@@ -12,4 +12,4 @@ export 'annotations/network/patch.dart';
 export 'annotations/network/delete.dart';
 export 'annotations/network/put.dart';
 export 'annotations/network/body.dart';
-export 'annotations/network/headers.dart';
+export 'annotations/network/header.dart';
