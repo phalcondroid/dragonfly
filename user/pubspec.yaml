@@ -34,12 +34,14 @@ dependencies:
   cupertino_icons: ^1.0.6
   dragonfly_annotations:
     path: ../dragonfly_annotations
+  dragonfly:
+    path: ../dragonfly
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  dragonfly:
-    path: ../dragonfly
+  dragonfly_builder:
+    path: ../dragonfly_builder
   flutter_lints: ^3.0.0
   build_runner:
 

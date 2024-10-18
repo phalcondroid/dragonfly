@@ -16,9 +16,11 @@ class _CharacterRepository implements CharacterRepository {
         DragonflyInjector.get<DragonflyNetworkHttpAdapter>(
             '__df_network_default');
     print(network);
-    final List<Map<String, Object?>> response =
-        await network.callForComplexResultset(
-            HttpAnnotations.post, 'julian/url', null, null);
-    return [Character(id: '', name: '', specie: '')];
+    final List<Map<String, Object?>> response = await network.callForList(
+        HttpMethods.post,
+        'https://rickandmortyapi.com/api/character',
+        null,
+        null);
+    return Character;
   }
 }
