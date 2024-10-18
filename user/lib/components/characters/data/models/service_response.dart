@@ -20,6 +20,7 @@ abstract interface class ServiceResponse<T, R>
       R Function(Object? json) fromJsonR) = _$ServiceResponse.fromJson;
 }
 
+/*
 void main() {
   final response = ServiceResponse<Character, Origin>.fromJson({
     "info": {"url": "http://alguna.com"},
@@ -39,3 +40,4 @@ void main() {
     return Origin.fromJson(raw as Map<String, Object?>);
   });
 }
+*/
