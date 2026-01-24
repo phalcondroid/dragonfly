@@ -76,15 +76,28 @@ class DragonflyContainer implements GetIt {
 
   @override
   Iterable<T> getAll<T extends Object>(
-          {param1, param2, bool fromAllScopes = false}) =>
-      GetIt.I
-          .getAll(param1: param1, param2: param2, fromAllScopes: fromAllScopes);
+          {dynamic param1,
+          dynamic param2,
+          bool fromAllScopes = false,
+          String? onlyInScope}) =>
+      GetIt.I.getAll(
+          param1: param1,
+          param2: param2,
+          fromAllScopes: fromAllScopes,
+          onlyInScope: onlyInScope);
 
   @override
-  Future<Iterable<T>> getAllAsync<T extends Object>(
-          {param1, param2, bool fromAllScopes = false}) =>
+  Future<Iterable<T>> getAllAsync<T extends Object>({
+    dynamic param1,
+    dynamic param2,
+    bool fromAllScopes = false,
+    String? onlyInScope,
+  }) =>
       GetIt.I.getAllAsync(
-          param1: param1, param2: param2, fromAllScopes: fromAllScopes);
+          param1: param1,
+          param2: param2,
+          fromAllScopes: fromAllScopes,
+          onlyInScope: onlyInScope);
 
   @override
   Future<T> getAsync<T extends Object>(
@@ -113,9 +126,13 @@ class DragonflyContainer implements GetIt {
       GetIt.I.isReadySync(instance: instance, instanceName: instanceName);
 
   @override
-  bool isRegistered<T extends Object>(
-          {Object? instance, String? instanceName}) =>
-      GetIt.I.isRegistered(instance: instance, instanceName: instanceName);
+  bool isRegistered<T extends Object>({
+    Object? instance,
+    String? instanceName,
+    Type? type,
+  }) =>
+      GetIt.I.isRegistered(
+          instance: instance, instanceName: instanceName, type: type);
 
   @override
   Future<void> popScope() => GetIt.I.popScope();
@@ -154,7 +171,8 @@ class DragonflyContainer implements GetIt {
       GetIt.I.registerCachedFactory(factoryFunc, instanceName: instanceName);
 
   @override
-  void registerCachedFactoryAsync<T extends Object>(FactoryFunc<T> factoryFunc,
+  void registerCachedFactoryAsync<T extends Object>(
+          Future<T> Function() factoryFunc,
           {String? instanceName}) =>
       GetIt.I
           .registerCachedFactoryAsync(factoryFunc, instanceName: instanceName);
@@ -168,10 +186,11 @@ class DragonflyContainer implements GetIt {
 
   @override
   void registerCachedFactoryParamAsync<T extends Object, P1, P2>(
-          FactoryFuncParam<T, P1, P2> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I.registerCachedFactoryParamAsync(factoryFunc,
-          instanceName: instanceName);
+      Future<T> Function(P1?, P2?) factoryFunc,
+      {String? instanceName}) {
+    return GetIt.I.registerCachedFactoryParamAsync(factoryFunc,
+        instanceName: instanceName);
+  }
 
   @override
   void registerFactory<T extends Object>(FactoryFunc<T> factoryFunc,
@@ -197,25 +216,32 @@ class DragonflyContainer implements GetIt {
           .registerFactoryParamAsync(factoryFunc, instanceName: instanceName);
 
   @override
-  void registerLazySingleton<T extends Object>(FactoryFunc<T> factoryFunc,
-          {String? instanceName,
-          DisposingFunc<T>? dispose,
-          bool useWeakReference = false}) =>
+  void registerLazySingleton<T extends Object>(
+    T Function() factoryFunc, {
+    String? instanceName,
+    FutureOr<dynamic> Function(T)? dispose,
+    void Function(T)? onCreated,
+    bool useWeakReference = false,
+  }) =>
       GetIt.I.registerLazySingleton(factoryFunc,
           instanceName: instanceName,
+          dispose: dispose,
           useWeakReference: useWeakReference,
-          dispose: dispose);
+          onCreated: onCreated);
 
   @override
   void registerLazySingletonAsync<T extends Object>(
-          FactoryFuncAsync<T> factoryFunc,
-          {String? instanceName,
-          DisposingFunc<T>? dispose,
-          bool useWeakReference = false}) =>
+    Future<T> Function() factoryFunc, {
+    String? instanceName,
+    FutureOr<dynamic> Function(T)? dispose,
+    void Function(T)? onCreated,
+    bool useWeakReference = false,
+  }) =>
       GetIt.I.registerLazySingletonAsync(factoryFunc,
           instanceName: instanceName,
           dispose: dispose,
-          useWeakReference: useWeakReference);
+          useWeakReference: useWeakReference,
+          onCreated: onCreated);
 
   @override
   T registerSingleton<T extends Object>(T instance,
@@ -228,11 +254,14 @@ class DragonflyContainer implements GetIt {
           dispose: dispose);
 
   @override
-  void registerSingletonAsync<T extends Object>(FactoryFuncAsync<T> factoryFunc,
-          {String? instanceName,
-          Iterable<Type>? dependsOn,
-          bool? signalsReady,
-          DisposingFunc<T>? dispose}) =>
+  void registerSingletonAsync<T extends Object>(
+    Future<T> Function() factoryFunc, {
+    String? instanceName,
+    Iterable<Type>? dependsOn,
+    bool? signalsReady,
+    FutureOr<dynamic> Function(T)? dispose,
+    void Function(T)? onCreated,
+  }) =>
       GetIt.I.registerSingletonAsync(factoryFunc,
           instanceName: instanceName,
           dependsOn: dependsOn,
@@ -304,14 +333,41 @@ class DragonflyContainer implements GetIt {
   @override
   ObjectRegistration<Object>? findFirstObjectRegistration<T extends Object>(
       {Object? instance, String? instanceName}) {
-    // TODO: implement findFirstObjectRegistration
-    throw UnimplementedError();
+    return GetIt.I.findFirstObjectRegistration(
+        instance: instance, instanceName: instanceName);
   }
 
   @override
   T? maybeGet<T extends Object>(
       {param1, param2, String? instanceName, Type? type}) {
-    // TODO: implement maybeGet
-    throw UnimplementedError();
+    return GetIt.I.maybeGet(
+        param1: param1, param2: param2, instanceName: instanceName, type: type);
+  }
+
+  @override
+  List<T> findAll<T extends Object>({
+    bool includeSubtypes = true,
+    bool inAllScopes = false,
+    String? onlyInScope,
+    bool includeMatchedByRegistrationType = true,
+    bool includeMatchedByInstance = true,
+    bool instantiateLazySingletons = false,
+    bool callFactories = false,
+  }) {
+    return GetIt.I.findAll(
+        includeSubtypes: includeSubtypes,
+        inAllScopes: inAllScopes,
+        onlyInScope: onlyInScope,
+        includeMatchedByRegistrationType: includeMatchedByRegistrationType,
+        includeMatchedByInstance: includeMatchedByInstance,
+        instantiateLazySingletons: instantiateLazySingletons,
+        callFactories: callFactories);
+  }
+
+  @override
+  Future<void> resetLazySingletons(
+      {bool dispose = true, bool inAllScopes = false, String? onlyInScope}) {
+    return GetIt.I.resetLazySingletons(
+        dispose: dispose, inAllScopes: inAllScopes, onlyInScope: onlyInScope);
   }
 }

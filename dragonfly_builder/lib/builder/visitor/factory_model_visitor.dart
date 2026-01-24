@@ -1,44 +1,44 @@
 import 'package:analyzer/dart/constant/value.dart';
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/visitor2.dart';
+import 'package:analyzer/dart/element/visitor.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:dragonfly_builder/builder/helper/metadata_extractor.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
 import 'package:source_gen/source_gen.dart';
 
-class FactoryModelVisitor extends SimpleElementVisitor2<void> {
+class FactoryModelVisitor extends SimpleElementVisitor<void> {
   List<FactoryModelField> properties = [];
   String? className;
   List<DartType> genericTypes = [];
   bool isGeneric = false;
 
   @override
-  void visitClassElement(ClassElement2 e) {
-    print("[TYPE CLASS CONSTURCTOR] ${e.typeParameters2}");
+  void visitClassElement(ClassElement e) {
+    print("[TYPE CLASS CONSTURCTOR] ${e.typeParameters}");
   }
 
   @override
-  void visitConstructorElement(ConstructorElement2 element) {
+  void visitConstructorElement(ConstructorElement element) {
     if (element.isFactory && element.displayName.contains(".fromJson")) {
       return;
     }
     genericTypes.addAll(element.returnType.typeArguments);
     className = element.displayName;
-    for (var e in element.formalParameters) {
+    for (var e in element.parameters) {
       fillProperty(e, e.type);
     }
   }
 
   @override
-  void visitFieldFormalParameterElement(FieldFormalParameterElement2 element) {
-    fillProperty(element as FormalParameterElement, element.type);
+  void visitFieldFormalParameterElement(FieldFormalParameterElement element) {
+    fillProperty(element as ParameterElement, element.type);
   }
 
   DartObject? getAnnotation(element) => const TypeChecker.fromRuntime(Field)
       .firstAnnotationOf(element, throwOnUnresolved: false);
 
-  void fillProperty(FormalParameterElement e, DartType type) {
+  void fillProperty(ParameterElement e, DartType type) {
     final (isFieldName, fieldName, defaultValue) =
         resolveAnnotationFieldName(e, type);
 
@@ -51,8 +51,9 @@ class FactoryModelVisitor extends SimpleElementVisitor2<void> {
         e.type.isDartCoreSet ||
         e.type.isDartCoreObject);
 
-    String listType =
-        MedatadaExtractor.getContentOfTag(type.getDisplayString());
+    String listType = MedatadaExtractor.getContentOfTag(
+        type.getDisplayString(withNullability: true));
+
     final bool isListClass = e.type.isDartCoreList &&
         !("bool" == listType ||
             "bool?" == listType ||
@@ -68,14 +69,15 @@ class FactoryModelVisitor extends SimpleElementVisitor2<void> {
             "Object" == listType ||
             "Object?" == listType);
 
-    // print(" [==== hard code field ] ${e.type} - (${e}) :: $isListClass \n\n");
+    //print(
+    //    " [==== hard code field ] ${fieldName}, ${e.displayName} =  ${e.type} - (${e}) :: $isListClass \n\n");
 
     properties.add(FactoryModelField(
         name: e.displayName,
         fieldName: fieldName,
         isFieldName: isFieldName,
         value: defaultValue,
-        type: type.getDisplayString(),
+        type: type.getDisplayString(withNullability: true),
         isDartList: e.type.isDartCoreList,
         isDartMap: e.type.isDartCoreMap,
         isDartSet: e.type.isDartCoreSet,
@@ -83,7 +85,8 @@ class FactoryModelVisitor extends SimpleElementVisitor2<void> {
         isFinal: e.isFinal,
         isClass: isClass,
         isRequired: e.isRequiredNamed,
-        listType: MedatadaExtractor.getContentOfTag(type.getDisplayString()),
+        listType: MedatadaExtractor.getContentOfTag(
+            type.getDisplayString(withNullability: true)),
         listTypeIsClass: isListClass,
         rawType: type));
   }
@@ -109,7 +112,7 @@ class FactoryModelVisitor extends SimpleElementVisitor2<void> {
   }
 
   Object? getDataTypeDefaultValue(ConstantReader ann, DartType type) =>
-      switch (type.getDisplayString()) {
+      switch (type.getDisplayString(withNullability: true)) {
         "String" => "'${ann.stringValue}'",
         "int" => ann.intValue,
         "double" => ann.doubleValue,

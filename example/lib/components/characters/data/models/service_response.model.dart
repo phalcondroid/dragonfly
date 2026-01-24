@@ -1,4 +1,3 @@
-// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'service_response.dart';
@@ -8,19 +7,20 @@ part of 'service_response.dart';
 // **************************************************************************
 
 class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
-  _$ServiceResponse({required this.info, required this.result});
+  _$ServiceResponse({
+    required this.info,
+    required this.result,
+  });
 
   factory _$ServiceResponse.fromJson(
     Map<String, Object?> json,
     T Function(Object? json) fromJsonT,
   ) {
     return _$ServiceResponse(
-      info: Info.fromJson(json['info'] as Map<String, Object?>),
-      result: JsonDatatypeMapper.mapGenericList<T>(
-        json['result'] as List,
-        fromJsonT,
-      ),
-    );
+        info: JsonDatatypeMapper.mapForGeneric<Info>(json, 'info',
+            defaultValue: null, mustWithDefault: false),
+        result: JsonDatatypeMapper.mapGenericList<T>(
+            json['result'] as List, fromJsonT));
   }
 
   @override

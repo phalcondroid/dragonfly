@@ -1,10 +1,10 @@
-/*
-DragonflyContainer container = DragonflyContainer();
+import 'package:dragonfly/dragonfly.dart';
+import 'package:dragonfly_annotations/annotations/injectable/injectable_annotations.dart';
 
-@DragonflyInjectableInit(
-  initializerName: "init", // default
-  preferRelativeImports: true, // default
-  asExtension: true, // default
-)
-void configureDependencies() => container.init();
-*/
+import 'injector.config.dart';
+
+@DragonflyInjectableInit()
+Future<void> initDragonflyContainer() async {
+  final container = DragonflyContainer();
+  await container.configureDependencies();
+}

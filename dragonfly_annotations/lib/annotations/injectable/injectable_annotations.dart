@@ -147,6 +147,35 @@ class Injectable {
   const Injectable({this.as, this.env, this.scope, this.order});
 }
 
+@Target({TargetKind.classType, TargetKind.method, TargetKind.getter})
+class InjectableUseCase extends Injectable {
+   /// passed to singlesReady property
+  /// in registerSingleton function
+  final bool? signalsReady;
+
+  /// passed to dependsOn property
+  /// in registerSingleton function
+  final List<Type>? dependsOn;
+
+  /// a dispose callback function to be
+  /// passed to [GetIt]
+  /// the signature must match FutureOr dispose(T)
+  final Function? dispose;
+
+  /// default constructor
+  const InjectableUseCase({
+    this.signalsReady,
+    this.dependsOn,
+    this.dispose,
+    super.as,
+    super.env,
+    super.scope,
+    super.order,
+  });
+}
+
+const useCaseComponent = InjectableUseCase();
+
 /// const instance of [Injectable]
 /// with default arguments
 const injectable = Injectable();

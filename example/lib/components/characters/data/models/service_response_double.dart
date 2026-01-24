@@ -9,11 +9,12 @@ abstract interface class ServiceResponseDouble<T, R>
   factory ServiceResponseDouble({
     required Map<String, Object?> info,
     required List<R> result,
-    required List<T> res,
+    required T res,
   }) = _$ServiceResponseDouble;
 
   factory ServiceResponseDouble.fromJson(
-      Map<String, Object?> value,
-      T Function(Object? json) fromJsonT,
-      R Function(Object? json) fromJsonR) = _$ServiceResponseDouble.fromJson;
+    Map<String, Object?> value,
+    T Function(Object? json) fromJsonT,
+    R Function(Object? json) fromJsonR,
+  ) = _$ServiceResponseDouble.fromJson;
 }

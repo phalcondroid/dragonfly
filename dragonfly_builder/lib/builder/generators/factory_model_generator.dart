@@ -1,4 +1,4 @@
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:dragonfly_builder/builder/code_builder/factory_model/common_factory_model_builder.dart';
 import 'package:dragonfly_builder/builder/visitor/factory_model_visitor.dart';
@@ -10,8 +10,8 @@ class FactoryModelGenerator extends GeneratorForAnnotation<FactoryModel> {
 
   @override
   String generateForAnnotatedElement(
-      Element2 element, ConstantReader annotation, BuildStep buildStep) {
-    element.visitChildren2(visitor);
+      Element element, ConstantReader annotation, BuildStep buildStep) {
+    element.visitChildren(visitor);
 
     final bool isGeneric = annotation.peek('generic')?.boolValue ?? false;
     try {

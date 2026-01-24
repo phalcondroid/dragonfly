@@ -21,9 +21,6 @@ class CreateFromJsonBuilder {
 
               if (property.isDartList) {
                 String item = "(item) => item";
-
-                if (property.listTypeIsClass) {}
-
                 if (property.listTypeIsClass && isGeneric) {
                   item = "fromJson${property.listType}";
                 } else if (property.listTypeIsClass && !isGeneric) {
@@ -39,11 +36,16 @@ class CreateFromJsonBuilder {
                   """;
               }
               String genericConstructor = "";
-              if (isGeneric) {
-                genericConstructor = "";
-                //"${property.type} Function(Object? json) fromJson${property.type}";
+              if (isGeneric && !property.isDartList) {
+                parsedField = """
+                  JsonDatatypeMapper.mapForGeneric<${property.type}>(
+                    json, 
+                    '$jsonKey', 
+                    defaultValue: ${property.value}, 
+                    mustWithDefault: ${property.value != null})
+                """;
               }
-              if (property.isClass) {
+              if (property.isClass && !isGeneric) {
                 parsedField =
                     "${property.type}.fromJson(json['$jsonKey'] as Map<String, Object?>, $genericConstructor)";
               }
@@ -63,9 +65,10 @@ class CreateFromJsonBuilder {
         c.requiredParameters.addAll(visitor.genericTypes.map((genType) {
           // print("===>>>> la super property ${genType}");
           return cb.Parameter((p) => p
-            ..name = "fromJson${genType.getDisplayString()}"
+            ..name =
+                "fromJson${genType.getDisplayString(withNullability: true)}"
             ..type = cb.Reference(
-                "${genType.getDisplayString()} Function(Object? json)"));
+                "${genType.getDisplayString(withNullability: true)} Function(Object? json)"));
         }));
       }
     });

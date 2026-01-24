@@ -1,3 +1,3 @@
-library dragonfly_builder;
+library;
 
 export 'builder.dart';

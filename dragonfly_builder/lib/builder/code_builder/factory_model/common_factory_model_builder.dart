@@ -42,8 +42,7 @@ class CommonFactoryModelBuilder {
 
     final emitter = cb.DartEmitter();
     final String model =
-        DartFormatter(languageVersion: DartFormatter.latestLanguageVersion)
-            .format("${factoryModel.accept(emitter)}");
+        DartFormatter().format("${factoryModel.accept(emitter)}");
     return model;
   }
 
@@ -61,8 +60,7 @@ class CommonFactoryModelBuilder {
             ..type = cb.Reference("${p.type} get "));
         })));
       final emitter = cb.DartEmitter();
-      return DartFormatter(languageVersion: DartFormatter.latestLanguageVersion)
-          .format('${abstractInterface.accept(emitter)}');
+      return DartFormatter().format('${abstractInterface.accept(emitter)}');
     } catch (e) {
       return "";
     }

@@ -1,4 +1,3 @@
-// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'character.dart';
@@ -25,67 +24,32 @@ class _$Character implements FactoryModelWatcher, Character {
 
   factory _$Character.fromJson(Map<String, Object?> json) {
     return _$Character(
-      id: JsonDatatypeMapper.mapForGeneric<int>(
-        json,
-        'id',
-        defaultValue: 123,
-        mustWithDefault: true,
-      ),
-      name: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'name',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      status: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'status',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      species: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'species',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      type: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'type',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      gender: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'gender',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      origin: Origin.fromJson(json['origin'] as Map<String, Object?>),
-      location: Location.fromJson(json['location'] as Map<String, Object?>),
-      image: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'image',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      episode: JsonDatatypeMapper.mapGenericList<String>(
-        json['episode'] as List,
-        (item) => item,
-      ),
-      url: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'url',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      created: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'created',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-    );
+        id: JsonDatatypeMapper.mapForGeneric<int>(json, 'id',
+            defaultValue: 123, mustWithDefault: true),
+        name: JsonDatatypeMapper.mapForGeneric<String>(json, 'name',
+            defaultValue: null, mustWithDefault: false),
+        status: JsonDatatypeMapper.mapForGeneric<String>(json, 'status',
+            defaultValue: null, mustWithDefault: false),
+        species: JsonDatatypeMapper.mapForGeneric<String>(json, 'species',
+            defaultValue: null, mustWithDefault: false),
+        type: JsonDatatypeMapper.mapForGeneric<String>(json, 'type',
+            defaultValue: null, mustWithDefault: false),
+        gender: JsonDatatypeMapper.mapForGeneric<String>(json, 'gender',
+            defaultValue: null, mustWithDefault: false),
+        origin: Origin.fromJson(
+          json['origin'] as Map<String, Object?>,
+        ),
+        location: Location.fromJson(
+          json['location'] as Map<String, Object?>,
+        ),
+        image: JsonDatatypeMapper.mapForGeneric<String>(json, 'image',
+            defaultValue: null, mustWithDefault: false),
+        episode: JsonDatatypeMapper.mapGenericList<String>(
+            json['episode'] as List, (item) => item),
+        url: JsonDatatypeMapper.mapForGeneric<String>(json, 'url',
+            defaultValue: null, mustWithDefault: false),
+        created: JsonDatatypeMapper.mapForGeneric<String>(json, 'created',
+            defaultValue: null, mustWithDefault: false));
   }
 
   @override

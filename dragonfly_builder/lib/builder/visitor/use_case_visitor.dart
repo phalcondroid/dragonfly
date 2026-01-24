@@ -1,28 +1,28 @@
-import 'package:analyzer/dart/element/element2.dart';
-import 'package:analyzer/dart/element/visitor2.dart';
+import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/visitor.dart';
 import '../types/method_repository_type.dart';
 import '../helper/metadata_extractor.dart';
 
-class UseCaseVisitor extends SimpleElementVisitor2<void> {
+class UseCaseVisitor extends SimpleElementVisitor<void> {
   late String className;
   final fields = <String, dynamic>{};
   final Map<String, dynamic> metaData = {};
   final List<MethodRepositoryType> methods = [];
 
   @override
-  void visitConstructorElement(ConstructorElement2 element) {
+  void visitConstructorElement(ConstructorElement element) {
     final elementReturnType = element.type.returnType.toString();
     className = elementReturnType.replaceFirst('*', '');
   }
 
   @override
-  void visitFieldElement(FieldElement2 element) {}
+  void visitFieldElement(FieldElement element) {}
 
   @override
-  void visitClassElement(ClassElement2 classElement) {}
+  void visitClassElement(ClassElement classElement) {}
 
   @override
-  void visitMethodElement(MethodElement2 element) {
+  void visitMethodElement(MethodElement element) {
     String name = element.displayName;
     String path = MedatadaExtractor.getAnnotationMethodField(element, 'path');
   }

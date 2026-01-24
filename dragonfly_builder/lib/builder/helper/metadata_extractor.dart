@@ -1,5 +1,5 @@
 import 'package:analyzer/dart/constant/value.dart';
-import 'package:analyzer/dart/element/element2.dart';
+import 'package:analyzer/dart/element/element.dart';
 import '../types/enums/http_annotations.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:source_gen/source_gen.dart';
@@ -8,7 +8,7 @@ class MedatadaExtractor {
   static TypeChecker typeChecker(Type type) => TypeChecker.fromRuntime(type);
 
   static Iterable<ConstantReader> getMethodAnnotations(
-    MethodElement2 method,
+    MethodElement method,
     Type type,
   ) =>
       typeChecker(type)
@@ -36,7 +36,7 @@ class MedatadaExtractor {
     }
   }
 
-  static dynamic getFromElement(Element2 element, Type type, String field) {
+  static dynamic getFromElement(Element element, Type type, String field) {
     Iterable<DartObject> annotations =
         TypeChecker.fromRuntime(type).annotationsOf(element);
     for (DartObject item in annotations) {
@@ -44,8 +44,8 @@ class MedatadaExtractor {
     }
   }
 
-  static HttpAnnotations getMethodType(MethodElement2 element) {
-    for (final ElementAnnotation item in element.metadata2.annotations) {
+  static HttpAnnotations getMethodType(MethodElement element) {
+    for (final ElementAnnotation item in element.metadata) {
       if (item.toString().contains("@Get")) {
         return HttpAnnotations.get;
       }
@@ -78,8 +78,7 @@ class MedatadaExtractor {
         .trim();
   }
 
-  static dynamic getAnnotationMethodField(
-      MethodElement2 element, String field) {
+  static dynamic getAnnotationMethodField(MethodElement element, String field) {
     final HttpAnnotations type = getMethodType(element);
     Type? method = switch (type) {
       HttpAnnotations.get => Get,

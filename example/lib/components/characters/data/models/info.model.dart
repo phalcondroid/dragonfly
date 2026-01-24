@@ -1,4 +1,3 @@
-// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'info.dart';
@@ -17,31 +16,14 @@ class _$Info implements FactoryModelWatcher, Info {
 
   factory _$Info.fromJson(Map<String, Object?> json) {
     return _$Info(
-      count: JsonDatatypeMapper.mapForGeneric<int>(
-        json,
-        'count',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      pages: JsonDatatypeMapper.mapForGeneric<int>(
-        json,
-        'pages',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      next: JsonDatatypeMapper.mapForGeneric<String>(
-        json,
-        'next',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      prev: JsonDatatypeMapper.mapForGeneric<String?>(
-        json,
-        'prev',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-    );
+        count: JsonDatatypeMapper.mapForGeneric<int>(json, 'count',
+            defaultValue: null, mustWithDefault: false),
+        pages: JsonDatatypeMapper.mapForGeneric<int>(json, 'pages',
+            defaultValue: null, mustWithDefault: false),
+        next: JsonDatatypeMapper.mapForGeneric<String>(json, 'next',
+            defaultValue: null, mustWithDefault: false),
+        prev: JsonDatatypeMapper.mapForGeneric<String?>(json, 'prev',
+            defaultValue: null, mustWithDefault: false));
   }
 
   @override

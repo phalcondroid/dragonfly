@@ -1,4 +1,3 @@
-// dart format width=80
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'service_response_double.dart';
@@ -21,18 +20,12 @@ class _$ServiceResponseDouble<T, R>
     R Function(Object? json) fromJsonR,
   ) {
     return _$ServiceResponseDouble(
-      info: JsonDatatypeMapper.mapForGeneric<Map<String, Object?>>(
-        json,
-        'info',
-        defaultValue: null,
-        mustWithDefault: false,
-      ),
-      result: JsonDatatypeMapper.mapGenericList<R>(
-        json['result'] as List,
-        fromJsonR,
-      ),
-      res: JsonDatatypeMapper.mapGenericList<T>(json['res'] as List, fromJsonT),
-    );
+        info: JsonDatatypeMapper.mapForGeneric<Map<String, Object?>>(
+            json, 'info', defaultValue: null, mustWithDefault: false),
+        result: JsonDatatypeMapper.mapGenericList<R>(
+            json['result'] as List, fromJsonR),
+        res: JsonDatatypeMapper.mapForGeneric<T>(json, 'res',
+            defaultValue: null, mustWithDefault: false));
   }
 
   @override
@@ -42,7 +35,7 @@ class _$ServiceResponseDouble<T, R>
   final List<R> result;
 
   @override
-  final List<T> res;
+  final T res;
 }
 
 abstract class _$ServiceResponseDoubleContract<T, R> {
@@ -50,5 +43,5 @@ abstract class _$ServiceResponseDoubleContract<T, R> {
 
   List<R> get result;
 
-  List<T> get res;
+  T get res;
 }
