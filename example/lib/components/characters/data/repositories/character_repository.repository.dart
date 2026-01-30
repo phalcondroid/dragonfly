@@ -13,7 +13,7 @@ class _CharacterRepository implements CharacterRepository {
     List<String> julian,
   ) async {
     final DragonflyNetworkHttpAdapter network = DragonflyContainer()
-        .get<DragonflyNetworkHttpAdapter>(instanceName: '__http__default');
+        .get<DragonflyNetworkHttpAdapter>(instanceName: 'default');
     final Map<String, Object?> response =
         await network.callForObject(HttpMethods.get, 'character', null, null);
     return ServiceResponse<Character>.fromJson(response as Map<String, Object?>,
@@ -26,7 +26,7 @@ class _CharacterRepository implements CharacterRepository {
     List<String> julian,
   ) async {
     final DragonflyNetworkHttpAdapter network = DragonflyContainer()
-        .get<DragonflyNetworkHttpAdapter>(instanceName: '__http__default');
+        .get<DragonflyNetworkHttpAdapter>(instanceName: 'default');
     final Map<String, Object?> response =
         await network.callForObject(HttpMethods.get, 'character', null, null);
     return ServiceResponseDouble<Character, Info>.fromJson(

@@ -7,6 +7,12 @@ typedef DiItemType<T> = Map<String, T>;
 enum DragonflyInjectorType { singleton, factory }
 
 class DragonflyContainer implements GetIt {
+  static final DragonflyContainer _instance = DragonflyContainer();
+
+  static DragonflyContainer get instance => _instance;
+
+  static DragonflyContainer get I => _instance;
+
   static void set<T extends Object>(String name, T dependency,
       {DragonflyInjectorType type = DragonflyInjectorType.singleton}) {
     if (type == DragonflyInjectorType.singleton) {
@@ -369,5 +375,13 @@ class DragonflyContainer implements GetIt {
       {bool dispose = true, bool inAllScopes = false, String? onlyInScope}) {
     return GetIt.I.resetLazySingletons(
         dispose: dispose, inAllScopes: inAllScopes, onlyInScope: onlyInScope);
+  }
+
+  @override
+  bool get debugEventsEnabled => GetIt.I.debugEventsEnabled;
+
+  @override
+  set debugEventsEnabled(bool _debugEventsEnabled) {
+    GetIt.I.debugEventsEnabled = _debugEventsEnabled;
   }
 }

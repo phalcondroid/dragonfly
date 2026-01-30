@@ -5,6 +5,6 @@ import 'injector.config.dart';
 
 @DragonflyInjectableInit()
 Future<void> initDragonflyContainer() async {
-  final container = DragonflyContainer();
+  final container = DragonflyContainer.I;
   await container.configureDependencies();
 }

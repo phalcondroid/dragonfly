@@ -18,7 +18,10 @@ class GetUserListUseCase
   ) async {
     return await Either.tryCatchAsync(
       () => userRepository.getAll(name, params),
-      (error, stackTrace) => Error(),
+      (error, stackTrace) {
+        print("===>>>> from use case: $error");
+        return Error();
+      },
     );
   }
 }

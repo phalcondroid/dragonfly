@@ -17,6 +17,9 @@ void main() async {
         print(
           "===>>>> value: ${value.fold((l) => l.toString(), (r) => r.toString())}",
         );
+      })
+      .catchError((e) {
+        print("===>>>> error: $e");
       });
   runApp(const MyApp());
 }

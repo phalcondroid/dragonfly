@@ -104,7 +104,7 @@ class InjectableConfigGenerator
 
   cb.Method _buildConfigureMethod(List<DependencyConfig> dependencies) {
     final body = StringBuffer();
-    body.writeln('final gh = DragonflyContainer();');
+    body.writeln('final gh = DragonflyContainer.;');
     body.writeln();
 
     // Group by type for better organization

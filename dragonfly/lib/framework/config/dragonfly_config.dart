@@ -3,6 +3,7 @@ import 'package:dragonfly/framework/config/dragonfly_network_config.dart';
 import 'package:dragonfly/framework/di/dragonfly_container.dart';
 import 'package:dragonfly/framework/exceptions/dragonfly_exception.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_network_http_adapter.dart';
+import 'package:dragonfly/framework/network/enums/dragonfly_network_names_constants.dart';
 
 class DragonflyHttpBaseOptions {
   final String baseUrl;
@@ -23,19 +24,18 @@ class DragonflyInstanceConfig {
 
   const DragonflyInstanceConfig({
     required this.options,
-    this.connectionName = "default",
+    this.connectionName = defaultHttpNetwork,
     this.interceptor = const DragonflyInterceptor(),
   });
 
-  void initConfig() {
+  void initConfig(DragonflyContainer container) {
     try {
       final DragonflyNetworkConfig config = DragonflyNetworkConfig(
         baseUrl: options.baseUrl,
         connectionTimeout: options.connectTimeout!.inSeconds.toDouble(),
       );
-      DragonflyContainer.set<DragonflyNetworkHttpAdapter>(
-          '__http__$connectionName',
-          DragonflyNetworkHttpAdapter(config: config));
+      container.registerSingleton(DragonflyNetworkHttpAdapter(config: config),
+          instanceName: connectionName);
     } catch (e) {
       throw DragonflyException(message: "$e");
     }
