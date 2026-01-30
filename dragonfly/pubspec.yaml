@@ -13,8 +13,6 @@ dependencies:
   hive:
   uuid:
   http:
-  http:
-  hive_flutter:
   hive_flutter:
 
 dev_dependencies:
