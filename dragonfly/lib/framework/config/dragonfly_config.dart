@@ -28,14 +28,18 @@ class DragonflyInstanceConfig {
     this.interceptor = const DragonflyInterceptor(),
   });
 
-  void initConfig(DragonflyContainer container) {
+  void initConfig() {
     try {
       final DragonflyNetworkConfig config = DragonflyNetworkConfig(
         baseUrl: options.baseUrl,
         connectionTimeout: options.connectTimeout!.inSeconds.toDouble(),
       );
-      container.registerSingleton(DragonflyNetworkHttpAdapter(config: config),
-          instanceName: connectionName);
+      if (!DragonflyContainer.I.isRegistered<DragonflyNetworkHttpAdapter>(
+          instanceName: connectionName)) {
+        DragonflyContainer.I.registerSingleton(
+            DragonflyNetworkHttpAdapter(config: config),
+            instanceName: connectionName);
+      }
     } catch (e) {
       throw DragonflyException(message: "$e");
     }

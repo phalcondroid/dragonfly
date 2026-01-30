@@ -10,11 +10,10 @@ class DragonflyApp {
   DragonflyApp({required this.config, this.itemDbConfig});
 
   Future<void> init() async {
-    final DragonflyContainer container = DragonflyContainer.I;
     List<DragonflyInstanceConfig> instanceConfig = config.instanceConfigs;
     for (DragonflyInstanceConfig config in instanceConfig) {
-      config.initConfig(container);
+      config.initConfig();
     }
-    await config.injector?.inject!(container);
+    await config.injector?.inject!(DragonflyContainer.I);
   }
 }

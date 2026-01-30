@@ -1,26 +1,15 @@
 import 'package:dragonfly/dragonfly.dart';
 import 'package:example/components/characters/domain/use_cases/get_user_list_use_case.dart';
 import 'package:flutter/material.dart';
-import 'package:example/components/characters/config/user_config.dart';
+import 'package:example/components/characters/config/app_config.dart';
 import 'package:example/components/characters/config/injector.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  DragonflyApp(config: AppConfig()).init();
   // Configure all dependencies (Repository and UseCaseComponent)
   await initDragonflyContainer();
-
-  await DragonflyContainer()
-      .get<GetUserListUseCase>()
-      .call("Rick", ["1", "2", "3"])
-      .then((value) {
-        print(
-          "===>>>> value: ${value.fold((l) => l.toString(), (r) => r.toString())}",
-        );
-      })
-      .catchError((e) {
-        print("===>>>> error: $e");
-      });
   runApp(const MyApp());
 }
 
@@ -52,20 +41,26 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
-  void _incrementCounter() {
+  void _incrementCounter() async {
     setState(() {
       _counter++;
     });
+
+    await DragonflyContainer.I
+        .get<GetUserListUseCase>()
+        .call("Rick", ["1", "2", "3"])
+        .then((value) {
+          print(
+            "===>>>> value: ${value.fold((l) => l.toString(), (r) => r.toString())}",
+          );
+        })
+        .catchError((e) {
+          print("===>>>> error: $e");
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-    DragonflyApp(config: UserConfig()).init();
-    /*CharacterRepository().getAll("sss", [""]).then(
-      (value) {
-        print("===>>>> comming from repo: ${value.results.first.episode}");
-      },
-    );*/
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
