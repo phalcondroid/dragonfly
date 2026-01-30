@@ -11,12 +11,15 @@ import 'package:dragonfly/dragonfly.dart';
 import 'package:example/components/characters/data/repositories/character_repository.dart';
 import 'package:example/components/characters/domain/use_cases/get_user_list_use_case.dart';
 
-extension DragonflyContainerConfigX on DragonflyContainer {Future<void> configureDependencies() async  { final gh = DragonflyContainer.;
+extension DragonflyContainerConfigX on DragonflyContainer {
+  Future<void> configureDependencies() async {
+    final gh = DragonflyContainer.I;
 
 // Lazy Singletons
-gh.registerLazySingleton<CharacterRepository>(() => CharacterRepository());
+    gh.registerLazySingleton<CharacterRepository>(() => CharacterRepository());
 
 // Factories
-gh.registerFactory<GetUserListUseCase>(() => GetUserListUseCase(gh.get<CharacterRepository>()));
- } 
- }
+    gh.registerFactory<GetUserListUseCase>(
+        () => GetUserListUseCase(gh.get<CharacterRepository>()));
+  }
+}

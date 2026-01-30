@@ -34,7 +34,8 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
       final className = visitor.className;
 
       url = annotation.peek('url')?.stringValue ?? '';
-      connection = annotation.peek('connection')?.stringValue ?? '';
+      connection =
+          annotation.peek('connection')?.stringValue ?? 'defaultHttpNetwork';
 
       final List<Method> methods =
           visitor.methods.map((MethodRepositoryType method) {
