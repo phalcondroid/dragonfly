@@ -12,7 +12,7 @@ class Repository {
   /// default constructor
   const Repository(
       {this.url = '',
-      this.connection = "default",
+      this.connection = "defaultHttpNetwork",
       this.adapter = NetworkAdapter.http,
       this.as,
       this.env,
