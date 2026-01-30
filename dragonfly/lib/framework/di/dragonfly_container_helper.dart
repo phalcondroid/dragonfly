@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly/framework/di/environment_filter.dart';
-import 'package:get_it/get_it.dart';
 
 const kEnvironmentsName = '__environments__';
 const kEnvironmentsFilterName = '__environments__filter__';

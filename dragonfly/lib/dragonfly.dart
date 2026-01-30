@@ -12,7 +12,14 @@ export 'package:dragonfly/framework/contracts/domain/use_case.dart'
 export 'package:dragonfly/framework/exceptions/dragonfly_exception.dart'
     show DragonflyException;
 export 'package:dragonfly/framework/di/dragonfly_container.dart'
-    show DragonflyContainer;
+    show
+        DragonflyContainer,
+        FactoryFunc,
+        FactoryFuncParam,
+        FactoryFuncAsync,
+        FactoryFuncParamAsync,
+        DisposingFunc,
+        ScopeDisposeFunc;
 export 'package:dragonfly/framework/di/dragonfly_container_helper.dart'
     show DragonflyContainerHelper;
 export 'package:dragonfly/framework/di/environment_filter.dart'

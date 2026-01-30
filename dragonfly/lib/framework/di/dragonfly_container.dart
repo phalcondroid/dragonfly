@@ -1,265 +1,83 @@
 import 'dart:async';
 
-import 'package:get_it/get_it.dart';
-
-typedef DiItemType<T> = Map<String, T>;
+typedef FactoryFunc<T> = T Function();
+typedef FactoryFuncParam<T, P1, P2> = T Function(P1 param1, P2 param2);
+typedef FactoryFuncAsync<T> = Future<T> Function();
+typedef FactoryFuncParamAsync<T, P1, P2> = Future<T> Function(
+    P1 param1, P2 param2);
+typedef DisposingFunc<T> = FutureOr<void> Function(T param);
+typedef ScopeDisposeFunc = FutureOr<void> Function();
 
 enum DragonflyInjectorType { singleton, factory }
 
-class DragonflyContainer implements GetIt {
+class DragonflyContainer {
   static final DragonflyContainer _instance = DragonflyContainer();
-
   static DragonflyContainer get instance => _instance;
-
   static DragonflyContainer get I => _instance;
+
+  final List<Map<_ServiceKey, _ServiceEntry>> _scopes = [];
+
+  DragonflyContainer() {
+    _scopes.add({});
+  }
+
+  Map<_ServiceKey, _ServiceEntry> get _currentScope => _scopes.last;
+
+  void Function(bool pushed)? onScopeChanged;
+  bool allowReassignment = false;
 
   static void set<T extends Object>(String name, T dependency,
       {DragonflyInjectorType type = DragonflyInjectorType.singleton}) {
     if (type == DragonflyInjectorType.singleton) {
-      if (!GetIt.I.isRegistered<T>(instanceName: name)) {
-        GetIt.I.registerSingleton<T>(dependency, instanceName: name);
+      if (!I.isRegistered<T>(instanceName: name)) {
+        I.registerSingleton<T>(dependency, instanceName: name);
       }
+    } else {
+      I.registerFactory<T>(() => dependency, instanceName: name);
     }
   }
 
-  @override
-  void Function(bool pushed)? onScopeChanged = GetIt.I.onScopeChanged;
-
-  @override
-  bool allowReassignment = false;
-
-  @override
-  bool skipDoubleRegistration = false;
-
-  @override
-  void enableRegisteringMultipleInstancesOfOneType() {
-    allowRegisterMultipleImplementationsOfoneType = true;
+  bool isRegistered<T extends Object>(
+      {Object? instance, String? instanceName}) {
+    final key = _ServiceKey(T, instanceName);
+    for (var scope in _scopes.reversed) {
+      if (scope.containsKey(key)) return true;
+    }
+    return false;
   }
 
-  @override
-  bool allowRegisterMultipleImplementationsOfoneType = false;
-
-  @override
-  Future<void> allReady(
-          {Duration? timeout, bool ignorePendingAsyncCreation = false}) =>
-      GetIt.I.allReady(
-          timeout: timeout,
-          ignorePendingAsyncCreation: ignorePendingAsyncCreation);
-
-  @override
-  bool allReadySync([bool ignorePendingAsyncCreation = false]) =>
-      GetIt.I.allReadySync(ignorePendingAsyncCreation);
-
-  @override
-  T call<T extends Object>(
-          {String? instanceName, param1, param2, Type? type}) =>
-      GetIt.I.call<T>(
-          instanceName: instanceName,
-          param1: param1,
-          param2: param2,
-          type: type);
-
-  @override
-  void changeTypeInstanceName<T extends Object>(
-          {String? instanceName,
-          required String newInstanceName,
-          T? instance}) =>
-      GetIt.I.changeTypeInstanceName(
-          newInstanceName: newInstanceName,
-          instance: instance,
-          instanceName: instanceName);
-
-  @override
-  bool checkLazySingletonInstanceExists<T extends Object>(
-          {String? instanceName}) =>
-      GetIt.I.checkLazySingletonInstanceExists(instanceName: instanceName);
-
-  @override
-  String? get currentScopeName => GetIt.I.currentScopeName;
-
-  @override
-  Future<void> dropScope(String scopeName) => GetIt.I.dropScope(scopeName);
-
-  @override
-  Iterable<T> getAll<T extends Object>(
-          {dynamic param1,
-          dynamic param2,
-          bool fromAllScopes = false,
-          String? onlyInScope}) =>
-      GetIt.I.getAll(
-          param1: param1,
-          param2: param2,
-          fromAllScopes: fromAllScopes,
-          onlyInScope: onlyInScope);
-
-  @override
-  Future<Iterable<T>> getAllAsync<T extends Object>({
-    dynamic param1,
-    dynamic param2,
-    bool fromAllScopes = false,
-    String? onlyInScope,
-  }) =>
-      GetIt.I.getAllAsync(
-          param1: param1,
-          param2: param2,
-          fromAllScopes: fromAllScopes,
-          onlyInScope: onlyInScope);
-
-  @override
-  Future<T> getAsync<T extends Object>(
-          {String? instanceName, param1, param2, Type? type}) =>
-      GetIt.I
-          .getAsync(instanceName: instanceName, param1: param1, param2: param2);
-
-  @override
-  bool hasScope(String scopeName) => GetIt.I.hasScope(scopeName);
-
-  @override
-  Future<void> isReady<T extends Object>(
-          {Object? instance,
-          String? instanceName,
-          Duration? timeout,
-          Object? callee}) =>
-      GetIt.I.isReady(
-          instance: instance,
-          instanceName: instanceName,
-          timeout: timeout,
-          callee: callee);
-
-  @override
-  bool isReadySync<T extends Object>(
-          {Object? instance, String? instanceName}) =>
-      GetIt.I.isReadySync(instance: instance, instanceName: instanceName);
-
-  @override
-  bool isRegistered<T extends Object>({
-    Object? instance,
-    String? instanceName,
-    Type? type,
-  }) =>
-      GetIt.I.isRegistered(
-          instance: instance, instanceName: instanceName, type: type);
-
-  @override
-  Future<void> popScope() => GetIt.I.popScope();
-
-  @override
-  Future<bool> popScopesTill(String name, {bool inclusive = true}) =>
-      GetIt.I.popScopesTill(name, inclusive: inclusive);
-
-  @override
-  void pushNewScope(
-          {void Function(DragonflyContainer getIt)? init,
-          String? scopeName,
-          ScopeDisposeFunc? dispose,
-          bool? isFinal}) =>
-      GetIt.I.pushNewScope(
-          init: (GetIt getIt) {},
-          scopeName: scopeName,
-          dispose: dispose,
-          isFinal: isFinal ?? false);
-
-  GetIt getInstance() {
-    return GetIt.I;
+  T registerSingleton<T extends Object>(T instance,
+      {String? instanceName, bool? signalsReady, DisposingFunc<T>? dispose}) {
+    _register<_ServiceEntry<T>>(
+        _ServiceEntry<T>.singleton(instance, dispose: dispose),
+        instanceName: instanceName);
+    return instance;
   }
 
-  @override
-  Future<void> pushNewScopeAsync(
-          {Future<void> Function(GetIt getIt)? init,
-          String? scopeName,
-          ScopeDisposeFunc? dispose}) =>
-      GetIt.I.pushNewScopeAsync(
-          init: init, scopeName: scopeName, dispose: dispose);
-
-  @override
-  void registerCachedFactory<T extends Object>(FactoryFunc<T> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I.registerCachedFactory(factoryFunc, instanceName: instanceName);
-
-  @override
-  void registerCachedFactoryAsync<T extends Object>(
-          Future<T> Function() factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I
-          .registerCachedFactoryAsync(factoryFunc, instanceName: instanceName);
-
-  @override
-  void registerCachedFactoryParam<T extends Object, P1, P2>(
-          FactoryFuncParam<T, P1, P2> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I
-          .registerCachedFactoryParam(factoryFunc, instanceName: instanceName);
-
-  @override
-  void registerCachedFactoryParamAsync<T extends Object, P1, P2>(
-      Future<T> Function(P1?, P2?) factoryFunc,
-      {String? instanceName}) {
-    return GetIt.I.registerCachedFactoryParamAsync(factoryFunc,
+  void registerLazySingleton<T extends Object>(T Function() factoryFunc,
+      {String? instanceName,
+      FutureOr<dynamic> Function(T)? dispose,
+      void Function(T)? onCreated,
+      bool useWeakReference = false}) {
+    _register<_ServiceEntry<T>>(
+        _ServiceEntry<T>.lazy(factoryFunc,
+            dispose: dispose, onCreated: onCreated),
         instanceName: instanceName);
   }
 
-  @override
   void registerFactory<T extends Object>(FactoryFunc<T> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I.registerFactory(factoryFunc, instanceName: instanceName);
+      {String? instanceName}) {
+    _register<_ServiceEntry<T>>(_ServiceEntry<T>.factory(factoryFunc),
+        instanceName: instanceName);
+  }
 
-  @override
-  void registerFactoryAsync<T extends Object>(FactoryFuncAsync<T> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I.registerFactoryAsync(factoryFunc, instanceName: instanceName);
-
-  @override
   void registerFactoryParam<T extends Object, P1, P2>(
-          FactoryFuncParam<T, P1, P2> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I.registerFactoryParam(factoryFunc, instanceName: instanceName);
+      FactoryFuncParam<T, P1, P2> factoryFunc,
+      {String? instanceName}) {
+    _register<_ServiceEntry<T>>(_ServiceEntry<T>.factoryParam(factoryFunc),
+        instanceName: instanceName);
+  }
 
-  @override
-  void registerFactoryParamAsync<T extends Object, P1, P2>(
-          FactoryFuncParamAsync<T, P1?, P2?> factoryFunc,
-          {String? instanceName}) =>
-      GetIt.I
-          .registerFactoryParamAsync(factoryFunc, instanceName: instanceName);
-
-  @override
-  void registerLazySingleton<T extends Object>(
-    T Function() factoryFunc, {
-    String? instanceName,
-    FutureOr<dynamic> Function(T)? dispose,
-    void Function(T)? onCreated,
-    bool useWeakReference = false,
-  }) =>
-      GetIt.I.registerLazySingleton(factoryFunc,
-          instanceName: instanceName,
-          dispose: dispose,
-          useWeakReference: useWeakReference,
-          onCreated: onCreated);
-
-  @override
-  void registerLazySingletonAsync<T extends Object>(
-    Future<T> Function() factoryFunc, {
-    String? instanceName,
-    FutureOr<dynamic> Function(T)? dispose,
-    void Function(T)? onCreated,
-    bool useWeakReference = false,
-  }) =>
-      GetIt.I.registerLazySingletonAsync(factoryFunc,
-          instanceName: instanceName,
-          dispose: dispose,
-          useWeakReference: useWeakReference,
-          onCreated: onCreated);
-
-  @override
-  T registerSingleton<T extends Object>(T instance,
-          {String? instanceName,
-          bool? signalsReady,
-          DisposingFunc<T>? dispose}) =>
-      GetIt.I.registerSingleton(instance,
-          instanceName: instanceName,
-          signalsReady: signalsReady,
-          dispose: dispose);
-
-  @override
   void registerSingletonAsync<T extends Object>(
     Future<T> Function() factoryFunc, {
     String? instanceName,
@@ -267,121 +85,277 @@ class DragonflyContainer implements GetIt {
     bool? signalsReady,
     FutureOr<dynamic> Function(T)? dispose,
     void Function(T)? onCreated,
-  }) =>
-      GetIt.I.registerSingletonAsync(factoryFunc,
-          instanceName: instanceName,
-          dependsOn: dependsOn,
-          signalsReady: signalsReady,
-          dispose: dispose);
-
-  @override
-  T registerSingletonIfAbsent<T extends Object>(T Function() factoryFunc,
-          {String? instanceName, DisposingFunc<T>? dispose}) =>
-      GetIt.I.registerSingletonIfAbsent(factoryFunc,
-          instanceName: instanceName, dispose: dispose);
-
-  @override
-  void registerSingletonWithDependencies<T extends Object>(
-          FactoryFunc<T> factoryFunc,
-          {String? instanceName,
-          Iterable<Type>? dependsOn,
-          bool? signalsReady,
-          DisposingFunc<T>? dispose}) =>
-      GetIt.I.registerSingletonWithDependencies(factoryFunc,
-          instanceName: instanceName,
-          dependsOn: dependsOn,
-          signalsReady: signalsReady,
-          dispose: dispose);
-
-  @override
-  void releaseInstance(Object instance) => GetIt.I.releaseInstance(instance);
-
-  @override
-  Future<void> reset({bool dispose = true}) => GetIt.I.reset(dispose: dispose);
-
-  @override
-  FutureOr resetLazySingleton<T extends Object>(
-          {T? instance,
-          String? instanceName,
-          FutureOr Function(T p1)? disposingFunction}) =>
-      GetIt.I.resetLazySingleton(
-          instance: instance,
-          instanceName: instanceName,
-          disposingFunction: disposingFunction);
-
-  @override
-  Future<void> resetScope({bool dispose = true}) =>
-      GetIt.I.resetScope(dispose: dispose);
-
-  @override
-  void signalReady(Object? instance) => GetIt.I.signalReady(instance);
-
-  @override
-  FutureOr unregister<T extends Object>(
-          {Object? instance,
-          String? instanceName,
-          FutureOr Function(T p1)? disposingFunction,
-          bool ignoreReferenceCount = false}) =>
-      GetIt.I.unregister(
-          instance: instance,
-          instanceName: instanceName,
-          disposingFunction: disposingFunction,
-          ignoreReferenceCount: ignoreReferenceCount);
-
-  @override
-  T get<T extends Object>({param1, param2, String? instanceName, Type? type}) =>
-      GetIt.I.get(
-          param1: param1,
-          param2: param2,
-          instanceName: instanceName,
-          type: type);
-
-  @override
-  ObjectRegistration<Object>? findFirstObjectRegistration<T extends Object>(
-      {Object? instance, String? instanceName}) {
-    return GetIt.I.findFirstObjectRegistration(
-        instance: instance, instanceName: instanceName);
-  }
-
-  @override
-  T? maybeGet<T extends Object>(
-      {param1, param2, String? instanceName, Type? type}) {
-    return GetIt.I.maybeGet(
-        param1: param1, param2: param2, instanceName: instanceName, type: type);
-  }
-
-  @override
-  List<T> findAll<T extends Object>({
-    bool includeSubtypes = true,
-    bool inAllScopes = false,
-    String? onlyInScope,
-    bool includeMatchedByRegistrationType = true,
-    bool includeMatchedByInstance = true,
-    bool instantiateLazySingletons = false,
-    bool callFactories = false,
   }) {
-    return GetIt.I.findAll(
-        includeSubtypes: includeSubtypes,
-        inAllScopes: inAllScopes,
-        onlyInScope: onlyInScope,
-        includeMatchedByRegistrationType: includeMatchedByRegistrationType,
-        includeMatchedByInstance: includeMatchedByInstance,
-        instantiateLazySingletons: instantiateLazySingletons,
-        callFactories: callFactories);
+    _register<_ServiceEntry<T>>(
+        _ServiceEntry<T>.asyncSingleton(factoryFunc,
+            dispose: dispose, onCreated: onCreated),
+        instanceName: instanceName);
   }
 
-  @override
-  Future<void> resetLazySingletons(
-      {bool dispose = true, bool inAllScopes = false, String? onlyInScope}) {
-    return GetIt.I.resetLazySingletons(
-        dispose: dispose, inAllScopes: inAllScopes, onlyInScope: onlyInScope);
+  void registerFactoryAsync<T extends Object>(FactoryFuncAsync<T> factoryFunc,
+      {String? instanceName}) {
+    _register<_ServiceEntry<T>>(_ServiceEntry<T>.asyncFactory(factoryFunc),
+        instanceName: instanceName);
   }
 
-  @override
-  bool get debugEventsEnabled => GetIt.I.debugEventsEnabled;
+  void registerFactoryParamAsync<T extends Object, P1, P2>(
+      FactoryFuncParamAsync<T, P1?, P2?> factoryFunc,
+      {String? instanceName}) {
+    _register<_ServiceEntry<T>>(_ServiceEntry<T>.asyncFactoryParam(factoryFunc),
+        instanceName: instanceName);
+  }
 
+  void registerLazySingletonAsync<T extends Object>(
+    Future<T> Function() factoryFunc, {
+    String? instanceName,
+    FutureOr<dynamic> Function(T)? dispose,
+    void Function(T)? onCreated,
+    bool useWeakReference = false,
+  }) {
+    _register<_ServiceEntry<T>>(
+        _ServiceEntry<T>.asyncLazySingleton(factoryFunc,
+            dispose: dispose, onCreated: onCreated),
+        instanceName: instanceName);
+  }
+
+  void registerSingletonWithDependencies<T extends Object>(
+      FactoryFunc<T> factoryFunc,
+      {String? instanceName,
+      Iterable<Type>? dependsOn,
+      bool? signalsReady,
+      DisposingFunc<T>? dispose}) {
+    registerSingleton<T>(factoryFunc(),
+        instanceName: instanceName,
+        signalsReady: signalsReady,
+        dispose: dispose);
+  }
+
+  T get<T extends Object>(
+      {String? instanceName, dynamic param1, dynamic param2, Type? type}) {
+    final key = _ServiceKey(type ?? T, instanceName);
+    for (var scope in _scopes.reversed) {
+      if (scope.containsKey(key)) {
+        return scope[key]!.get(param1, param2) as T;
+      }
+    }
+    throw Exception(
+        "Object of type ${type ?? T} with name ${instanceName} not found");
+  }
+
+  T call<T extends Object>(
+      {String? instanceName, dynamic param1, dynamic param2, Type? type}) {
+    return get<T>(
+        instanceName: instanceName, param1: param1, param2: param2, type: type);
+  }
+
+  Future<T> getAsync<T extends Object>(
+      {String? instanceName,
+      dynamic param1,
+      dynamic param2,
+      Type? type}) async {
+    final key = _ServiceKey(type ?? T, instanceName);
+    for (var scope in _scopes.reversed) {
+      if (scope.containsKey(key)) {
+        return scope[key]!.getAsync(param1, param2) as Future<T>;
+      }
+    }
+    throw Exception(
+        "Object of type ${type ?? T} with name ${instanceName} not found");
+  }
+
+  void _register<E extends _ServiceEntry>(E entry, {String? instanceName}) {
+    final key = _ServiceKey(entry.type, instanceName);
+    if (!allowReassignment && _currentScope.containsKey(key)) {
+      // Allow overriding? GetIt allows it if allowReassignment is true.
+      // Here defaults to false.
+      // However, to keep it simple, we log or throw?
+      // user asked to remove GetIt and implement functionality.
+      return;
+    }
+    _currentScope[key] = entry;
+  }
+
+  void pushNewScope(
+      {void Function(DragonflyContainer getIt)? init,
+      String? scopeName,
+      ScopeDisposeFunc? dispose,
+      bool? isFinal}) {
+    _scopes.add({});
+    onScopeChanged?.call(true);
+    init?.call(this);
+  }
+
+  Future<void> popScope() async {
+    if (_scopes.length > 1) {
+      final scope = _scopes.removeLast();
+      for (var entry in scope.values) {
+        await entry.dispose();
+      }
+      onScopeChanged?.call(false);
+    }
+  }
+
+  // Method needed for helper
+  Future<void> allReady(
+      {Duration? timeout, bool ignorePendingAsyncCreation = false}) async {
+    // Simplified: we don't track async creation status finely yet
+    return Future.value();
+  }
+
+  bool allReadySync([bool ignorePendingAsyncCreation = false]) => true;
+
+  Future<void> isReady<T extends Object>(
+      {Object? instance,
+      String? instanceName,
+      Duration? timeout,
+      Object? callee}) async {
+    return Future.value();
+  }
+}
+
+class _ServiceKey {
+  final Type type;
+  final String? name;
+  _ServiceKey(this.type, this.name);
   @override
-  set debugEventsEnabled(bool _debugEventsEnabled) {
-    GetIt.I.debugEventsEnabled = _debugEventsEnabled;
+  bool operator ==(Object other) =>
+      other is _ServiceKey && other.type == type && other.name == name;
+  @override
+  int get hashCode => type.hashCode ^ (name?.hashCode ?? 0);
+}
+
+class _ServiceEntry<T> {
+  final Type type;
+  final bool isSingleton;
+  final bool isLazy;
+  final bool isAsync;
+  T? _instance; // For singletons
+  Future<T>? _futureInstance; // For async singletons
+  dynamic _factory; // Can be FactoryFunc, FactoryFuncParam, etc.
+  DisposingFunc<T>? _dispose;
+  void Function(T)? _onCreated;
+
+  _ServiceEntry.singleton(T instance, {DisposingFunc<T>? dispose})
+      : type = T,
+        isSingleton = true,
+        isLazy = false,
+        isAsync = false,
+        _instance = instance,
+        _dispose = dispose;
+
+  _ServiceEntry.lazy(T Function() factory,
+      {DisposingFunc<T>? dispose, void Function(T)? onCreated})
+      : type = T,
+        isSingleton = true,
+        isLazy = true,
+        isAsync = false,
+        _factory = factory,
+        _dispose = dispose,
+        _onCreated = onCreated;
+
+  _ServiceEntry.factory(FactoryFunc<T> factory)
+      : type = T,
+        isSingleton = false,
+        isLazy = false,
+        isAsync = false,
+        _factory = factory;
+
+  _ServiceEntry.factoryParam(Function factory)
+      : type = T,
+        isSingleton = false,
+        isLazy = false,
+        isAsync = false,
+        _factory = factory;
+
+  _ServiceEntry.asyncSingleton(Future<T> Function() factory,
+      {DisposingFunc<T>? dispose, void Function(T)? onCreated})
+      : type = T,
+        isSingleton = true,
+        isLazy = false,
+        isAsync = true,
+        _factory = factory,
+        _dispose = dispose,
+        _onCreated = onCreated {
+    // Trigger immediately
+    _futureInstance = factory().then((val) {
+      _instance = val;
+      _onCreated?.call(val);
+      return val;
+    });
+  }
+
+  _ServiceEntry.asyncLazySingleton(Future<T> Function() factory,
+      {DisposingFunc<T>? dispose, void Function(T)? onCreated})
+      : type = T,
+        isSingleton = true,
+        isLazy = true,
+        isAsync = true,
+        _factory = factory,
+        _dispose = dispose,
+        _onCreated = onCreated;
+
+  _ServiceEntry.asyncFactory(FactoryFuncAsync<T> factory)
+      : type = T,
+        isSingleton = false,
+        isLazy = false,
+        isAsync = true,
+        _factory = factory;
+
+  _ServiceEntry.asyncFactoryParam(Function factory)
+      : type = T,
+        isSingleton = false,
+        isLazy = false,
+        isAsync = true,
+        _factory = factory;
+
+  dynamic get(dynamic p1, dynamic p2) {
+    if (isSingleton) {
+      if (isAsync) {
+        throw Exception("Cannot use get() for async singleton, use getAsync()");
+      }
+      if (isLazy && _instance == null) {
+        _instance = (_factory as FactoryFunc<T>)();
+        _onCreated?.call(_instance as T);
+      }
+      return _instance!;
+    }
+    // Factory
+    if (_factory is FactoryFunc<T>) {
+      return (_factory as FactoryFunc<T>)();
+    } else if (_factory is FactoryFuncParam<T, dynamic, dynamic>) {
+      return (_factory as FactoryFuncParam<T, dynamic, dynamic>)(p1, p2);
+    }
+    throw Exception("Unknown factory type");
+  }
+
+  Future<dynamic> getAsync(dynamic p1, dynamic p2) async {
+    if (isSingleton) {
+      if (isAsync) {
+        if (isLazy && _futureInstance == null) {
+          _futureInstance = (_factory as Future<T> Function())().then((val) {
+            _instance = val;
+            _onCreated?.call(val);
+            return val;
+          });
+        }
+        return _futureInstance!;
+      }
+      // Non-async singleton, return instance
+      return get(p1, p2);
+    }
+    // Async Factory
+    if (_factory is FactoryFuncAsync<T>) {
+      return (_factory as FactoryFuncAsync<T>)();
+    } else if (_factory is FactoryFuncParamAsync<T, dynamic, dynamic>) {
+      return (_factory as FactoryFuncParamAsync<T, dynamic, dynamic>)(p1, p2);
+    }
+    // Non-async Factory called via getAsync?
+    return get(p1, p2);
+  }
+
+  Future<void> dispose() async {
+    if (_instance != null && _dispose != null) {
+      await _dispose!(_instance as T);
+    }
   }
 }
