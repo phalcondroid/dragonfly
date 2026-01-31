@@ -15,11 +15,12 @@ extension DragonflyContainerConfigX on DragonflyContainer {
   Future<void> configureDependencies() async {
     final gh = DragonflyContainer.I;
 
-// Lazy Singletons
+    // Lazy Singletons
     gh.registerLazySingleton<CharacterRepository>(() => CharacterRepository());
 
-// Factories
+    // Factories
     gh.registerFactory<GetUserListUseCase>(
-        () => GetUserListUseCase(gh.get<CharacterRepository>()));
+      () => GetUserListUseCase(gh.get<CharacterRepository>()),
+    );
   }
 }

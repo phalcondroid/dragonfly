@@ -93,7 +93,7 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
       ..annotations.add(refer('override'))
       ..returns = refer(method.returnType.raw)
       ..body = Code("final DragonflyNetworkHttpAdapter network = "
-          "DragonflyContainer().get<DragonflyNetworkHttpAdapter>(instanceName: '$repoConn'); \n"
+          "DragonflyContainer.I.get<DragonflyNetworkHttpAdapter>(instanceName: '$repoConn'); \n"
           "final $returnType response = await network.$methodKind($httpMethod, '$repoUrl${method.path}', null, null);\n"
           "$response;\n"
           ""));
