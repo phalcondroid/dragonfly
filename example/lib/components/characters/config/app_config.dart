@@ -12,6 +12,9 @@ class AppConfig extends DragonflyConfig {
   ];
 
   @override
-  DragonflyInjector? get injector =>
-      DragonflyInjector(inject: (DragonflyContainer injector) async {});
+  DragonflyInjector? get injector => DragonflyInjector(
+    inject: (DragonflyContainer injector) async {
+      print("===>>>> AppConfig Injector called ${injector.isRegistered()}");
+    },
+  );
 }

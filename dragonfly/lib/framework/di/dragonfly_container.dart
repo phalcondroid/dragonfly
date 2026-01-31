@@ -163,6 +163,32 @@ class DragonflyContainer {
         "Object of type ${type ?? T} with name ${instanceName} not found");
   }
 
+  void debugPrintRegisteredInstances() {
+    print('╔═══════════════════════════════════════════════════════════════');
+    print('║ DragonflyContainer Registered Instances');
+    print('╠═══════════════════════════════════════════════════════════════');
+    for (var i = 0; i < _scopes.length; i++) {
+      print('║ Scope $i');
+      final scope = _scopes[i];
+      if (scope.isEmpty) {
+        print('║   (empty)');
+      } else {
+        scope.forEach((key, entry) {
+          final nameStr = key.name != null ? 'Name: ${key.name}' : 'No Name';
+          final typeStr = key.type.toString();
+          var kind = 'Factory';
+          if (entry.isSingleton) {
+            kind = entry.isLazy ? 'Lazy Singleton' : 'Singleton';
+          }
+          if (entry.isAsync) kind = 'Async $kind';
+
+          print('║   - $typeStr ($nameStr) -> $kind');
+        });
+      }
+    }
+    print('╚═══════════════════════════════════════════════════════════════');
+  }
+
   void _register<E extends _ServiceEntry>(E entry, {String? instanceName}) {
     final key = _ServiceKey(entry.type, instanceName);
     if (!allowReassignment && _currentScope.containsKey(key)) {
