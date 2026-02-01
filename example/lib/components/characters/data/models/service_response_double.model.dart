@@ -49,13 +49,13 @@ class _$ServiceResponseDouble<T, R>
   }
 
   Map<String, Object?> toMap(
-    Object? Function(T value) _toMapT,
-    Object? Function(R value) _toMapR,
+    dynamic Function(T value) _toJsonT,
+    dynamic Function(R value) _toJsonR,
   ) {
     return <String, Object?>{
       'info': info,
-      'result': result.map((e) => _toMapR(e)).toList(),
-      'res': _toMapT(res)
+      'result': result.map((e) => _toJsonR(e)).toList(),
+      'res': _toJsonT(res)
     };
   }
 

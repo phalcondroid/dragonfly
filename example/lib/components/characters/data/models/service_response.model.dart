@@ -41,10 +41,10 @@ class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
     };
   }
 
-  Map<String, Object?> toMap(Object? Function(T value) _toMapT) {
+  Map<String, Object?> toMap(dynamic Function(T value) _toJsonT) {
     return <String, Object?>{
-      'info': info.toMap(),
-      'results': results.map((e) => _toMapT(e)).toList()
+      'info': info.toJson(),
+      'results': results.map((e) => _toJsonT(e)).toList()
     };
   }
 

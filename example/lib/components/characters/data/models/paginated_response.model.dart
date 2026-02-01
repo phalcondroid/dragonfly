@@ -43,12 +43,12 @@ class _$PaginatedResponse<I, T>
   }
 
   Map<String, Object?> toMap(
-    Object? Function(I value) _toMapI,
-    Object? Function(T value) _toMapT,
+    dynamic Function(I value) _toJsonI,
+    dynamic Function(T value) _toJsonT,
   ) {
     return <String, Object?>{
-      'info': _toMapI(info),
-      'results': results.map((e) => _toMapT(e)).toList()
+      'info': _toJsonI(info),
+      'results': results.map((e) => _toJsonT(e)).toList()
     };
   }
 
