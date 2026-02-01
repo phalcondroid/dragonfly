@@ -1,81 +1,73 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'service_response_double.dart';
+part of 'paginated_response.dart';
 
 // **************************************************************************
 // FactoryModelGenerator
 // **************************************************************************
 
-class _$ServiceResponseDouble<T, R>
-    implements FactoryModelWatcher, ServiceResponseDouble<T, R> {
-  _$ServiceResponseDouble({
+class _$PaginatedResponse<I, T>
+    implements FactoryModelWatcher, PaginatedResponse<I, T> {
+  _$PaginatedResponse({
     required this.info,
-    required this.result,
-    required this.res,
+    required this.results,
   });
 
-  factory _$ServiceResponseDouble.fromJson(
+  factory _$PaginatedResponse.fromJson(
     Map<String, Object?> json,
+    I Function(Object? json) fromJsonI,
     T Function(Object? json) fromJsonT,
-    R Function(Object? json) fromJsonR,
   ) {
-    return _$ServiceResponseDouble(
-        info: (json['info'] as Map<String, Object?>?) ?? <String, dynamic>{},
-        result: JsonDatatypeMapper.mapGenericListForTypeParameter<R>(
-          json['result'] as List?,
-          fromJsonR,
-        ),
-        res: fromJsonT(json['res']));
+    return _$PaginatedResponse(
+        info: fromJsonI(json['info']),
+        results: JsonDatatypeMapper.mapGenericListForTypeParameter<T>(
+          json['results'] as List?,
+          fromJsonT,
+        ));
   }
 
   @override
-  final Map<String, Object?> info;
+  final I info;
 
   @override
-  final List<R> result;
-
-  @override
-  final T res;
+  final List<T> results;
 
   Map<String, dynamic> toJson(
+    dynamic Function(I value) _toJsonI,
     dynamic Function(T value) _toJsonT,
-    dynamic Function(R value) _toJsonR,
   ) {
     return {
-      'info': info,
-      'result': result.map((e) => _toJsonR(e)).toList(),
-      'res': _toJsonT(res)
+      'info': _toJsonI(info),
+      'results': results.map((e) => _toJsonT(e)).toList()
     };
   }
 
   Map<String, Object?> toMap(
+    Object? Function(I value) _toMapI,
     Object? Function(T value) _toMapT,
-    Object? Function(R value) _toMapR,
   ) {
     return <String, Object?>{
-      'info': info,
-      'result': result.map((e) => _toMapR(e)).toList(),
-      'res': _toMapT(res)
+      'info': _toMapI(info),
+      'results': results.map((e) => _toMapT(e)).toList()
     };
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ServiceResponseDouble &&
-        _mapEquals(other.info, info) &&
-        _listEquals(other.result, result) &&
-        other.res == res;
+    return other is PaginatedResponse &&
+        other.info == info &&
+        _listEquals(other.results, results);
   }
 
   @override
   int get hashCode {
-    return info.hashCode ^ result.hashCode ^ res.hashCode;
+    return info.hashCode ^ results.hashCode;
   }
 
   @override
   String toString() {
-    return 'ServiceResponseDouble(info: $info, result: $result, res: $res)';
+    return 'PaginatedResponse(info: $info, results: $results)';
   }
 
   static bool _listEquals<T>(
@@ -115,10 +107,8 @@ class _$ServiceResponseDouble<T, R>
   }
 }
 
-abstract class _$ServiceResponseDoubleContract<T, R> {
-  Map<String, Object?> get info;
+abstract class _$PaginatedResponseContract<I, T> {
+  I get info;
 
-  List<R> get result;
-
-  T get res;
+  List<T> get results;
 }
