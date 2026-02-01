@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/visitor.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
@@ -7,121 +8,238 @@ import 'package:dragonfly_builder/builder/helper/metadata_extractor.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
 import 'package:source_gen/source_gen.dart';
 
+/// Visitor for extracting metadata from @FactoryModel annotated classes.
+///
+/// This visitor collects:
+/// - Class name
+/// - Generic type parameters
+/// - Constructor parameters (converted to model fields)
+/// - Field annotations for custom JSON mapping
 class FactoryModelVisitor extends SimpleElementVisitor<void> {
+  /// The properties extracted from the constructor parameters.
   List<FactoryModelField> properties = [];
+
+  /// The name of the annotated class.
   String? className;
+
+  /// The generic type parameters of the class.
   List<DartType> genericTypes = [];
+
+  /// Whether the class has generic type parameters.
   bool isGeneric = false;
 
+  /// Set of generic type parameter names for quick lookup.
+  Set<String> _genericTypeNames = {};
+
   @override
-  void visitClassElement(ClassElement e) {
-    print("[TYPE CLASS CONSTURCTOR] ${e.typeParameters}");
+  void visitClassElement(ClassElement element) {
+    // Capture generic type parameters from class declaration
+    if (element.typeParameters.isNotEmpty) {
+      isGeneric = true;
+      _genericTypeNames = element.typeParameters.map((t) => t.name).toSet();
+    }
   }
 
   @override
   void visitConstructorElement(ConstructorElement element) {
-    if (element.isFactory && element.displayName.contains(".fromJson")) {
+    // Skip fromJson factories
+    if (element.isFactory && element.name == 'fromJson') {
       return;
     }
-    genericTypes.addAll(element.returnType.typeArguments);
-    className = element.displayName;
-    for (var e in element.parameters) {
-      fillProperty(e, e.type);
+
+    // Only process the first non-fromJson constructor
+    if (className != null) {
+      return;
+    }
+
+    // Get class name
+    className = element.enclosingElement3.name;
+
+    // Capture generic types from the interface declaration
+    final classElement = element.enclosingElement3 as ClassElement;
+    if (classElement.typeParameters.isNotEmpty) {
+      isGeneric = true;
+      _genericTypeNames = classElement.typeParameters.map((t) => t.name).toSet();
+
+      // Also capture the actual type arguments from return type
+      genericTypes.addAll(element.returnType.typeArguments);
+
+      // If no type arguments from return type, use the parameters themselves
+      if (genericTypes.isEmpty) {
+        for (final param in classElement.typeParameters) {
+          // Create a simple type reference from the parameter name
+          genericTypes.add(_createTypeFromParameter(param));
+        }
+      }
+    }
+
+    // Process constructor parameters
+    for (final param in element.parameters) {
+      _fillProperty(param, param.type);
     }
   }
 
   @override
   void visitFieldFormalParameterElement(FieldFormalParameterElement element) {
-    fillProperty(element as ParameterElement, element.type);
+    _fillProperty(element, element.type);
   }
 
-  DartObject? getAnnotation(element) => const TypeChecker.fromRuntime(Field)
-      .firstAnnotationOf(element, throwOnUnresolved: false);
+  /// Creates a fake DartType from a TypeParameterElement for generic type handling.
+  DartType _createTypeFromParameter(TypeParameterElement param) {
+    // Return the bound if it exists, otherwise use the parameter's type
+    return param.bound ?? param.instantiate(nullabilitySuffix: NullabilitySuffix.none);
+  }
 
-  void fillProperty(ParameterElement e, DartType type) {
+  /// Gets the @Field annotation from an element if present.
+  DartObject? _getFieldAnnotation(Element element) {
+    return const TypeChecker.fromRuntime(Field).firstAnnotationOf(
+      element,
+      throwOnUnresolved: false,
+    );
+  }
+
+  /// Extracts property information from a constructor parameter.
+  void _fillProperty(ParameterElement param, DartType type) {
+    final typeString = type.getDisplayString(withNullability: true);
+    final cleanTypeString = typeString.replaceAll('?', '');
+
+    // Check if this type is a generic type parameter
+    final isGenericTypeParam = _genericTypeNames.contains(cleanTypeString);
+
+    // Resolve Field annotation
     final (isFieldName, fieldName, defaultValue) =
-        resolveAnnotationFieldName(e, type);
+        _resolveFieldAnnotation(param, type);
 
-    final bool isClass = !(e.type.isDartCoreBool ||
-        e.type.isDartCoreDouble ||
-        e.type.isDartCoreInt ||
-        e.type.isDartCoreString ||
-        e.type.isDartCoreList ||
-        e.type.isDartCoreMap ||
-        e.type.isDartCoreSet ||
-        e.type.isDartCoreObject);
+    // Determine if this is a class type (not primitive)
+    final bool isClass = _isClassType(param.type, cleanTypeString);
 
-    String listType = MedatadaExtractor.getContentOfTag(
-        type.getDisplayString(withNullability: true));
+    // Handle List types
+    String listType = MedatadaExtractor.getContentOfTag(typeString);
+    final bool isListClass =
+        param.type.isDartCoreList && _isClassType(null, listType.replaceAll('?', ''));
 
-    final bool isListClass = e.type.isDartCoreList &&
-        !("bool" == listType ||
-            "bool?" == listType ||
-            "double" == listType ||
-            "double?" == listType ||
-            "int" == listType ||
-            "int?" == listType ||
-            "String" == listType ||
-            "String?" == listType ||
-            "List" == listType ||
-            "Map" == listType ||
-            "Set" == listType ||
-            "Object" == listType ||
-            "Object?" == listType);
-
-    //print(
-    //    " [==== hard code field ] ${fieldName}, ${e.displayName} =  ${e.type} - (${e}) :: $isListClass \n\n");
+    // Also check if the list contains a generic type parameter
+    final bool isListGenericType =
+        param.type.isDartCoreList && _genericTypeNames.contains(listType.replaceAll('?', ''));
 
     properties.add(FactoryModelField(
-        name: e.displayName,
-        fieldName: fieldName,
-        isFieldName: isFieldName,
-        value: defaultValue,
-        type: type.getDisplayString(withNullability: true),
-        isDartList: e.type.isDartCoreList,
-        isDartMap: e.type.isDartCoreMap,
-        isDartSet: e.type.isDartCoreSet,
-        isNullable: e.type.isDartCoreNull,
-        isFinal: e.isFinal,
-        isClass: isClass,
-        isRequired: e.isRequiredNamed,
-        listType: MedatadaExtractor.getContentOfTag(
-            type.getDisplayString(withNullability: true)),
-        listTypeIsClass: isListClass,
-        rawType: type));
+      name: param.displayName,
+      fieldName: fieldName,
+      isFieldName: isFieldName,
+      value: defaultValue,
+      type: typeString,
+      isDartList: param.type.isDartCoreList,
+      isDartMap: param.type.isDartCoreMap,
+      isDartSet: param.type.isDartCoreSet,
+      isNullable: typeString.endsWith('?'),
+      isFinal: param.isFinal,
+      isClass: isClass && !isGenericTypeParam,
+      isRequired: param.isRequiredNamed || param.isRequiredPositional,
+      listType: listType,
+      listTypeIsClass: isListClass || isListGenericType,
+      rawType: type,
+    ));
   }
 
-  (bool, String?, Object?) resolveAnnotationFieldName(element, DartType type) {
-    final rawAnnotation = getAnnotation(element);
-    if (rawAnnotation != null) {
-      final annotation = ConstantReader(rawAnnotation);
-      bool isFieldName = false;
-      String fieldName = "";
-      Object? defaultValue = "";
-      if (!annotation.read("field").isNull &&
-          annotation.read("field").stringValue.isNotEmpty) {
-        fieldName = annotation.read("field").stringValue;
-      }
-      final defaultValAnn = annotation.read("value");
-      if (!defaultValAnn.isNull) {
-        defaultValue = getDataTypeDefaultValue(defaultValAnn, type);
-      }
-      return (isFieldName, fieldName, defaultValue);
+  /// Checks if a type is a class type (not a primitive).
+  bool _isClassType(DartType? type, String typeString) {
+    // Check against known primitives
+    const primitives = {
+      'bool',
+      'int',
+      'double',
+      'num',
+      'String',
+      'List',
+      'Map',
+      'Set',
+      'Object',
+      'dynamic',
+      'void',
+      'Null',
+      'Never',
+    };
+
+    if (primitives.contains(typeString)) {
+      return false;
     }
-    return (false, null, null);
+
+    // Check if it's a generic type parameter
+    if (_genericTypeNames.contains(typeString)) {
+      return false;
+    }
+
+    // Use DartType checks if available
+    if (type != null) {
+      return !(type.isDartCoreBool ||
+          type.isDartCoreDouble ||
+          type.isDartCoreInt ||
+          type.isDartCoreString ||
+          type.isDartCoreList ||
+          type.isDartCoreMap ||
+          type.isDartCoreSet ||
+          type.isDartCoreObject ||
+          type.isDartCoreNull);
+    }
+
+    return true;
   }
 
-  Object? getDataTypeDefaultValue(ConstantReader ann, DartType type) =>
-      switch (type.getDisplayString(withNullability: true)) {
-        "String" => "'${ann.stringValue}'",
-        "int" => ann.intValue,
-        "double" => ann.doubleValue,
-        "bool" => ann.boolValue,
-        "List" => ann.listValue,
-        "Map" => ann.mapValue,
-        "Set" => ann.setValue,
-        "Object" => ann.objectValue,
-        "DateTime" => "DateTime('${ann.objectValue.toStringValue()}')",
-        _ => ann.objectValue
-      };
+  /// Resolves the @Field annotation values.
+  (bool, String?, Object?) _resolveFieldAnnotation(
+    ParameterElement element,
+    DartType type,
+  ) {
+    final rawAnnotation = _getFieldAnnotation(element);
+
+    if (rawAnnotation == null) {
+      return (false, null, null);
+    }
+
+    final annotation = ConstantReader(rawAnnotation);
+    bool hasFieldName = false;
+    String? fieldName;
+    Object? defaultValue;
+
+    // Read field name
+    final fieldReader = annotation.read('field');
+    if (!fieldReader.isNull && fieldReader.stringValue.isNotEmpty) {
+      hasFieldName = true;
+      fieldName = fieldReader.stringValue;
+    }
+
+    // Read default value
+    final valueReader = annotation.read('value');
+    if (!valueReader.isNull) {
+      defaultValue = _getDefaultValue(valueReader, type);
+    }
+
+    return (hasFieldName, fieldName, defaultValue);
+  }
+
+  /// Converts annotation value to appropriate Dart literal.
+  Object? _getDefaultValue(ConstantReader reader, DartType type) {
+    final typeString = type.getDisplayString(withNullability: false);
+
+    return switch (typeString) {
+      'String' => "'${reader.stringValue}'",
+      'int' => reader.intValue,
+      'double' => reader.doubleValue,
+      'bool' => reader.boolValue,
+      'List' => reader.listValue,
+      'Map' => reader.mapValue,
+      'Set' => reader.setValue,
+      'DateTime' => "DateTime.parse('${reader.objectValue.toStringValue()}')",
+      _ => reader.objectValue,
+    };
+  }
+
+  /// Resets the visitor state for reuse.
+  void reset() {
+    properties = [];
+    className = null;
+    genericTypes = [];
+    isGeneric = false;
+    _genericTypeNames = {};
+  }
 }

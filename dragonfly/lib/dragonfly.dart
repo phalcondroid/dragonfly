@@ -27,9 +27,9 @@ export 'package:dragonfly/framework/di/environment_filter.dart'
 export 'package:dragonfly/framework/network/adapter/dragonfly_network_http_adapter.dart'
     show DragonflyNetworkHttpAdapter;
 export 'package:dragonfly/framework/types/enums/http_methods.dart'
-    show HttpMethod;
+    show HttpMethods;
 export 'package:dragonfly/framework/mapper/json_datatype_mapper.dart'
-    show JsonDatatypeMapper;
+    show JsonDatatypeMapper, JsonMappingException, DataTypeEnum;
 export 'package:dragonfly/framework/contracts/models/factory_model_watcher.dart'
     show FactoryModelWatcher;
 export 'package:dragonfly/framework/constructors/generic_builder_class.dart'

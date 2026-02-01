@@ -1,11 +1,22 @@
 library;
 
+// Injectable annotations
 export 'annotations/injectable/injectable_annotations.dart' show Injectable;
 export 'annotations/injectable/inyectar.dart';
+
+// Component annotations
 export 'annotations/component/injector/injector_config.dart';
+
+// Model annotations
 export 'annotations/component/models/factory_model.dart' show FactoryModel;
-export 'annotations/component/models/field.dart' show Field;
+export 'annotations/component/models/event_model.dart' show EventModel;
+export 'annotations/component/models/state_model.dart' show StateModel;
+export 'annotations/component/models/field.dart' show Field, JsonIgnore, JsonKey;
+
+// Repository annotations
 export 'annotations/component/repositoriy/repository.dart' show Repository;
+
+// Network annotations
 export 'annotations/network/get.dart' show Get;
 export 'annotations/network/path.dart' show Path;
 export 'annotations/network/query.dart' show Query;

@@ -2,76 +2,210 @@ import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
 import 'package:dragonfly_builder/builder/visitor/factory_model_visitor.dart';
 import 'package:code_builder/code_builder.dart' as cb;
 
+/// Builder for creating fromJson factory constructors.
 class CreateFromJsonBuilder {
-  cb.Constructor fromJsonBuilder(FactoryModelVisitor visitor,
-      List<FactoryModelField> properties, bool isGeneric) {
-    String finalConstructor = "_\$${visitor.className}("
-        "${properties.map((property) {
-              final jsonKey = property.isFieldName
-                  ? property.fieldName ?? ""
-                  : property.name;
+  /// Builds a fromJson factory constructor.
+  ///
+  /// For non-generic models:
+  /// ```dart
+  /// factory _$Model.fromJson(Map<String, Object?> json) {
+  ///   return _$Model(...);
+  /// }
+  /// ```
+  ///
+  /// For generic models:
+  /// ```dart
+  /// factory _$Model.fromJson(
+  ///   Map<String, Object?> json,
+  ///   T Function(Object? json) fromJsonT,
+  /// ) {
+  ///   return _$Model(...);
+  /// }
+  /// ```
+  cb.Constructor fromJsonBuilder(
+    FactoryModelVisitor visitor,
+    List<FactoryModelField> properties,
+    bool isGeneric,
+  ) {
+    // Get generic type names from the visitor
+    final genericTypeNames = _extractGenericTypeNames(visitor);
 
-              String parsedField = """
-                  JsonDatatypeMapper.mapForGeneric<${property.type}>(
-                    json, 
-                    '$jsonKey', 
-                    defaultValue: ${property.value}, 
-                    mustWithDefault: ${property.value != null})
-                  """;
+    final constructorArgs = properties.map((property) {
+      return '${property.name}: ${_buildFieldMapping(property, isGeneric, genericTypeNames)}';
+    }).join(', ');
 
-              if (property.isDartList) {
-                String item = "(item) => item";
-                if (property.listTypeIsClass && isGeneric) {
-                  item = "fromJson${property.listType}";
-                } else if (property.listTypeIsClass && !isGeneric) {
-                  item =
-                      "(e) => ${property.listType}.fromJson(e as Map<String, Object?>)";
-                }
+    final body = 'return _\$${visitor.className}($constructorArgs);';
 
-                parsedField = """
-                  JsonDatatypeMapper.mapGenericList<${property.listType}>(
-                    json['$jsonKey'] as List, 
-                    $item
-                    )
-                  """;
-              }
-              String genericConstructor = "";
-              if (isGeneric && !property.isDartList) {
-                parsedField = """
-                  JsonDatatypeMapper.mapForGeneric<${property.type}>(
-                    json, 
-                    '$jsonKey', 
-                    defaultValue: ${property.value}, 
-                    mustWithDefault: ${property.value != null})
-                """;
-              }
-              if (property.isClass && !isGeneric) {
-                parsedField =
-                    "${property.type}.fromJson(json['$jsonKey'] as Map<String, Object?>, $genericConstructor)";
-              }
-              return "${property.name}: $parsedField";
-            }).toList().join(",")}"
-        "); ";
-    final String body = "return $finalConstructor";
-    final fromJsonConstruct = cb.Constructor((c) {
+    return cb.Constructor((c) {
       c
         ..factory = true
+        ..name = 'fromJson'
         ..requiredParameters.add(cb.Parameter((p) => p
-          ..name = "json"
-          ..type = const cb.Reference("Map<String, Object?>")))
-        ..body = cb.Code(body)
-        ..name = "fromJson";
-      if (isGeneric) {
-        c.requiredParameters.addAll(visitor.genericTypes.map((genType) {
-          // print("===>>>> la super property ${genType}");
-          return cb.Parameter((p) => p
-            ..name =
-                "fromJson${genType.getDisplayString(withNullability: true)}"
-            ..type = cb.Reference(
-                "${genType.getDisplayString(withNullability: true)} Function(Object? json)"));
-        }));
+          ..name = 'json'
+          ..type = const cb.Reference('Map<String, Object?>')))
+        ..body = cb.Code(body);
+
+      // Add fromJson function parameters for generic types
+      if (isGeneric && genericTypeNames.isNotEmpty) {
+        for (final typeName in genericTypeNames) {
+          c.requiredParameters.add(cb.Parameter((p) => p
+            ..name = 'fromJson$typeName'
+            ..type = cb.Reference('$typeName Function(Object? json)')));
+        }
       }
     });
-    return fromJsonConstruct;
+  }
+
+  /// Extracts generic type parameter names from the visitor.
+  List<String> _extractGenericTypeNames(FactoryModelVisitor visitor) {
+    if (!visitor.isGeneric || visitor.genericTypes.isEmpty) {
+      return [];
+    }
+
+    return visitor.genericTypes
+        .map((t) => t.getDisplayString(withNullability: false))
+        .toList();
+  }
+
+  /// Builds the field mapping expression for a single property.
+  String _buildFieldMapping(
+    FactoryModelField property,
+    bool isGeneric,
+    List<String> genericTypeNames,
+  ) {
+    final jsonKey = property.fieldName ?? property.name;
+    final cleanType = property.type.replaceAll('?', '');
+    final isNullable = property.type.endsWith('?');
+    final isGenericType = genericTypeNames.contains(cleanType);
+    final cleanListType = property.listType.replaceAll('?', '');
+    final isGenericListType = genericTypeNames.contains(cleanListType);
+
+    // Handle List types
+    if (property.isDartList) {
+      return _buildListMapping(
+        property,
+        isGeneric,
+        isGenericListType,
+        jsonKey,
+        cleanListType,
+        isNullable,
+      );
+    }
+
+    // Handle Map types
+    if (property.isDartMap) {
+      return _buildMapMapping(property, jsonKey, isNullable);
+    }
+
+    // Handle generic type parameters (e.g., T, I)
+    if (isGeneric && isGenericType) {
+      return _buildGenericTypeMapping(property, jsonKey, cleanType, isNullable);
+    }
+
+    // Handle nested class types
+    if (property.isClass) {
+      return _buildNestedObjectMapping(property, jsonKey, isNullable);
+    }
+
+    // Handle primitive types
+    return _buildPrimitiveMapping(property, jsonKey);
+  }
+
+  /// Builds mapping for List types.
+  String _buildListMapping(
+    FactoryModelField property,
+    bool isGeneric,
+    bool isGenericListType,
+    String jsonKey,
+    String cleanListType,
+    bool isNullableList,
+  ) {
+    final listType = property.listType;
+
+    // Null safety wrapper
+    String nullCheck = isNullableList ? "json['$jsonKey'] == null ? null : " : '';
+
+    // Generic list type (e.g., List<T>)
+    if (isGeneric && isGenericListType) {
+      return '''${nullCheck}JsonDatatypeMapper.mapGenericListForTypeParameter<$cleanListType>(
+        json['$jsonKey'] as List?,
+        fromJson$cleanListType,
+      )''';
+    }
+
+    // List of class objects
+    if (property.listTypeIsClass) {
+      return '''${nullCheck}JsonDatatypeMapper.mapGenericList<$listType>(
+        json['$jsonKey'] as List?,
+        (e) => $listType.fromJson(e as Map<String, Object?>),
+      )''';
+    }
+
+    // List of primitives
+    return '''${nullCheck}JsonDatatypeMapper.mapGenericList<$listType>(
+        json['$jsonKey'] as List?,
+        (e) => e as $listType,
+      )''';
+  }
+
+  /// Builds mapping for Map types.
+  String _buildMapMapping(
+    FactoryModelField property,
+    String jsonKey,
+    bool isNullable,
+  ) {
+    if (isNullable) {
+      return "json['$jsonKey'] as ${property.type}";
+    }
+    return "(json['$jsonKey'] as ${property.type}?) ?? <String, dynamic>{}";
+  }
+
+  /// Builds mapping for generic type parameters.
+  String _buildGenericTypeMapping(
+    FactoryModelField property,
+    String jsonKey,
+    String cleanType,
+    bool isNullable,
+  ) {
+    if (isNullable) {
+      return '''json['$jsonKey'] == null 
+        ? null 
+        : fromJson$cleanType(json['$jsonKey'])''';
+    }
+    return "fromJson$cleanType(json['$jsonKey'])";
+  }
+
+  /// Builds mapping for nested object types.
+  String _buildNestedObjectMapping(
+    FactoryModelField property,
+    String jsonKey,
+    bool isNullable,
+  ) {
+    final cleanType = property.type.replaceAll('?', '');
+
+    if (isNullable) {
+      return '''JsonDatatypeMapper.mapNullableNestedObject<$cleanType>(
+        json,
+        '$jsonKey',
+        (map) => $cleanType.fromJson(map),
+      )''';
+    }
+    return '''JsonDatatypeMapper.mapNestedObject<$cleanType>(
+        json,
+        '$jsonKey',
+        (map) => $cleanType.fromJson(map),
+      )''';
+  }
+
+  /// Builds mapping for primitive types.
+  String _buildPrimitiveMapping(FactoryModelField property, String jsonKey) {
+    final hasDefault = property.value != null;
+
+    return '''JsonDatatypeMapper.mapForGeneric<${property.type}>(
+        json,
+        '$jsonKey',
+        defaultValue: ${property.value ?? 'null'},
+        mustWithDefault: $hasDefault,
+      )''';
   }
 }

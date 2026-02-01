@@ -1,4 +1,5 @@
 builders:
+  # Repository generator - generates network repository implementations
   repository_generator:
     import: "package:dragonfly_builder/builder.dart"
     builder_factories: ["repositoryGenerator"]
@@ -7,6 +8,7 @@ builders:
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
+  # Factory model generator - generates data/repository layer models
   factory_model_generator:
     import: "package:dragonfly_builder/builder.dart"
     builder_factories: ["factoryModelGenerator"]
@@ -15,6 +17,25 @@ builders:
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
+  # Event model generator - generates BLoC event classes
+  event_model_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["eventModelGenerator"]
+    build_extensions: { ".dart": [".event.part"] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
+
+  # State model generator - generates BLoC state classes
+  state_model_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["stateModelGenerator"]
+    build_extensions: { ".dart": [".state.part"] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
+
+  # Injectable config generator - generates DI configuration
   injectable_config_builder:
     import: "package:dragonfly_builder/builder.dart"
     builder_factories: ["injectableConfigBuilder"]
@@ -22,4 +43,3 @@ builders:
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
-

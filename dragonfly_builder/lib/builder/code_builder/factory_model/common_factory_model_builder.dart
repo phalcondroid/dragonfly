@@ -1,68 +1,196 @@
 import 'package:dart_style/dart_style.dart';
 import 'package:code_builder/code_builder.dart' as cb;
 import 'package:dragonfly_builder/builder/code_builder/factory_model/create_from_json_builder.dart';
+import 'package:dragonfly_builder/builder/code_builder/common/model_method_builder.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
+import 'package:dragonfly_builder/builder/models/factory_model_config.dart';
 import 'package:dragonfly_builder/builder/visitor/factory_model_visitor.dart';
 
+/// Builder for creating factory model classes.
 class CommonFactoryModelBuilder {
-  String createGenericModel(FactoryModelVisitor visitor,
-      List<FactoryModelField> properties, bool isGeneric) {
-    final construct = cb.Constructor((constructor) => constructor
-      ..optionalParameters
-          .addAll(properties.map((property) => cb.Parameter((p) => p
+  final _formatter = DartFormatter();
+
+  /// Creates the generated model class.
+  ///
+  /// Example output:
+  /// ```dart
+  /// class _$User implements FactoryModelWatcher, User {
+  ///   _$User({required this.name, required this.age});
+  ///
+  ///   factory _$User.fromJson(Map<String, Object?> json) { ... }
+  ///
+  ///   @override
+  ///   final String name;
+  ///
+  ///   @override
+  ///   final int age;
+  ///
+  ///   // Optional: toJson, toMap, equals, hashCode, toString, copyWith
+  /// }
+  /// ```
+  String createGenericModel(
+    FactoryModelVisitor visitor,
+    List<FactoryModelField> properties,
+    FactoryModelConfig config,
+  ) {
+    final genericTypeNames = visitor.genericTypes
+        .map((t) => t.getDisplayString(withNullability: false))
+        .toList();
+
+    final genericSuffix =
+        config.isGeneric && genericTypeNames.isNotEmpty ? '<${genericTypeNames.join(', ')}>' : '';
+
+    final factoryModel = cb.Class((cls) {
+      // Add generic type parameters
+      if (config.isGeneric && visitor.genericTypes.isNotEmpty) {
+        cls.types.addAll(
+          visitor.genericTypes.map(
+            (t) => cb.Reference(t.getDisplayString(withNullability: false)),
+          ),
+        );
+      }
+
+      cls
+        ..name = '_\$${visitor.className}'
+        ..implements.add(const cb.Reference('FactoryModelWatcher'))
+        ..implements.add(cb.Reference('${visitor.className}$genericSuffix'))
+        // Add fields
+        ..fields.addAll(_buildFields(properties))
+        // Add constructor
+        ..constructors.add(_buildConstructor(properties))
+        // Add fromJson factory
+        ..constructors.add(
+          CreateFromJsonBuilder().fromJsonBuilder(visitor, properties, config.isGeneric),
+        );
+
+      // Add optional methods based on config
+      _addOptionalMethods(
+        cls,
+        visitor.className!,
+        '_\$${visitor.className}',
+        properties,
+        config,
+        genericTypeNames,
+      );
+    });
+
+    final emitter = cb.DartEmitter(useNullSafetySyntax: true);
+    try {
+      return _formatter.format('${factoryModel.accept(emitter)}');
+    } catch (e) {
+      return '${factoryModel.accept(emitter)}';
+    }
+  }
+
+  /// Creates the abstract interface contract class.
+  String createAbstractInterface(
+    FactoryModelVisitor visitor,
+    List<FactoryModelField> properties,
+    bool isGeneric,
+  ) {
+    final genericTypeNames = visitor.genericTypes
+        .map((t) => t.getDisplayString(withNullability: false))
+        .toList();
+
+    final genericSuffix =
+        isGeneric && genericTypeNames.isNotEmpty ? '<${genericTypeNames.join(', ')}>' : '';
+
+    try {
+      final abstractInterface = cb.Class((c) {
+        c
+          ..abstract = true
+          ..name = '_\$${visitor.className}Contract$genericSuffix'
+          ..fields.addAll(properties.map((p) {
+            return cb.Field((f) => f
+              ..name = p.name
+              ..type = cb.Reference('${p.type} get '));
+          }));
+      });
+
+      final emitter = cb.DartEmitter(useNullSafetySyntax: true);
+      return _formatter.format('${abstractInterface.accept(emitter)}');
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /// Builds the class fields.
+  Iterable<cb.Field> _buildFields(List<FactoryModelField> properties) {
+    return properties.map((p) {
+      return cb.Field((f) => f
+        ..name = p.name
+        ..annotations.add(const cb.Reference('override'))
+        ..modifier = cb.FieldModifier.final$
+        ..type = cb.Reference(p.type));
+    });
+  }
+
+  /// Builds the default constructor.
+  cb.Constructor _buildConstructor(List<FactoryModelField> properties) {
+    return cb.Constructor((constructor) => constructor.optionalParameters.addAll(
+          properties.map((property) => cb.Parameter((p) => p
             ..name = property.name
             ..toThis = true
             ..named = true
-            ..required = property.isRequired))));
-
-    final factoryModel = cb.Class((cls) {
-      if (isGeneric) {
-        cls.types.add(cb.Reference(visitor.genericTypes.join(",")));
-      }
-      cls
-        ..implements.add(const cb.Reference("FactoryModelWatcher"))
-        ..name = "_\$${visitor.className}"
-        ..implements.add(isGeneric
-            ? cb.Reference(
-                "${visitor.className}<${visitor.genericTypes.join(",")}>")
-            : cb.Reference("${visitor.className}"))
-        ..fields.addAll(properties.map((p) {
-          var d = cb.Field((f) => f
-            ..name = p.name
-            ..annotations.add(cb.Reference("override"))
-            ..modifier = cb.FieldModifier.final$
-            ..type = cb.Reference(p.type));
-          return d;
-        }))
-        ..constructors.add(construct)
-        ..constructors.add(CreateFromJsonBuilder()
-            .fromJsonBuilder(visitor, properties, isGeneric))
-        ..sealed = false;
-    });
-
-    final emitter = cb.DartEmitter();
-    final String model =
-        DartFormatter().format("${factoryModel.accept(emitter)}");
-    return model;
+            ..required = property.isRequired)),
+        ));
   }
 
-  String createAbstractInterface(
-      visitor, List<FactoryModelField> properties, bool isGeneric) {
-    try {
-      final abstractInterface = cb.Class((c) => c
-        ..abstract = true
-        ..name = isGeneric
-            ? "_\$${visitor.className}Contract<${visitor.genericTypes.join(",")}>"
-            : "_\$${visitor.className}Contract"
-        ..fields.addAll(properties.map((p) {
-          return cb.Field((f) => f
-            ..name = p.name
-            ..type = cb.Reference("${p.type} get "));
-        })));
-      final emitter = cb.DartEmitter();
-      return DartFormatter().format('${abstractInterface.accept(emitter)}');
-    } catch (e) {
-      return "";
+  /// Adds optional methods based on configuration.
+  void _addOptionalMethods(
+    cb.ClassBuilder cls,
+    String className,
+    String generatedClassName,
+    List<FactoryModelField> properties,
+    FactoryModelConfig config,
+    List<String> genericTypes,
+  ) {
+    // Add toJson method
+    if (config.toJson) {
+      cls.methods.add(ModelMethodBuilder.buildToJson(
+        properties,
+        isGeneric: config.isGeneric,
+        genericTypes: genericTypes,
+      ));
+    }
+
+    // Add toMap method
+    if (config.toMap) {
+      cls.methods.add(ModelMethodBuilder.buildToMap(
+        properties,
+        isGeneric: config.isGeneric,
+        genericTypes: genericTypes,
+      ));
+    }
+
+    // Add equality operator and hashCode
+    if (config.equals) {
+      cls.methods.add(ModelMethodBuilder.buildEqualsOperator(className, properties));
+      cls.methods.add(ModelMethodBuilder.buildHashCode(properties));
+    }
+
+    // Add toString method
+    if (config.toStringMethod) {
+      cls.methods.add(ModelMethodBuilder.buildToString(className, properties));
+    }
+
+    // Add copyWith method
+    if (config.copyWith) {
+      cls.methods.add(ModelMethodBuilder.buildCopyWith(
+        className,
+        generatedClassName,
+        properties,
+        isGeneric: config.isGeneric,
+        genericTypes: genericTypes,
+      ));
+    }
+
+    // Add equality helper methods if needed
+    if (config.equals) {
+      final hasCollection = properties.any((p) => p.isDartList || p.isDartMap || p.isDartSet);
+      if (hasCollection) {
+        cls.methods.addAll(ModelMethodBuilder.buildEqualityHelpers());
+      }
     }
   }
 }
