@@ -54,6 +54,4 @@ abstract interface class Character implements _$CharacterContract {
   }) = _$Character;
 
   factory Character.fromJson(Map<String, Object?> value) = _$Character.fromJson;
-
-  factory Character.toJson() => _$Character.toJson;
 }

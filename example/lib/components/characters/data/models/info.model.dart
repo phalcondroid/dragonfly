@@ -96,4 +96,7 @@ abstract class _$InfoContract {
   String? get next;
 
   String? get prev;
+
+  Map<String, dynamic> toJson();
+  Map<String, Object?> toMap();
 }

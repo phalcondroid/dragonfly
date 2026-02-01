@@ -63,4 +63,7 @@ abstract class _$OriginContract {
   String get name;
 
   String get url;
+
+  Map<String, dynamic> toJson();
+  Map<String, Object?> toMap();
 }

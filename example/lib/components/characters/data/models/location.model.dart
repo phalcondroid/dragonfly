@@ -63,4 +63,7 @@ abstract class _$LocationContract {
   String get name;
 
   String get url;
+
+  Map<String, dynamic> toJson();
+  Map<String, Object?> toMap();
 }

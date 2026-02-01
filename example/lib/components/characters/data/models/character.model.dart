@@ -293,4 +293,21 @@ abstract class _$CharacterContract {
   String get url;
 
   String get created;
+
+  Map<String, dynamic> toJson();
+  Map<String, Object?> toMap();
+  Character copyWith({
+    int? id,
+    String? name,
+    String? status,
+    String? species,
+    String? type,
+    String? gender,
+    Origin? origin,
+    Location? location,
+    String? image,
+    List<String>? episode,
+    String? url,
+    String? created,
+  });
 }
