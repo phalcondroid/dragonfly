@@ -1,8 +1,9 @@
-import 'package:example/components/characters/presentation/views/character_view.dart';
-import 'package:flutter/material.dart';
 import 'package:dragonfly/dragonfly.dart';
 import 'package:example/components/characters/config/app_config.dart';
 import 'package:example/components/characters/config/injector.dart';
+import 'package:example/components/characters/presentation/features/character_feature.dart';
+import 'package:example/components/characters/presentation/screens/character_screen.dart';
+import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const CharacterViewProvider(),
+      home: CharacterFeatureProvider(child: const CharacterScreen()),
     );
   }
 }
