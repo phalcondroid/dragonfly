@@ -35,6 +35,33 @@ builders:
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
+  # Dragonfly bloc generator - generates BLoC mixins
+  dragonfly_bloc_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["dragonflyBlocGenerator"]
+    build_extensions: { ".dart": [".bloc.part"] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
+
+  # Dragonfly view generator - generates view mixins and state builders
+  dragonfly_view_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["dragonflyViewGenerator"]
+    build_extensions: { ".dart": [".view.part"] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
+
+  # Dragonfly feature generator - generates feature mixins and providers (new architecture)
+  dragonfly_feature_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["dragonflyFeatureGenerator"]
+    build_extensions: { ".dart": [".feature.part"] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]
+
   # Injectable config generator - generates DI configuration
   injectable_config_builder:
     import: "package:dragonfly_builder/builder.dart"

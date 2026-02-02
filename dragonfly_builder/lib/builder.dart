@@ -1,4 +1,7 @@
 import 'package:build/build.dart';
+import 'package:dragonfly_builder/builder/generators/dragonfly_bloc_generator.dart';
+import 'package:dragonfly_builder/builder/generators/dragonfly_feature_generator.dart';
+import 'package:dragonfly_builder/builder/generators/dragonfly_view_generator.dart';
 import 'package:dragonfly_builder/builder/generators/event_model_generator.dart';
 import 'package:dragonfly_builder/builder/generators/factory_model_generator.dart';
 import 'package:dragonfly_builder/builder/generators/injectable_config_generator.dart';
@@ -55,6 +58,49 @@ Builder eventModelGenerator(BuilderOptions options) => PartBuilder(
 Builder stateModelGenerator(BuilderOptions options) => PartBuilder(
       [StateModelGenerator()],
       '.state.dart',
+      options: options,
+    );
+
+/// Builder for @DragonflyBlocAnnotation annotated classes.
+///
+/// Generates BLoC mixins with:
+/// - Event handler registration helpers
+/// - State management utilities
+/// - Dispatch helpers
+///
+/// Output extension: `.bloc.dart`
+Builder dragonflyBlocGenerator(BuilderOptions options) => PartBuilder(
+      [DragonflyBlocGenerator()],
+      '.bloc.dart',
+      options: options,
+    );
+
+/// Builder for @DragonflyViewAnnotation annotated classes.
+///
+/// Generates view mixins with:
+/// - State-aware widget builder methods
+/// - Event dispatch helpers
+/// - BLoC access utilities
+/// - Standalone state builder widgets
+///
+/// Output extension: `.view.dart`
+Builder dragonflyViewGenerator(BuilderOptions options) => PartBuilder(
+      [DragonflyViewGenerator()],
+      '.view.dart',
+      options: options,
+    );
+
+/// Builder for @DragonflyFeature annotated classes.
+///
+/// Generates feature classes with:
+/// - State management utilities (when, maybeWhen, map)
+/// - Provider widget for auto-injection
+/// - BuildContext extensions for easy access
+///
+/// Output extension: `.feature.dart`
+Builder dragonflyFeatureGenerator(BuilderOptions options) => PartBuilder(
+      [DragonflyFeatureGenerator()],
+      '.feature.dart',
       options: options,
     );
 

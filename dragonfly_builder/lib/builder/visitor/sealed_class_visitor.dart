@@ -48,10 +48,10 @@ class SealedClassVisitor extends SimpleElementVisitor<void> {
     if (!element.isFactory) return;
 
     // Get the class name from the first factory constructor
-    className ??= element.enclosingElement3.name;
+    className ??= element.enclosingElement.name;
 
     // Check for generic types
-    final classElement = element.enclosingElement3 as ClassElement;
+    final classElement = element.enclosingElement as ClassElement;
     if (classElement.typeParameters.isNotEmpty) {
       isGeneric = true;
       genericTypes =

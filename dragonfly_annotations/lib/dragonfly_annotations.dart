@@ -1,7 +1,19 @@
 library;
 
 // Injectable annotations
-export 'annotations/injectable/injectable_annotations.dart' show Injectable;
+export 'annotations/injectable/injectable_annotations.dart'
+    show
+        Injectable,
+        InjectableUseCase,
+        Singleton,
+        LazySingleton,
+        Named,
+        Inject,
+        DragonflyInjectableInit,
+        useCaseComponent,
+        injectable,
+        singleton,
+        lazySingleton;
 export 'annotations/injectable/inyectar.dart';
 
 // Component annotations
@@ -15,6 +27,16 @@ export 'annotations/component/models/field.dart' show Field, JsonIgnore, JsonKey
 
 // Repository annotations
 export 'annotations/component/repositoriy/repository.dart' show Repository;
+
+// Presentation annotations (BLoC & View)
+export 'annotations/component/presentation/dragonfly_bloc.dart'
+    show DragonflyBloc;
+export 'annotations/component/presentation/dragonfly_view.dart'
+    show DragonflyView, DragonflyStateBuilder;
+
+// Feature annotations (New architecture)
+export 'annotations/component/presentation/feature/dragonfly_feature.dart'
+    show DragonflyFeature, InitialState, FeatureAction, SideEffect, Computed, StateSlot;
 
 // Network annotations
 export 'annotations/network/get.dart' show Get;

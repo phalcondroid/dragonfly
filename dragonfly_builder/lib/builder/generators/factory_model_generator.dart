@@ -86,7 +86,7 @@ class FactoryModelGenerator extends GeneratorForAnnotation<FactoryModel> {
 
       final String model = builder.createGenericModel(visitor, properties, config);
       final String interfaceContract =
-          builder.createAbstractInterface(visitor, properties, config.isGeneric);
+          builder.createAbstractInterface(visitor, properties, config);
 
       // Reset visitor state
       _resetVisitor(visitor);

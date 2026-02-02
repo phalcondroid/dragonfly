@@ -37,8 +37,9 @@ class CommonFactoryModelBuilder {
         .map((t) => t.getDisplayString(withNullability: false))
         .toList();
 
-    final genericSuffix =
-        config.isGeneric && genericTypeNames.isNotEmpty ? '<${genericTypeNames.join(', ')}>' : '';
+    final genericSuffix = config.isGeneric && genericTypeNames.isNotEmpty
+        ? '<${genericTypeNames.join(', ')}>'
+        : '';
 
     final factoryModel = cb.Class((cls) {
       // Add generic type parameters
@@ -60,7 +61,8 @@ class CommonFactoryModelBuilder {
         ..constructors.add(_buildConstructor(properties))
         // Add fromJson factory
         ..constructors.add(
-          CreateFromJsonBuilder().fromJsonBuilder(visitor, properties, config.isGeneric),
+          CreateFromJsonBuilder()
+              .fromJsonBuilder(visitor, properties, config.isGeneric),
         );
 
       // Add optional methods based on config
@@ -83,17 +85,22 @@ class CommonFactoryModelBuilder {
   }
 
   /// Creates the abstract interface contract class.
+  ///
+  /// This includes:
+  /// - Getter signatures for all properties
+  /// - Method signatures for toJson, toMap, copyWith (if enabled)
   String createAbstractInterface(
     FactoryModelVisitor visitor,
     List<FactoryModelField> properties,
-    bool isGeneric,
+    FactoryModelConfig config,
   ) {
     final genericTypeNames = visitor.genericTypes
         .map((t) => t.getDisplayString(withNullability: false))
         .toList();
 
-    final genericSuffix =
-        isGeneric && genericTypeNames.isNotEmpty ? '<${genericTypeNames.join(', ')}>' : '';
+    final genericSuffix = config.isGeneric && genericTypeNames.isNotEmpty
+        ? '<${genericTypeNames.join(', ')}>'
+        : '';
 
     try {
       final abstractInterface = cb.Class((c) {
@@ -105,6 +112,41 @@ class CommonFactoryModelBuilder {
               ..name = p.name
               ..type = cb.Reference('${p.type} get '));
           }));
+
+        // Add method signatures to the contract
+        // For generic models, these methods have different signatures (with function params)
+        // so we only add them for non-generic models
+        if (!config.isGeneric) {
+          if (config.toJson) {
+            c.methods.add(cb.Method((m) => m
+              ..name = 'toJson'
+              ..returns = const cb.Reference('Map<String, dynamic>')));
+          }
+
+          if (config.toMap) {
+            c.methods.add(cb.Method((m) => m
+              ..name = 'toMap'
+              ..returns = const cb.Reference('Map<String, Object?>')));
+          }
+
+          if (config.copyWith) {
+            final params = properties.map((p) {
+              String type = p.type;
+              if (!type.endsWith('?')) {
+                type = '$type?';
+              }
+              return cb.Parameter((param) => param
+                ..name = p.name
+                ..named = true
+                ..type = cb.Reference(type));
+            }).toList();
+
+            c.methods.add(cb.Method((m) => m
+              ..name = 'copyWith'
+              ..returns = cb.Reference('${visitor.className}$genericSuffix')
+              ..optionalParameters.addAll(params)));
+          }
+        }
       });
 
       final emitter = cb.DartEmitter(useNullSafetySyntax: true);
@@ -127,13 +169,14 @@ class CommonFactoryModelBuilder {
 
   /// Builds the default constructor.
   cb.Constructor _buildConstructor(List<FactoryModelField> properties) {
-    return cb.Constructor((constructor) => constructor.optionalParameters.addAll(
-          properties.map((property) => cb.Parameter((p) => p
-            ..name = property.name
-            ..toThis = true
-            ..named = true
-            ..required = property.isRequired)),
-        ));
+    return cb.Constructor(
+        (constructor) => constructor.optionalParameters.addAll(
+              properties.map((property) => cb.Parameter((p) => p
+                ..name = property.name
+                ..toThis = true
+                ..named = true
+                ..required = property.isRequired)),
+            ));
   }
 
   /// Adds optional methods based on configuration.
@@ -165,7 +208,8 @@ class CommonFactoryModelBuilder {
 
     // Add equality operator and hashCode
     if (config.equals) {
-      cls.methods.add(ModelMethodBuilder.buildEqualsOperator(className, properties));
+      cls.methods
+          .add(ModelMethodBuilder.buildEqualsOperator(className, properties));
       cls.methods.add(ModelMethodBuilder.buildHashCode(properties));
     }
 
@@ -187,7 +231,8 @@ class CommonFactoryModelBuilder {
 
     // Add equality helper methods if needed
     if (config.equals) {
-      final hasCollection = properties.any((p) => p.isDartList || p.isDartMap || p.isDartSet);
+      final hasCollection =
+          properties.any((p) => p.isDartList || p.isDartMap || p.isDartSet);
       if (hasCollection) {
         cls.methods.addAll(ModelMethodBuilder.buildEqualityHelpers());
       }

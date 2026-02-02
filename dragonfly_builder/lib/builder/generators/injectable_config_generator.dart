@@ -5,6 +5,7 @@ import 'package:code_builder/code_builder.dart' as cb;
 import 'package:dart_style/dart_style.dart';
 import 'package:dragonfly_annotations/annotations/injectable/injectable_annotations.dart';
 import 'package:dragonfly_builder/builder/models/dependency_config.dart';
+import 'package:dragonfly_builder/builder/models/importable_type.dart';
 import 'package:dragonfly_builder/builder/models/injectable_type.dart';
 import 'package:dragonfly_builder/builder/visitor/injectable_visitor.dart';
 import 'package:source_gen/source_gen.dart';
@@ -50,19 +51,12 @@ class InjectableConfigGenerator
   String _generateConfigCode(List<DependencyConfig> dependencies) {
     final imports = <String>{};
 
-    // Collect all imports
+    // Collect all imports (including nested type arguments)
     for (final dep in dependencies) {
-      if (dep.type.import != null) {
-        imports.add(dep.type.import!);
-      }
-      if (dep.typeImpl.import != null &&
-          dep.typeImpl.import != dep.type.import) {
-        imports.add(dep.typeImpl.import!);
-      }
+      _collectImportsFromType(dep.type, imports);
+      _collectImportsFromType(dep.typeImpl, imports);
       for (final param in dep.dependencies) {
-        if (param.type.import != null) {
-          imports.add(param.type.import!);
-        }
+        _collectImportsFromType(param.type, imports);
       }
     }
 
@@ -99,6 +93,19 @@ class InjectableConfigGenerator
     } catch (e) {
       log.warning('Failed to format generated code: $e');
       return code.toString();
+    }
+  }
+
+  /// Recursively collects imports from a type and all its type arguments
+  void _collectImportsFromType(ImportableType type, Set<String> imports) {
+    if (type.import != null) {
+      imports.add(type.import!);
+    }
+    if (type.otherImports != null) {
+      imports.addAll(type.otherImports!);
+    }
+    for (final typeArg in type.typeArguments) {
+      _collectImportsFromType(typeArg, imports);
     }
   }
 
@@ -155,19 +162,29 @@ class InjectableConfigGenerator
 
     // Build constructor call with dependencies
     final params = dep.dependencies.map((d) {
+      // If the dependency has an instanceName, use it in the get call
+      if (d.instanceName != null && d.instanceName!.isNotEmpty) {
+        return "gh.get<${d.type.name}>(instanceName: '${d.instanceName}')";
+      }
       return 'gh.get<${d.type.name}>()';
     }).join(', ');
 
     final constructor = '${dep.typeImpl.name}($params)';
 
+    // Build instanceName parameter if present
+    final instanceNameParam =
+        dep.instanceName != null && dep.instanceName!.isNotEmpty
+            ? ", instanceName: '${dep.instanceName}'"
+            : '';
+
     switch (dep.injectableType) {
       case InjectableType.singleton:
-        return 'gh.registerSingleton$registerType($constructor);';
+        return 'gh.registerSingleton$registerType($constructor$instanceNameParam);';
       case InjectableType.lazySingleton:
-        return 'gh.registerLazySingleton$registerType(() => $constructor);';
+        return 'gh.registerLazySingleton$registerType(() => $constructor$instanceNameParam);';
       case InjectableType.factory:
       default:
-        return 'gh.registerFactory$registerType(() => $constructor);';
+        return 'gh.registerFactory$registerType(() => $constructor$instanceNameParam);';
     }
   }
 }

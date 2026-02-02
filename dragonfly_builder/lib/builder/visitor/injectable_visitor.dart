@@ -1,6 +1,9 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/visitor.dart';
 import 'package:build/build.dart';
+import 'package:dragonfly_annotations/annotations/component/presentation/dragonfly_bloc.dart';
+import 'package:dragonfly_annotations/annotations/component/presentation/feature/dragonfly_feature.dart';
 import 'package:dragonfly_annotations/annotations/component/repositoriy/repository.dart';
 import 'package:dragonfly_annotations/annotations/injectable/injectable_annotations.dart';
 import 'package:dragonfly_builder/builder/models/dependency_config.dart';
@@ -17,6 +20,10 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
   // Type checkers for annotations
   static final _useCaseChecker = TypeChecker.fromRuntime(InjectableUseCase);
   static final _repositoryChecker = TypeChecker.fromRuntime(Repository);
+  static final _blocChecker = TypeChecker.fromRuntime(DragonflyBloc);
+  static final _featureChecker = TypeChecker.fromRuntime(DragonflyFeature);
+  static final _injectChecker = TypeChecker.fromRuntime(Inject);
+  static final _namedChecker = TypeChecker.fromRuntime(Named);
 
   InjectableVisitor(this.buildStep);
 
@@ -33,6 +40,18 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
       _processRepository(element);
       return;
     }
+
+    // Check for DragonflyBloc annotation
+    if (_blocChecker.hasAnnotationOfExact(element)) {
+      _processDragonflyBloc(element);
+      return;
+    }
+
+    // Check for DragonflyFeature annotation
+    if (_featureChecker.hasAnnotationOfExact(element)) {
+      _processDragonflyFeature(element);
+      return;
+    }
   }
 
   /// Process @InjectableUseCase annotated classes
@@ -46,6 +65,7 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
     final envList = annotation.peek('env')?.listValue;
     final scope = annotation.peek('scope')?.stringValue;
     final order = annotation.peek('order')?.intValue ?? 0;
+    final instanceName = annotation.peek('instanceName')?.stringValue;
 
     // Get environments
     final environments = envList
@@ -60,6 +80,9 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
       final constructor = element.constructors.first;
 
       final deps = constructor.parameters.map((param) {
+        // Check for @Inject or @Named annotation on the parameter
+        final paramInstanceName = _getParameterInstanceName(param);
+
         return InjectedDependency(
           type: ImportableType(
             name: param.type.getDisplayString(withNullability: false),
@@ -67,6 +90,7 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
           ),
           paramName: param.name,
           isPositional: param.isPositional,
+          instanceName: paramInstanceName,
         );
       }).toList();
 
@@ -76,11 +100,9 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
         import: element.librarySource.uri.toString(),
       );
 
+      // Extract type with all type arguments and their imports
       final type = asType != null
-          ? ImportableType(
-              name: asType.getDisplayString(withNullability: false),
-              import: asType.element?.librarySource?.uri.toString(),
-            )
+          ? _extractImportableType(asType)
           : typeImpl;
 
       final config = DependencyConfig(
@@ -91,12 +113,53 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
         environments: environments,
         scope: scope,
         orderPosition: order,
+        instanceName: instanceName,
       );
 
       dependencies.add(config);
     } catch (e, s) {
       print("==========>>>>>>>> error processing use case: $e, $s");
     }
+  }
+
+  /// Extract instance name from @Inject or @Named annotation on a parameter
+  String? _getParameterInstanceName(ParameterElement param) {
+    // Check for @Inject annotation
+    if (_injectChecker.hasAnnotationOfExact(param)) {
+      final injectAnnotation =
+          ConstantReader(_injectChecker.firstAnnotationOfExact(param));
+      return injectAnnotation.peek('name')?.stringValue;
+    }
+
+    // Check for @Named annotation
+    if (_namedChecker.hasAnnotationOfExact(param)) {
+      final namedAnnotation =
+          ConstantReader(_namedChecker.firstAnnotationOfExact(param));
+      return namedAnnotation.peek('name')?.stringValue;
+    }
+
+    return null;
+  }
+
+  /// Recursively extracts ImportableType with all type arguments and their imports
+  ImportableType _extractImportableType(DartType dartType) {
+    final typeName = dartType.getDisplayString(withNullability: false);
+    final element = dartType.element;
+    final import = element?.librarySource?.uri.toString();
+
+    // Extract type arguments recursively
+    final typeArguments = <ImportableType>[];
+    if (dartType is InterfaceType) {
+      for (final typeArg in dartType.typeArguments) {
+        typeArguments.add(_extractImportableType(typeArg));
+      }
+    }
+
+    return ImportableType(
+      name: typeName,
+      import: import,
+      typeArguments: typeArguments,
+    );
   }
 
   /// Process @Repository annotated classes
@@ -109,6 +172,7 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
     final envList = annotation.peek('env')?.listValue;
     final scope = annotation.peek('scope')?.stringValue;
     final order = annotation.peek('order')?.intValue ?? 0;
+    final instanceName = annotation.peek('instanceName')?.stringValue;
 
     // Get environments
     final environments = envList
@@ -128,11 +192,9 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
         import: element.librarySource.uri.toString(),
       );
 
+      // Extract type with all type arguments and their imports
       final type = asType != null
-          ? ImportableType(
-              name: asType.getDisplayString(withNullability: false),
-              import: asType.element?.librarySource?.uri.toString(),
-            )
+          ? _extractImportableType(asType)
           : typeImpl;
 
       // Repositories typically don't have constructor dependencies
@@ -145,11 +207,113 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
         environments: environments,
         scope: scope,
         orderPosition: order,
+        instanceName: instanceName,
       );
 
       dependencies.add(config);
     } catch (e, s) {
       print("==========>>>>>>>> error processing repository: $e, $s");
+    }
+  }
+
+  /// Process @DragonflyBloc annotated classes
+  void _processDragonflyBloc(ClassElement element) {
+    // BLoCs are registered as factories (new instance each time)
+    int injectableType = InjectableType.factory;
+
+    if (element.constructors.isEmpty) return;
+
+    try {
+      final constructor = element.constructors.first;
+
+      // Extract constructor dependencies with @Inject support
+      final deps = constructor.parameters.map((param) {
+        final paramInstanceName = _getParameterInstanceName(param);
+
+        return InjectedDependency(
+          type: ImportableType(
+            name: param.type.getDisplayString(withNullability: false),
+            import: param.type.element?.librarySource?.uri.toString(),
+          ),
+          paramName: param.name,
+          isPositional: param.isPositional,
+          instanceName: paramInstanceName,
+        );
+      }).toList();
+
+      final typeImpl = ImportableType(
+        name: element.name,
+        import: element.librarySource.uri.toString(),
+      );
+
+      final config = DependencyConfig(
+        type: typeImpl,
+        typeImpl: typeImpl,
+        injectableType: injectableType,
+        dependencies: deps,
+        environments: [],
+        orderPosition: 100, // BLoCs are registered after repositories and use cases
+      );
+
+      dependencies.add(config);
+    } catch (e, s) {
+      print("==========>>>>>>>> error processing bloc: $e, $s");
+    }
+  }
+
+  /// Process @DragonflyFeature annotated classes
+  void _processDragonflyFeature(ClassElement element) {
+    final annotation =
+        ConstantReader(_featureChecker.firstAnnotationOfExact(element));
+
+    // Check if injectable is enabled (default: true)
+    final injectable = annotation.peek('injectable')?.boolValue ?? true;
+    if (!injectable) return;
+
+    final order = annotation.peek('order')?.intValue ?? 100;
+    final scope = annotation.peek('scope')?.stringValue;
+
+    // Features are registered as factories (new instance each time)
+    int injectableType = InjectableType.factory;
+
+    if (element.constructors.isEmpty) return;
+
+    try {
+      final constructor = element.constructors.first;
+
+      // Extract constructor dependencies with @Inject support
+      final deps = constructor.parameters.map((param) {
+        final paramInstanceName = _getParameterInstanceName(param);
+
+        return InjectedDependency(
+          type: ImportableType(
+            name: param.type.getDisplayString(withNullability: false),
+            import: param.type.element?.librarySource?.uri.toString(),
+          ),
+          paramName: param.name,
+          isPositional: param.isPositional,
+          instanceName: paramInstanceName,
+        );
+      }).toList();
+
+      final typeImpl = ImportableType(
+        name: element.name,
+        import: element.librarySource.uri.toString(),
+      );
+
+      final config = DependencyConfig(
+        type: typeImpl,
+        typeImpl: typeImpl,
+        injectableType: injectableType,
+        dependencies: deps,
+        environments: [],
+        scope: scope,
+        orderPosition: order,
+      );
+
+      dependencies.add(config);
+    } catch (e, s) {
+      print("==========>>>>>>>> error processing feature: $e, $s");
     }
   }
 }

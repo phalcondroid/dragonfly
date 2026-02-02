@@ -53,10 +53,10 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
     }
 
     // Get class name
-    className = element.enclosingElement3.name;
+    className = element.enclosingElement.name;
 
     // Capture generic types from the interface declaration
-    final classElement = element.enclosingElement3 as ClassElement;
+    final classElement = element.enclosingElement as ClassElement;
     if (classElement.typeParameters.isNotEmpty) {
       isGeneric = true;
       _genericTypeNames = classElement.typeParameters.map((t) => t.name).toSet();

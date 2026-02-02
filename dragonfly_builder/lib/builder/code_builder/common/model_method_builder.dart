@@ -168,7 +168,8 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
 
   /// Builds a toMap method that returns Map<String, Object?>.
   ///
-  /// Similar to toJson but with Object? type.
+  /// Similar to toJson but with Object? type. Uses toJson() for nested objects
+  /// since that is the standard serialization method all models implement.
   static cb.Method buildToMap(
     List<FactoryModelField> properties, {
     bool isGeneric = false,
@@ -181,19 +182,22 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
       String valueExpr;
 
       if (isGeneric && genericTypes.contains(p.type.replaceAll('?', ''))) {
-        valueExpr = '_toMap${p.type.replaceAll('?', '')}(${p.name})';
+        // For generic types, use the provided toJson function
+        valueExpr = '_toJson${p.type.replaceAll('?', '')}(${p.name})';
       } else if (p.isClass && !p.isDartList && !p.isDartMap && !p.isDartSet) {
+        // Nested object - use toJson() as it's the standard method
         if (p.type.endsWith('?')) {
-          valueExpr = '${p.name}?.toMap()';
+          valueExpr = '${p.name}?.toJson()';
         } else {
-          valueExpr = '${p.name}.toMap()';
+          valueExpr = '${p.name}.toJson()';
         }
       } else if (p.isDartList && p.listTypeIsClass) {
+        // List of objects - use toJson()
         if (isGeneric && genericTypes.contains(p.listType.replaceAll('?', ''))) {
           valueExpr =
-              '${p.name}.map((e) => _toMap${p.listType.replaceAll('?', '')}(e)).toList()';
+              '${p.name}.map((e) => _toJson${p.listType.replaceAll('?', '')}(e)).toList()';
         } else {
-          valueExpr = '${p.name}.map((e) => e.toMap()).toList()';
+          valueExpr = '${p.name}.map((e) => e.toJson()).toList()';
         }
       } else {
         valueExpr = p.name;
@@ -210,11 +214,12 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
         ..returns = const cb.Reference('Map<String, Object?>')
         ..body = cb.Code(body);
 
+      // Use toJson function parameters for generic types (same as toJson method)
       if (isGeneric) {
         for (final genType in genericTypes) {
           m.requiredParameters.add(cb.Parameter((p) => p
-            ..name = '_toMap$genType'
-            ..type = cb.Reference('Object? Function($genType value)')));
+            ..name = '_toJson$genType'
+            ..type = cb.Reference('dynamic Function($genType value)')));
         }
       }
     });

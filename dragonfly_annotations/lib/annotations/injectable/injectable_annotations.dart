@@ -143,8 +143,21 @@ class Injectable {
   /// of annotating the element with @Scope
   final String? scope;
 
+  /// The name to register this instance under.
+  /// Use this when you need multiple implementations of the same interface.
+  /// 
+  /// Example:
+  /// ```dart
+  /// @Injectable(as: UserRepository, instanceName: 'remote')
+  /// class RemoteUserRepository implements UserRepository {}
+  /// 
+  /// @Injectable(as: UserRepository, instanceName: 'local')
+  /// class LocalUserRepository implements UserRepository {}
+  /// ```
+  final String? instanceName;
+
   /// default constructor
-  const Injectable({this.as, this.env, this.scope, this.order});
+  const Injectable({this.as, this.env, this.scope, this.order, this.instanceName});
 }
 
 @Target({TargetKind.classType, TargetKind.method, TargetKind.getter})
@@ -171,6 +184,7 @@ class InjectableUseCase extends Injectable {
     super.env,
     super.scope,
     super.order,
+    super.instanceName,
   });
 }
 
@@ -206,6 +220,7 @@ class Singleton extends Injectable {
     super.env,
     super.scope,
     super.order,
+    super.instanceName,
   });
 }
 
@@ -224,6 +239,7 @@ class LazySingleton extends Injectable {
     this.dispose,
     super.scope,
     super.order,
+    super.instanceName,
   });
 
   /// a dispose callback function to be
@@ -264,6 +280,32 @@ class Named {
 /// const instance of [Named]
 /// with default arguments
 const named = Named('');
+
+/// Annotation to inject a named dependency into a constructor parameter.
+/// 
+/// Use this to specify which named instance should be injected when
+/// there are multiple implementations of the same interface.
+/// 
+/// Example:
+/// ```dart
+/// class UserService {
+///   UserService(
+///     @Inject('remote') this.remoteRepo,
+///     @Inject('local') this.localRepo,
+///   );
+///   
+///   final UserRepository remoteRepo;
+///   final UserRepository localRepo;
+/// }
+/// ```
+@Target({TargetKind.parameter, TargetKind.field})
+class Inject {
+  /// The instance name to inject
+  final String name;
+
+  /// default constructor
+  const Inject(this.name);
+}
 
 /// Used to annotate dependencies which are
 /// registered under certain environments
