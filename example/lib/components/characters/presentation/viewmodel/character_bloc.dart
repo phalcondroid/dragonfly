@@ -1,136 +1,99 @@
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:example/components/characters/data/models/character.dart';
-import 'package:example/components/characters/data/repositories/character_repository.dart';
-import 'package:example/components/characters/presentation/events/user_event.dart';
-import 'package:example/components/characters/presentation/states/user_state.dart';
+import 'package:example/components/characters/data/models/service_response.dart';
+import 'package:example/components/characters/domain/use_cases/get_user_list_use_case.dart';
+import 'package:example/components/characters/presentation/events/character_event.dart';
+import 'package:example/components/characters/presentation/states/character_state.dart';
 
 part 'character_bloc.bloc.dart';
 
-/// BLoC for managing character/user state.
-///
-/// This BLoC handles events related to user operations and emits
-/// corresponding states that the UI can react to.
-///
-/// Example usage:
-/// ```dart
-/// // In a widget
-/// final bloc = context.bloc<CharacterBloc>();
-///
-/// // Dispatch events
-/// bloc.add(const UserEvent.loading());
-/// bloc.add(UserEvent.fetchUser(userId: 1));
-///
-/// // Listen to state changes
-/// DragonflyBlocBuilder<CharacterBloc, UserState>(
-///   builder: (context, state) {
-///     return state.when(
-///       initial: () => Text('Welcome'),
-///       loading: () => CircularProgressIndicator(),
-///       loaded: (user) => Text(user.name),
-///       error: (message) => Text('Error: $message'),
-///     );
-///   },
-/// )
-/// ```
-@DragonflyBlocAnnotation(
-  event: UserEvent,
-  state: UserState,
+@DragonflyBloc(
+  event: CharacterEvent,
+  state: CharacterState,
   enableLogging: true,
 )
-class CharacterBloc extends DragonflyBloc<UserEvent, UserState>
+class CharacterBloc extends DragonflyBlocBase<CharacterEvent, CharacterState>
     with _$CharacterBlocMixin {
-  CharacterBloc(this._characterRepository) : super(const UserState.initial()) {
-    // Register event handlers
-    on<UserEventLoading>(_onLoading);
-    on<UserEventFetchUser>(_onFetchUser);
-    on<UserEventDeleteUser>(_onDeleteUser);
-    on<UserEventUpdateUser>(_onUpdateUser);
+  CharacterBloc(@Inject('GetUserList') this._getUserListUseCase)
+    : super(const CharacterState.initial()) {
+    on<CharacterEventLoading>(_onLoading);
+    on<CharacterEventFetch>(_onFetch);
+    on<CharacterEventDelete>(_onDelete);
+    on<CharacterEventUpdate>(_onUpdate);
   }
 
-  final CharacterRepository _characterRepository;
+  final GetUserListUseCase _getUserListUseCase;
 
-  /// Handle loading event.
   Future<void> _onLoading(
-    UserEventLoading event,
-    Emitter<UserState> emit,
+    CharacterEventLoading event,
+    Emitter<CharacterState> emit,
   ) async {
-    emit(const UserState.loading());
+    emit(const CharacterState.loading());
   }
 
-  /// Handle fetch user event.
-  Future<void> _onFetchUser(
-    UserEventFetchUser event,
-    Emitter<UserState> emit,
+  Future<void> _onFetch(
+    CharacterEventFetch event,
+    Emitter<CharacterState> emit,
   ) async {
-    emit(const UserState.loading());
+    emit(const CharacterState.loading());
 
-    try {
-      final response = await _characterRepository.getAll("Rick", [
-        "1",
-        "2",
-        "3",
-      ]);
+    final result = await _getUserListUseCase.call("Rick", ["1", "2", "3"]);
 
-      // ServiceResponse has results property with the list of characters
-      final characters = response.results;
-
-      if (characters.isNotEmpty) {
-        emit(UserState.loaded(user: characters.first));
-      } else {
-        emit(const UserState.error(message: 'No characters found'));
-      }
-    } catch (e) {
-      emit(UserState.error(message: e.toString()));
-    }
+    result.fold(
+      (error) => emit(CharacterState.error(message: error.toString())),
+      (response) {
+        final characters = response.results;
+        if (characters.isNotEmpty) {
+          emit(CharacterState.loaded(character: characters.first));
+        } else {
+          emit(const CharacterState.error(message: 'No characters found'));
+        }
+      },
+    );
   }
 
-  /// Handle delete user event.
-  Future<void> _onDeleteUser(
-    UserEventDeleteUser event,
-    Emitter<UserState> emit,
+  Future<void> _onDelete(
+    CharacterEventDelete event,
+    Emitter<CharacterState> emit,
   ) async {
-    emit(const UserState.loading());
+    emit(const CharacterState.loading());
 
     try {
-      // Simulate deletion
       await Future.delayed(const Duration(seconds: 1));
-      emit(const UserState.initial());
+      emit(const CharacterState.initial());
     } catch (e) {
-      emit(UserState.error(message: e.toString()));
+      emit(CharacterState.error(message: e.toString()));
     }
   }
 
-  /// Handle update user event.
-  Future<void> _onUpdateUser(
-    UserEventUpdateUser event,
-    Emitter<UserState> emit,
+  Future<void> _onUpdate(
+    CharacterEventUpdate event,
+    Emitter<CharacterState> emit,
   ) async {
-    emit(const UserState.loading());
+    emit(const CharacterState.loading());
 
     try {
-      // Simulate update - in real app, call repository
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Create updated user (using copyWith if available)
-      final updatedUser = Character(
-        id: event.user.id,
+      final updated = Character(
+        id: event.character.id,
         name: event.newName,
-        status: event.user.status,
-        species: event.user.species,
-        type: event.user.type,
-        gender: event.user.gender,
-        origin: event.user.origin,
-        location: event.user.location,
-        image: event.user.image,
-        episode: event.user.episode,
-        url: event.user.url,
-        created: event.user.created,
+        status: event.character.status,
+        species: event.character.species,
+        type: event.character.type,
+        gender: event.character.gender,
+        origin: event.character.origin,
+        location: event.character.location,
+        image: event.character.image,
+        episode: event.character.episode,
+        url: event.character.url,
+        created: event.character.created,
       );
 
-      emit(UserState.loaded(user: updatedUser));
+      emit(CharacterState.loaded(character: updated));
     } catch (e) {
-      emit(UserState.error(message: e.toString()));
+      emit(CharacterState.error(message: e.toString()));
     }
   }
 }

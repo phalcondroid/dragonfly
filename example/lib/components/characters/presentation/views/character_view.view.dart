@@ -16,7 +16,7 @@ mixin _$CharacterViewMixin on StatelessWidget {
   }
 
   /// Dispatches an event to the bloc.
-  void dispatch(BuildContext context, UserEvent event) {
+  void dispatch(BuildContext context, CharacterEvent event) {
     getBloc(context).add(event);
   }
 
@@ -27,17 +27,17 @@ mixin _$CharacterViewMixin on StatelessWidget {
     BuildContext context, {
     required Widget Function() onInitial,
     required Widget Function() onLoading,
-    required Widget Function(Character user) onLoaded,
-    required Widget Function(List<Character> users) onUserList,
+    required Widget Function(Character character) onLoaded,
+    required Widget Function(List<Character> characters) onCharacterList,
     required Widget Function(String message) onError,
   }) {
-    return DragonflyBlocBuilder<CharacterBloc, UserState>(
+    return DragonflyBlocBuilder<CharacterBloc, CharacterState>(
       builder: (context, state) {
         return state.when(
           initial: onInitial,
           loading: onLoading,
-          loaded: (user) => onLoaded(user),
-          userList: (users) => onUserList(users),
+          loaded: (character) => onLoaded(character),
+          characterList: (characters) => onCharacterList(characters),
           error: (message) => onError(message),
         );
       },
@@ -50,10 +50,10 @@ mixin _$CharacterViewMixin on StatelessWidget {
   Widget withStateListener(
     BuildContext context, {
     required Widget child,
-    required void Function(BuildContext, UserState) listener,
-    bool Function(UserState, UserState)? listenWhen,
+    required void Function(BuildContext, CharacterState) listener,
+    bool Function(CharacterState, CharacterState)? listenWhen,
   }) {
-    return DragonflyBlocListener<CharacterBloc, UserState>(
+    return DragonflyBlocListener<CharacterBloc, CharacterState>(
       listener: listener,
       listenWhen: listenWhen,
       child: child,
@@ -61,23 +61,48 @@ mixin _$CharacterViewMixin on StatelessWidget {
   }
 }
 
-/// A standalone widget that builds based on [UserState] variants.
-class UserStateBuilderWidget extends StatelessWidget {
-  const UserStateBuilderWidget({
+/// Wrapper widget that provides [CharacterBloc] to [CharacterView].
+///
+/// Use this instead of manually wrapping with DragonflyBlocProvider.
+/// ```dart
+/// // Instead of:
+/// DragonflyBlocProvider<CharacterBloc>(
+///   create: (context) => DragonflyContainer.I.get<CharacterBloc>(),
+///   child: const CharacterView(),
+/// )
+///
+/// // Use:
+/// const CharacterViewProvider()
+/// ```
+class CharacterViewProvider extends StatelessWidget {
+  const CharacterViewProvider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DragonflyBlocProvider<CharacterBloc>(
+      create: (context) => DragonflyContainer.I.get<CharacterBloc>(),
+      child: const CharacterView(),
+    );
+  }
+}
+
+/// A standalone widget that builds based on [CharacterState] variants.
+class CharacterStateBuilderWidget extends StatelessWidget {
+  const CharacterStateBuilderWidget({
     super.key,
     required this.state,
     required this.onInitial,
     required this.onLoading,
     required this.onLoaded,
-    required this.onUserList,
+    required this.onCharacterList,
     required this.onError,
   });
 
-  final UserState state;
+  final CharacterState state;
   final Widget Function() onInitial;
   final Widget Function() onLoading;
-  final Widget Function(Character user) onLoaded;
-  final Widget Function(List<Character> users) onUserList;
+  final Widget Function(Character character) onLoaded;
+  final Widget Function(List<Character> characters) onCharacterList;
   final Widget Function(String message) onError;
 
   @override
@@ -85,8 +110,8 @@ class UserStateBuilderWidget extends StatelessWidget {
     return state.when(
       initial: onInitial,
       loading: onLoading,
-      loaded: (user) => onLoaded(user),
-      userList: (users) => onUserList(users),
+      loaded: (character) => onLoaded(character),
+      characterList: (characters) => onCharacterList(characters),
       error: (message) => onError(message),
     );
   }

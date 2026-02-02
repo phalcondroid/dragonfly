@@ -9,12 +9,13 @@ part of 'character_bloc.dart';
 /// Generated mixin for CharacterBloc.
 ///
 /// Provides helper methods for event handling and state management.
-mixin _$CharacterBlocMixin on DragonflyBloc<UserEvent, UserState> {
+mixin _$CharacterBlocMixin
+    on DragonflyBlocBase<CharacterEvent, CharacterState> {
   /// Dispatches an event to the bloc.
-  void dispatch(UserEvent event) => add(event);
+  void dispatch(CharacterEvent event) => add(event);
 
   /// The current state of the bloc.
-  UserState get currentState => state;
+  CharacterState get currentState => state;
 
   @override
   void onError(Object error, StackTrace stackTrace) {
