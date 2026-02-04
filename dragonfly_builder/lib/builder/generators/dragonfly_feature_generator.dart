@@ -5,30 +5,30 @@ import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:glob/glob.dart';
 import 'package:source_gen/source_gen.dart';
 
-/// Generator for @DragonflyFeature annotated classes.
+/// Generator for @DragonflyStateManager annotated classes.
 ///
 /// This generator creates:
-/// - A mixin with helper methods for the feature
+/// - A mixin with helper methods for the state manager
 /// - A typed `when` method for state handling
 /// - A provider widget for easy injection
 /// - Registration in DI if injectable is true
 ///
 /// Example input:
 /// ```dart
-/// @DragonflyFeature()
+/// @DragonflyStateManager()
 /// class CharacterFeature extends Feature<CharacterState> {
 ///   @InitialState()
 ///   CharacterState get initialState => const CharacterState.initial();
 ///
-///   @Intent()
+///   @StateAction()
 ///   Future<void> fetchCharacter(int id) async { ... }
 /// }
 /// ```
-class DragonflyFeatureGenerator
-    extends GeneratorForAnnotation<DragonflyFeature> {
+class DragonflyStateManagerGenerator
+    extends GeneratorForAnnotation<DragonflyStateManager> {
   final _formatter = DartFormatter();
 
-  static final _actionChecker = TypeChecker.fromRuntime(FeatureAction);
+  static final _actionChecker = TypeChecker.fromRuntime(StateAction);
   static final _computedChecker = TypeChecker.fromRuntime(Computed);
   static final _initialStateChecker = TypeChecker.fromRuntime(InitialState);
 
@@ -40,7 +40,7 @@ class DragonflyFeatureGenerator
   ) async {
     if (element is! ClassElement) {
       throw InvalidGenerationSourceError(
-        '@DragonflyFeature can only be applied to classes.',
+        '@DragonflyStateManager can only be applied to classes.',
         element: element,
       );
     }
@@ -62,20 +62,20 @@ class DragonflyFeatureGenerator
     final stateVariants = await _findStateVariants(buildStep, stateType);
 
     try {
-      final code = _generateFeatureCode(
+      final code = _generateViewCode(
         className: className,
         stateType: stateType,
         logging: logging,
         injectable: injectable,
-        intents: intents,
+        actions: intents,
         computedProps: computedProps,
         stateVariants: stateVariants,
       );
 
       return _formatter.format(code);
     } catch (e, stackTrace) {
-      log.severe('DragonflyFeatureGenerator error: $e\n$stackTrace');
-      return '// Error generating feature code: $e';
+      log.severe('DragonflyStateManagerGenerator error: $e\n$stackTrace');
+      return '// Error generating state manager code: $e';
     }
   }
 
@@ -224,19 +224,19 @@ class DragonflyFeatureGenerator
     return s[0].toUpperCase() + s.substring(1);
   }
 
-  String _generateFeatureCode({
+  String _generateViewCode({
     required String className,
     required String stateType,
     required bool logging,
     required bool injectable,
-    required List<_IntentInfo> intents,
+    required List<_IntentInfo> actions,
     required List<_ComputedInfo> computedProps,
     required List<_StateVariant> stateVariants,
   }) {
     final buffer = StringBuffer();
 
     // Generate mixin
-    _generateMixin(buffer, className, stateType, logging, intents, computedProps, stateVariants);
+    _generateMixin(buffer, className, stateType, logging, actions, computedProps, stateVariants);
 
     buffer.writeln();
 
@@ -256,150 +256,25 @@ class DragonflyFeatureGenerator
     String className,
     String stateType,
     bool logging,
-    List<_IntentInfo> intents,
+    List<_IntentInfo> actions,
     List<_ComputedInfo> computedProps,
     List<_StateVariant> stateVariants,
   ) {
     buffer.writeln('/// Generated mixin for $className.');
     buffer.writeln('///');
-    buffer.writeln('/// Provides helper methods and state handling utilities.');
+    buffer.writeln('/// Provides logging configuration.');
+    buffer.writeln('/// State pattern matching (when, maybeWhen, map) is available directly on the state.');
     buffer.writeln('mixin _\$${className}Mixin on Feature<$stateType> {');
 
     // Override loggingEnabled
     buffer.writeln('  @override');
     buffer.writeln('  bool get loggingEnabled => $logging;');
-    buffer.writeln();
 
-    // Generate when method if we have state variants
-    if (stateVariants.isNotEmpty) {
-      _generateWhenMethod(buffer, stateType, stateVariants);
-      buffer.writeln();
-      _generateMaybeWhenMethod(buffer, stateType, stateVariants);
-      buffer.writeln();
-      _generateMapMethod(buffer, stateType, stateVariants);
-    }
+    // NOTE: when, maybeWhen, map methods are NOT generated here
+    // because they already exist on the State class itself.
+    // Use: state.when(...), state.maybeWhen(...), state.map(...)
 
     buffer.writeln('}');
-  }
-
-  void _generateWhenMethod(
-    StringBuffer buffer,
-    String stateType,
-    List<_StateVariant> variants,
-  ) {
-    // Generate callback parameters
-    final callbackParams = variants.map((v) {
-      if (v.params.isEmpty) {
-        return 'required T Function() ${v.name}';
-      } else {
-        final paramTypes = v.params.map((p) => '${p.type} ${p.name}').join(', ');
-        return 'required T Function($paramTypes) ${v.name}';
-      }
-    }).join(',\n    ');
-
-    buffer.writeln('  /// Pattern matches on the current state and returns a value.');
-    buffer.writeln('  ///');
-    buffer.writeln('  /// All callbacks are required for exhaustive matching.');
-    buffer.writeln('  T when<T>({');
-    buffer.writeln('    $callbackParams,');
-    buffer.writeln('  }) {');
-    buffer.writeln('    final s = state;');
-
-    // Generate switch cases
-    for (int i = 0; i < variants.length; i++) {
-      final variant = variants[i];
-      final isFirst = i == 0;
-      final prefix = isFirst ? 'if' : '} else if';
-
-      if (variant.params.isEmpty) {
-        buffer.writeln('    $prefix (s is ${variant.className}) {');
-        buffer.writeln('      return ${variant.name}();');
-      } else {
-        buffer.writeln('    $prefix (s is ${variant.className}) {');
-        final args = variant.params.map((p) => 's.${p.name}').join(', ');
-        buffer.writeln('      return ${variant.name}($args);');
-      }
-    }
-
-    buffer.writeln('    }');
-    buffer.writeln("    throw StateError('Unknown state type: \$s');");
-    buffer.writeln('  }');
-  }
-
-  void _generateMaybeWhenMethod(
-    StringBuffer buffer,
-    String stateType,
-    List<_StateVariant> variants,
-  ) {
-    // Generate callback parameters
-    final callbackParams = variants.map((v) {
-      if (v.params.isEmpty) {
-        return 'T Function()? ${v.name}';
-      } else {
-        final paramTypes = v.params.map((p) => '${p.type} ${p.name}').join(', ');
-        return 'T Function($paramTypes)? ${v.name}';
-      }
-    }).join(',\n    ');
-
-    buffer.writeln('  /// Pattern matches on the current state with optional callbacks.');
-    buffer.writeln('  ///');
-    buffer.writeln('  /// Returns orElse if no callback matches.');
-    buffer.writeln('  T maybeWhen<T>({');
-    buffer.writeln('    $callbackParams,');
-    buffer.writeln('    required T Function() orElse,');
-    buffer.writeln('  }) {');
-    buffer.writeln('    final s = state;');
-
-    // Generate switch cases
-    for (int i = 0; i < variants.length; i++) {
-      final variant = variants[i];
-      final isFirst = i == 0;
-      final prefix = isFirst ? 'if' : '} else if';
-
-      if (variant.params.isEmpty) {
-        buffer.writeln('    $prefix (s is ${variant.className} && ${variant.name} != null) {');
-        buffer.writeln('      return ${variant.name}();');
-      } else {
-        buffer.writeln('    $prefix (s is ${variant.className} && ${variant.name} != null) {');
-        final args = variant.params.map((p) => 's.${p.name}').join(', ');
-        buffer.writeln('      return ${variant.name}($args);');
-      }
-    }
-
-    buffer.writeln('    }');
-    buffer.writeln('    return orElse();');
-    buffer.writeln('  }');
-  }
-
-  void _generateMapMethod(
-    StringBuffer buffer,
-    String stateType,
-    List<_StateVariant> variants,
-  ) {
-    // Generate callback parameters
-    final callbackParams = variants.map((v) {
-      return 'required T Function(${v.className} state) ${v.name}';
-    }).join(',\n    ');
-
-    buffer.writeln('  /// Maps the current state to a value using typed callbacks.');
-    buffer.writeln('  T map<T>({');
-    buffer.writeln('    $callbackParams,');
-    buffer.writeln('  }) {');
-    buffer.writeln('    final s = state;');
-
-    // Generate switch cases
-    for (int i = 0; i < variants.length; i++) {
-      final variant = variants[i];
-      final isFirst = i == 0;
-      final prefix = isFirst ? 'if' : '} else if';
-
-      buffer.writeln('    $prefix (s is ${variant.className}) {');
-      buffer.writeln('      return ${variant.name}(s);');
-    }
-
-    buffer.writeln('    }');
-    buffer.writeln("    throw StateError('Unknown state type: \$s');");
-    buffer.writeln('  }');
   }
 
   void _generateProviderWidget(

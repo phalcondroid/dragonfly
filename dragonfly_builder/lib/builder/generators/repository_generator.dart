@@ -83,6 +83,10 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
         ? buildResponseWhenIsList(method, modelMeta)
         : buildResponseWhenIsObject(method, modelMeta);
 
+    // Build parameter map for logging
+    final paramNames = method.params.map((p) => "'${p.name}': ${p.name}").join(', ');
+    final paramsLog = method.params.isEmpty ? 'null' : '{$paramNames}';
+
     final Method methodBuilder = Method((b) => b
       ..name = method.name
       ..requiredParameters
@@ -92,11 +96,44 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
       ..modifier = MethodModifier.async
       ..annotations.add(refer('override'))
       ..returns = refer(method.returnType.raw)
-      ..body = Code("final DragonflyNetworkHttpAdapter network = "
-          "DragonflyContainer.I.get<DragonflyNetworkHttpAdapter>(instanceName: '$repoConn'); \n"
-          "final $returnType response = await network.$methodKind($httpMethod, '$repoUrl${method.path}', null, null);\n"
-          "$response;\n"
-          ""));
+      ..body = Code("""
+final _log = DragonflyLogManager.instance;
+final _stopwatch = Stopwatch()..start();
+
+try {
+  _log.repositoryStart(
+    repository: '$className',
+    method: '${method.name}',
+    params: $paramsLog,
+  );
+
+  final DragonflyNetworkHttpAdapter network = DragonflyContainer.I.get<DragonflyNetworkHttpAdapter>(instanceName: '$repoConn');
+  final $returnType response = await network.$methodKind($httpMethod, '$repoUrl${method.path}', null, null);
+
+  _stopwatch.stop();
+  _log.repositorySuccess(
+    repository: '$className',
+    method: '${method.name}',
+    message: 'Operation completed successfully',
+    durationMs: _stopwatch.elapsedMilliseconds,
+    params: $paramsLog,
+  );
+
+  $response;
+} catch (e, stackTrace) {
+  _stopwatch.stop();
+  _log.repositoryError(
+    repository: '$className',
+    method: '${method.name}',
+    message: 'Operation failed',
+    error: e,
+    stackTrace: stackTrace,
+    durationMs: _stopwatch.elapsedMilliseconds,
+    params: $paramsLog,
+  );
+  rethrow;
+}
+"""));
 
     return methodBuilder;
   }

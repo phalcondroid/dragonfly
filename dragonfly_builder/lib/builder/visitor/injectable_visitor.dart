@@ -21,7 +21,7 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
   static final _useCaseChecker = TypeChecker.fromRuntime(InjectableUseCase);
   static final _repositoryChecker = TypeChecker.fromRuntime(Repository);
   static final _blocChecker = TypeChecker.fromRuntime(DragonflyBloc);
-  static final _featureChecker = TypeChecker.fromRuntime(DragonflyFeature);
+  static final _stateManagerChecker = TypeChecker.fromRuntime(DragonflyStateManager);
   static final _injectChecker = TypeChecker.fromRuntime(Inject);
   static final _namedChecker = TypeChecker.fromRuntime(Named);
 
@@ -29,6 +29,11 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
 
   @override
   void visitClassElement(ClassElement element) {
+    // Skip Flutter widgets - they should not be registered in DI
+    if (_isFlutterWidget(element)) {
+      return;
+    }
+
     // Check for InjectableUseCase annotation
     if (_useCaseChecker.hasAnnotationOfExact(element)) {
       _processInjectableUseCase(element);
@@ -47,11 +52,22 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
       return;
     }
 
-    // Check for DragonflyFeature annotation
-    if (_featureChecker.hasAnnotationOfExact(element)) {
-      _processDragonflyFeature(element);
+    // Check for DragonflyStateManager annotation (for Features/state managers)
+    if (_stateManagerChecker.hasAnnotationOfExact(element)) {
+      _processDragonflyStateManager(element);
       return;
     }
+  }
+
+  /// Check if element extends StatelessWidget or StatefulWidget
+  bool _isFlutterWidget(ClassElement element) {
+    for (final supertype in element.allSupertypes) {
+      final name = supertype.element.name;
+      if (name == 'StatelessWidget' || name == 'StatefulWidget' || name == 'Widget') {
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Process @InjectableUseCase annotated classes
@@ -261,10 +277,20 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
     }
   }
 
-  /// Process @DragonflyFeature annotated classes
-  void _processDragonflyFeature(ClassElement element) {
+  /// Process @DragonflyStateManager annotated classes (Features)
+  void _processDragonflyStateManager(ClassElement element) {
+    // Only process if it extends Feature
+    bool extendsFeature = false;
+    for (final supertype in element.allSupertypes) {
+      if (supertype.element.name == 'Feature') {
+        extendsFeature = true;
+        break;
+      }
+    }
+    if (!extendsFeature) return;
+
     final annotation =
-        ConstantReader(_featureChecker.firstAnnotationOfExact(element));
+        ConstantReader(_stateManagerChecker.firstAnnotationOfExact(element));
 
     // Check if injectable is enabled (default: true)
     final injectable = annotation.peek('injectable')?.boolValue ?? true;
@@ -313,7 +339,7 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
 
       dependencies.add(config);
     } catch (e, s) {
-      print("==========>>>>>>>> error processing feature: $e, $s");
+      print("==========>>>>>>>> error processing state manager: $e, $s");
     }
   }
 }

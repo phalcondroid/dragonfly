@@ -1,9 +1,16 @@
 import 'package:dragonfly/dragonfly.dart';
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:example/components/characters/data/models/character.dart';
 import 'package:example/components/characters/presentation/features/character_feature.dart';
 import 'package:example/components/characters/presentation/states/character_state.dart';
 import 'package:flutter/material.dart';
 
+@DragonflyRoute(
+  path: '/',
+  initial: true,
+  name: 'characters',
+  provider: CharacterFeature,
+)
 class CharacterScreen extends StatelessWidget {
   const CharacterScreen({super.key});
 
@@ -29,9 +36,8 @@ class CharacterScreen extends StatelessWidget {
         body: FeatureBuilder<CharacterFeature, CharacterState>(
           builder: (context, state) {
             return state.when(
-              initial: () => _InitialView(
-                onFetch: () => feature.fetchCharacter(1),
-              ),
+              initial: () =>
+                  _InitialView(onFetch: () => feature.fetchCharacter(1)),
               loading: () => const _LoadingView(),
               loaded: (character) => _CharacterDetailView(
                 character: character,
@@ -139,8 +145,9 @@ class _CharacterDetailView extends StatelessWidget {
           Center(
             child: Chip(
               label: Text(character.status),
-              backgroundColor:
-                  character.status == 'Alive' ? Colors.green : Colors.red,
+              backgroundColor: character.status == 'Alive'
+                  ? Colors.green
+                  : Colors.red,
               labelStyle: const TextStyle(color: Colors.white),
             ),
           ),
@@ -150,16 +157,36 @@ class _CharacterDetailView extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  _InfoRow(icon: Icons.tag, label: 'ID', value: '${character.id}'),
-                  _InfoRow(icon: Icons.category, label: 'Species', value: character.species),
+                  _InfoRow(
+                    icon: Icons.tag,
+                    label: 'ID',
+                    value: '${character.id}',
+                  ),
+                  _InfoRow(
+                    icon: Icons.category,
+                    label: 'Species',
+                    value: character.species,
+                  ),
                   _InfoRow(
                     icon: Icons.type_specimen,
                     label: 'Type',
                     value: character.type.isEmpty ? 'N/A' : character.type,
                   ),
-                  _InfoRow(icon: Icons.person, label: 'Gender', value: character.gender),
-                  _InfoRow(icon: Icons.home, label: 'Origin', value: character.origin.name),
-                  _InfoRow(icon: Icons.location_on, label: 'Location', value: character.location.name),
+                  _InfoRow(
+                    icon: Icons.person,
+                    label: 'Gender',
+                    value: character.gender,
+                  ),
+                  _InfoRow(
+                    icon: Icons.home,
+                    label: 'Origin',
+                    value: character.origin.name,
+                  ),
+                  _InfoRow(
+                    icon: Icons.location_on,
+                    label: 'Location',
+                    value: character.location.name,
+                  ),
                   _InfoRow(
                     icon: Icons.movie,
                     label: 'Episodes',
@@ -177,9 +204,7 @@ class _CharacterDetailView extends StatelessWidget {
                 onPressed: onDelete,
                 icon: const Icon(Icons.delete),
                 label: const Text('Delete'),
-                style: FilledButton.styleFrom(
-                  foregroundColor: Colors.red,
-                ),
+                style: FilledButton.styleFrom(foregroundColor: Colors.red),
               ),
               FilledButton.icon(
                 onPressed: onRefresh,
@@ -223,12 +248,7 @@ class _InfoRow extends StatelessWidget {
               ),
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Expanded(child: Text(value, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
@@ -239,10 +259,7 @@ class _CharacterListView extends StatelessWidget {
   final List<Character> characters;
   final void Function(Character) onSelect;
 
-  const _CharacterListView({
-    required this.characters,
-    required this.onSelect,
-  });
+  const _CharacterListView({required this.characters, required this.onSelect});
 
   @override
   Widget build(BuildContext context) {
@@ -253,14 +270,14 @@ class _CharacterListView extends StatelessWidget {
         return ListTile(
           leading: Hero(
             tag: 'avatar-${character.id}',
-            child: CircleAvatar(
-              backgroundImage: NetworkImage(character.image),
-            ),
+            child: CircleAvatar(backgroundImage: NetworkImage(character.image)),
           ),
           title: Text(character.name),
           subtitle: Text('${character.species} - ${character.status}'),
           trailing: Icon(
-            character.status == 'Alive' ? Icons.favorite : Icons.favorite_border,
+            character.status == 'Alive'
+                ? Icons.favorite
+                : Icons.favorite_border,
             color: character.status == 'Alive' ? Colors.red : Colors.grey,
           ),
           onTap: () => onSelect(character),
@@ -274,10 +291,7 @@ class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _ErrorView({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorView({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {

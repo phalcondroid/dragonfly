@@ -5,7 +5,7 @@ import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:glob/glob.dart';
 import 'package:source_gen/source_gen.dart';
 
-/// Generator for @DragonflyView annotated classes.
+/// Generator for @DragonflyBlocView annotated classes.
 ///
 /// This generator creates a mixin that provides:
 /// - State-aware widget builder method
@@ -14,7 +14,7 @@ import 'package:source_gen/source_gen.dart';
 ///
 /// Example input:
 /// ```dart
-/// @DragonflyView(
+/// @DragonflyBlocView(
 ///   bloc: UserBloc,
 ///   event: UserEvent,
 ///   state: UserState,
@@ -34,8 +34,8 @@ import 'package:source_gen/source_gen.dart';
 ///   }
 /// }
 /// ```
-class DragonflyViewGenerator
-    extends GeneratorForAnnotation<DragonflyView> {
+class DragonflyBlocViewGenerator
+    extends GeneratorForAnnotation<DragonflyBlocView> {
   final _formatter = DartFormatter();
 
   @override
@@ -46,7 +46,7 @@ class DragonflyViewGenerator
   ) async {
     if (element is! ClassElement) {
       throw InvalidGenerationSourceError(
-        '@DragonflyViewAnnotation can only be applied to classes.',
+        '@DragonflyBlocView can only be applied to classes.',
         element: element,
       );
     }

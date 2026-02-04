@@ -44,20 +44,27 @@ builders:
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
-  # Dragonfly view generator - generates view mixins and state builders
-  dragonfly_view_generator:
+  router_generator:
     import: "package:dragonfly_builder/builder.dart"
-    builder_factories: ["dragonflyViewGenerator"]
-    build_extensions: { ".dart": [".view.part"] }
+    builder_factories: ["routerBuilder"]
+    build_extensions: { ".dart": [".router.dart"] }
+    auto_apply: dependents
+    build_to: source
+
+  # Dragonfly BLoC view generator - generates BLoC view mixins and state builders
+  dragonfly_bloc_view_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["dragonflyBlocViewGenerator"]
+    build_extensions: { ".dart": [".blocview.part"] }
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
-  # Dragonfly feature generator - generates feature mixins and providers (new architecture)
-  dragonfly_feature_generator:
+  # Dragonfly state manager generator - generates state manager mixins and providers
+  dragonfly_state_manager_generator:
     import: "package:dragonfly_builder/builder.dart"
-    builder_factories: ["dragonflyFeatureGenerator"]
-    build_extensions: { ".dart": [".feature.part"] }
+    builder_factories: ["dragonflyStateManagerGenerator"]
+    build_extensions: { ".dart": [".state_manager.part"] }
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]

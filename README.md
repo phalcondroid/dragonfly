@@ -485,6 +485,137 @@ abstract class ApiRepository {
 
 ---
 
+## 📋 Logging
+
+Dragonfly includes a beautiful, colored logging system with full support for network request/response logging and repository operations.
+
+### Basic Usage
+
+```dart
+import 'package:dragonfly/dragonfly.dart';
+
+final log = DragonflyLogManager.instance;
+// or use the shorthand
+final log = dragonflyLog;
+
+// Different log levels
+log.debug('Detailed debug info');
+log.info('General information');
+log.success('Operation completed!', data: {'userId': '123'});
+log.warning('This might be a problem');
+log.error('Something went wrong', error: exception, stackTrace: stack);
+log.danger('Critical failure!');
+```
+
+### Configuration
+
+```dart
+// In your main.dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  DragonflyApp(
+    config: AppConfig(),
+    showBanner: true,        // Show the Dragonfly banner
+    enableLogging: true,     // Enable/disable logging
+    minLogLevel: DragonflyLogLevel.info, // Set minimum level
+  ).init();
+
+  runApp(const MyApp());
+}
+
+// Configure manually
+final log = DragonflyLogManager.instance;
+log.setEnabled(true);
+log.setMinLevel(DragonflyLogLevel.debug);
+log.enableHistory(maxSize: 500); // Keep log history
+```
+
+### Network Logging
+
+Network requests and responses are automatically logged when using `DragonflyNetworkHttpAdapter`:
+
+```
+╭─────────────────────────────────────────────────────────╮
+│ 📤 REQUEST  [ABC12345]                                  │
+├─────────────────────────────────────────────────────────┤
+│  GET     https://api.example.com/users                  │
+├─ Headers                                                │
+│    Content-Type: application/json                       │
+│    Authorization: Bearer ***                            │
+╰─────────────────────────────────────────────────────────╯
+
+╭─────────────────────────────────────────────────────────╮
+│ 📥 RESPONSE [ABC12345]                                  │
+├─────────────────────────────────────────────────────────┤
+│  ✅ 200 OK (145ms)                                      │
+│  ← GET https://api.example.com/users                    │
+├─ Response Body                                          │
+│    {                                                    │
+│      "users": [...]                                     │
+│    }                                                    │
+╰─────────────────────────────────────────────────────────╯
+```
+
+### Repository Logging
+
+Repository operations are automatically logged with try/catch wrapping:
+
+```
+╭───────────────────────────────────────────╮
+│ ✅ SUCCESS  Repository                    │
+├───────────────────────────────────────────┤
+│  UserRepository.getUser()                 │
+│  ⏱️  234ms                                │
+├─ Parameters                               │
+│    userId: 123                            │
+├─ Message                                  │
+│  Operation completed successfully         │
+╰───────────────────────────────────────────╯
+```
+
+### Custom Log Listeners
+
+```dart
+// Add custom log listener
+dragonflyLog.addListener((entry) {
+  // Send to analytics
+  analytics.trackEvent('log', {
+    'level': entry.level.name,
+    'message': entry.message,
+  });
+
+  // Or send to crash reporting
+  if (entry.level == DragonflyLogLevel.error) {
+    crashlytics.recordError(entry.error, entry.stackTrace);
+  }
+});
+
+// Stream-based listening
+dragonflyLog.logStream.listen((entry) {
+  // Process log entries
+});
+```
+
+### Log Levels
+
+| Level | Icon | Usage |
+|-------|------|-------|
+| `debug` | 🔍 | Detailed debugging information |
+| `info` | ℹ️ | General information |
+| `success` | ✅ | Successful operations |
+| `warning` | ⚠️ | Warnings and potential issues |
+| `error` | ❌ | Recoverable errors |
+| `danger` | 🔥 | Critical/fatal errors |
+| `request` | 📤 | HTTP requests |
+| `response` | 📥 | HTTP responses |
+
+### Design
+
+Dragonfly logs use beautiful **Unicode box-drawing characters** and **emoji icons** for visual clarity in any terminal or debug console, without relying on ANSI color codes for maximum compatibility.
+
+---
+
 ## 🔧 Utilities
 
 ### Either Type

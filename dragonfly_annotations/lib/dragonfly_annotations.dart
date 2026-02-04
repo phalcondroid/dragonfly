@@ -23,20 +23,35 @@ export 'annotations/component/injector/injector_config.dart';
 export 'annotations/component/models/factory_model.dart' show FactoryModel;
 export 'annotations/component/models/event_model.dart' show EventModel;
 export 'annotations/component/models/state_model.dart' show StateModel;
-export 'annotations/component/models/field.dart' show Field, JsonIgnore, JsonKey;
+export 'annotations/component/models/field.dart'
+    show Field, JsonIgnore, JsonKey;
 
 // Repository annotations
 export 'annotations/component/repositoriy/repository.dart' show Repository;
 
-// Presentation annotations (BLoC & View)
+// Presentation annotations (BLoC)
 export 'annotations/component/presentation/dragonfly_bloc.dart'
     show DragonflyBloc;
 export 'annotations/component/presentation/dragonfly_view.dart'
-    show DragonflyView, DragonflyStateBuilder;
+    show DragonflyBlocView, DragonflyStateBuilder;
 
-// Feature annotations (New architecture)
+// State Manager annotations (Feature architecture)
 export 'annotations/component/presentation/feature/dragonfly_feature.dart'
-    show DragonflyFeature, InitialState, FeatureAction, SideEffect, Computed, StateSlot;
+    show
+        DragonflyStateManager,
+        DragonflyView, // Deprecated alias
+        DragonflyFeature, // Deprecated alias
+        InitialState,
+        StateAction,
+        ViewAction, // Deprecated alias
+        FeatureAction, // Deprecated alias
+        SideEffect,
+        Computed,
+        StateSlot;
+// Router annotations
+export 'annotations/navigation/router_config.dart'
+    show DragonflyRouterConfig, DragonflyRoute, RouteTransition, PathParam, QueryParam;
+export 'annotations/where.dart';
 
 // Network annotations
 export 'annotations/network/get.dart' show Get;

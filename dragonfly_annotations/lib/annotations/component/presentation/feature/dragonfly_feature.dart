@@ -1,19 +1,19 @@
 import 'package:meta/meta.dart';
 import 'package:meta/meta_meta.dart';
 
-/// Annotation for creating a Dragonfly Feature.
+/// Annotation for creating a Dragonfly State Manager (Feature).
 ///
-/// A Feature combines state management, intents (user actions), and
+/// A StateManager combines state management, user actions, and
 /// side effects into a single, cohesive unit.
 ///
 /// Example:
 /// ```dart
-/// @DragonflyFeature()
-/// class CharacterFeature extends Feature<CharacterFeature, CharacterState> {
+/// @DragonflyStateManager()
+/// class CharacterFeature extends Feature<CharacterState> {
 ///   @InitialState()
 ///   CharacterState get initialState => const CharacterState.initial();
 ///
-///   @Intent()
+///   @StateAction()
 ///   Future<void> fetchCharacter(int id) async {
 ///     emit(const CharacterState.loading());
 ///     final result = await useCase<GetCharacterUseCase>().call(id);
@@ -25,8 +25,8 @@ import 'package:meta/meta_meta.dart';
 /// }
 /// ```
 @immutable
-class DragonflyFeature {
-  /// Whether to automatically register this feature in the DI container.
+class DragonflyStateManager {
+  /// Whether to automatically register this state manager in the DI container.
   final bool injectable;
 
   /// Whether to enable state change logging.
@@ -38,10 +38,10 @@ class DragonflyFeature {
   /// Order position for DI registration.
   final int order;
 
-  /// The state type for this feature.
+  /// The state type for this state manager.
   final Type? state;
 
-  const DragonflyFeature({
+  const DragonflyStateManager({
     this.injectable = true,
     this.logging = false,
     this.scope,
@@ -50,7 +50,14 @@ class DragonflyFeature {
   });
 }
 
-/// Marks a getter as the initial state for a Feature.
+/// Backwards compatibility aliases
+@Deprecated('Use @DragonflyStateManager instead')
+typedef DragonflyFeature = DragonflyStateManager;
+
+@Deprecated('Use @DragonflyStateManager instead')
+typedef DragonflyView = DragonflyStateManager;
+
+/// Marks a getter as the initial state for a StateManager.
 ///
 /// Example:
 /// ```dart
@@ -63,24 +70,24 @@ class InitialState {
   const InitialState();
 }
 
-/// Marks a method as a user action in a Feature.
+/// Marks a method as a user action in a StateManager.
 ///
 /// User actions are triggered from the UI and can modify state.
 ///
 /// Example:
 /// ```dart
-/// @FeatureAction()
+/// @StateAction()
 /// Future<void> fetchCharacter(int id) async {
 ///   emit(const CharacterState.loading());
 ///   // ...
 /// }
 ///
-/// @FeatureAction(debounce: Duration(milliseconds: 300))
+/// @StateAction(debounce: Duration(milliseconds: 300))
 /// Future<void> search(String query) async { ... }
 /// ```
 @immutable
 @Target({TargetKind.method})
-class FeatureAction {
+class StateAction {
   /// Optional debounce duration for this action.
   final Duration? debounce;
 
@@ -90,14 +97,21 @@ class FeatureAction {
   /// Whether this action should be logged.
   final bool log;
 
-  const FeatureAction({
+  const StateAction({
     this.debounce,
     this.throttle,
     this.log = true,
   });
 }
 
-/// Marks a method as a SideEffect in a Feature.
+/// Backwards compatibility aliases
+@Deprecated('Use @StateAction instead')
+typedef ViewAction = StateAction;
+
+@Deprecated('Use @StateAction instead')
+typedef FeatureAction = StateAction;
+
+/// Marks a method as a SideEffect in a StateManager.
 ///
 /// Side effects are actions that don't modify state but interact
 /// with the outside world (navigation, dialogs, snackbars, etc.)
@@ -133,7 +147,7 @@ class Computed {
   const Computed();
 }
 
-/// Marks a state slot for features with multiple independent state sections.
+/// Marks a state slot for state managers with multiple independent state sections.
 ///
 /// Example:
 /// ```dart

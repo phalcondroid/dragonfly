@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:dragonfly/framework/config/dragonfly_network_config.dart';
+import 'package:dragonfly/framework/logging/dragonfly_log_manager.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_base_network_adapter.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_network_options.dart';
 import 'package:dragonfly/framework/network/exceptions/dragonfly_network_invalid_method_exception.dart';
@@ -9,7 +10,15 @@ import 'package:http/http.dart' as http;
 class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
   final DragonflyNetworkConfig config;
 
-  const DragonflyNetworkHttpAdapter({required this.config});
+  /// Whether to enable logging for this adapter.
+  final bool enableLogging;
+
+  const DragonflyNetworkHttpAdapter({
+    required this.config,
+    this.enableLogging = true,
+  });
+
+  DragonflyLogManager get _log => DragonflyLogManager.instance;
 
   /// Build the final URL with query parameters for GET requests
   Uri _buildUri(String path, Map<String, dynamic>? queryParams) {
@@ -67,45 +76,113 @@ class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
     DragonflyNetworkOptions? options,
   ) async {
     final headers = _buildHeaders(options);
+    final methodName = method.name.toUpperCase();
+    final uri = method == HttpMethods.get || method == HttpMethods.delete
+        ? _buildUri(path, params)
+        : _buildUri(path, null);
 
-    switch (method) {
-      case HttpMethods.get:
-        return await http.get(
-          _buildUri(path, params),
-          headers: headers,
+    // Generate request ID for correlation
+    final requestId = _log.generateRequestId();
+    final stopwatch = Stopwatch()..start();
+
+    // Log the request
+    if (enableLogging) {
+      _log.request(
+        method: methodName,
+        url: uri.toString(),
+        requestId: requestId,
+        headers: headers,
+        body: method != HttpMethods.get ? params : null,
+        queryParams: method == HttpMethods.get ? params : null,
+        source: 'DragonflyNetworkHttpAdapter',
+      );
+    }
+
+    http.Response response;
+
+    try {
+      switch (method) {
+        case HttpMethods.get:
+          response = await http.get(uri, headers: headers);
+          break;
+
+        case HttpMethods.post:
+          response = await http.post(
+            uri,
+            headers: headers,
+            body: _encodeBody(params),
+          );
+          break;
+
+        case HttpMethods.put:
+          response = await http.put(
+            uri,
+            headers: headers,
+            body: _encodeBody(params),
+          );
+          break;
+
+        case HttpMethods.patch:
+          response = await http.patch(
+            uri,
+            headers: headers,
+            body: _encodeBody(params),
+          );
+          break;
+
+        case HttpMethods.delete:
+          response = await http.delete(
+            uri,
+            headers: headers,
+            body: _encodeBody(params),
+          );
+          break;
+
+        case HttpMethods.unknow:
+          throw const DragonflyNetworkInvalidMethodException(
+              "Unknown HTTP method!");
+      }
+
+      stopwatch.stop();
+
+      // Log the response
+      if (enableLogging) {
+        dynamic responseBody;
+        try {
+          responseBody = jsonDecode(response.body);
+        } catch (_) {
+          responseBody = response.body;
+        }
+
+        _log.response(
+          statusCode: response.statusCode,
+          durationMs: stopwatch.elapsedMilliseconds,
+          requestId: requestId,
+          url: uri.toString(),
+          method: methodName,
+          statusMessage: response.reasonPhrase,
+          headers: response.headers,
+          body: responseBody,
+          source: 'DragonflyNetworkHttpAdapter',
         );
+      }
 
-      case HttpMethods.post:
-        return await http.post(
-          _buildUri(path, null),
-          headers: headers,
-          body: _encodeBody(params),
+      return response;
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+
+      // Log the error
+      if (enableLogging) {
+        _log.error(
+          'Request failed: $methodName ${uri.toString()}',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'DragonflyNetworkHttpAdapter',
+          data: {'requestId': requestId, 'durationMs': stopwatch.elapsedMilliseconds},
         );
+      }
 
-      case HttpMethods.put:
-        return await http.put(
-          _buildUri(path, null),
-          headers: headers,
-          body: _encodeBody(params),
-        );
-
-      case HttpMethods.patch:
-        return await http.patch(
-          _buildUri(path, null),
-          headers: headers,
-          body: _encodeBody(params),
-        );
-
-      case HttpMethods.delete:
-        return await http.delete(
-          _buildUri(path, params),
-          headers: headers,
-          body: _encodeBody(params),
-        );
-
-      case HttpMethods.unknow:
-        throw const DragonflyNetworkInvalidMethodException(
-            "Unknown HTTP method!");
+      rethrow;
     }
   }
 

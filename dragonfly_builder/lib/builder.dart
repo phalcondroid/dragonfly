@@ -7,6 +7,7 @@ import 'package:dragonfly_builder/builder/generators/factory_model_generator.dar
 import 'package:dragonfly_builder/builder/generators/injectable_config_generator.dart';
 import 'package:dragonfly_builder/builder/generators/repository_generator.dart';
 import 'package:dragonfly_builder/builder/generators/state_model_generator.dart';
+import 'package:dragonfly_builder/builder/generators/router_generator.dart';
 import 'package:source_gen/source_gen.dart';
 
 /// Builder for @Repository annotated classes.
@@ -75,32 +76,32 @@ Builder dragonflyBlocGenerator(BuilderOptions options) => PartBuilder(
       options: options,
     );
 
-/// Builder for @DragonflyViewAnnotation annotated classes.
+/// Builder for @DragonflyBlocView annotated classes.
 ///
-/// Generates view mixins with:
+/// Generates BLoC view mixins with:
 /// - State-aware widget builder methods
 /// - Event dispatch helpers
 /// - BLoC access utilities
 /// - Standalone state builder widgets
 ///
-/// Output extension: `.view.dart`
-Builder dragonflyViewGenerator(BuilderOptions options) => PartBuilder(
-      [DragonflyViewGenerator()],
-      '.view.dart',
+/// Output extension: `.blocview.dart`
+Builder dragonflyBlocViewGenerator(BuilderOptions options) => PartBuilder(
+      [DragonflyBlocViewGenerator()],
+      '.blocview.dart',
       options: options,
     );
 
-/// Builder for @DragonflyFeature annotated classes.
+/// Builder for @DragonflyStateManager annotated classes.
 ///
-/// Generates feature classes with:
-/// - State management utilities (when, maybeWhen, map)
+/// Generates state manager classes with:
+/// - State management utilities
 /// - Provider widget for auto-injection
 /// - BuildContext extensions for easy access
 ///
-/// Output extension: `.feature.dart`
-Builder dragonflyFeatureGenerator(BuilderOptions options) => PartBuilder(
-      [DragonflyFeatureGenerator()],
-      '.feature.dart',
+/// Output extension: `.state_manager.dart`
+Builder dragonflyStateManagerGenerator(BuilderOptions options) => PartBuilder(
+      [DragonflyStateManagerGenerator()],
+      '.state_manager.dart',
       options: options,
     );
 
@@ -112,5 +113,16 @@ Builder injectableConfigBuilder(BuilderOptions options) {
   return LibraryBuilder(
     InjectableConfigGenerator(),
     generatedExtension: '.config.dart',
+  );
+}
+
+/// Builder for @DragonflyRouterConfig.
+///
+/// Generates router configuration file.
+/// Output extension: `.router.dart`
+Builder routerBuilder(BuilderOptions options) {
+  return LibraryBuilder(
+    RouterGenerator(),
+    generatedExtension: '.router.dart',
   );
 }

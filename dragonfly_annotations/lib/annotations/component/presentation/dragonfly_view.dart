@@ -1,11 +1,11 @@
-/// Annotation for creating a view widget with state-aware builders.
+/// Annotation for creating a BLoC-based view widget with state-aware builders.
 ///
 /// This annotation generates widget builders that correspond to each
-/// state variant, making it easy to build reactive UIs.
+/// state variant, making it easy to build reactive UIs with BLoC.
 ///
 /// Example usage:
 /// ```dart
-/// @DragonflyView(
+/// @DragonflyBlocView(
 ///   bloc: UserBloc,
 ///   event: UserEvent,
 ///   state: UserState,
@@ -32,7 +32,7 @@
 /// - `buildStateWidget` method with callbacks for each state variant
 /// - `dispatchEvent` method to easily dispatch events
 /// - Helper getters to access the bloc and current state
-class DragonflyView {
+class DragonflyBlocView {
   /// The BLoC type for this view.
   final Type bloc;
 
@@ -50,8 +50,8 @@ class DragonflyView {
   /// Whether to generate listener callbacks.
   final bool generateListener;
 
-  /// Creates a DragonflyView annotation.
-  const DragonflyView({
+  /// Creates a DragonflyBlocView annotation.
+  const DragonflyBlocView({
     required this.bloc,
     required this.event,
     required this.state,
@@ -59,6 +59,10 @@ class DragonflyView {
     this.generateListener = true,
   });
 }
+
+/// Backwards compatibility alias.
+@Deprecated('Use @DragonflyView from dragonfly_feature.dart instead')
+typedef DragonflyViewAnnotation = DragonflyBlocView;
 
 /// Annotation for generating a standalone state builder widget.
 ///
