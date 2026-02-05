@@ -77,3 +77,12 @@ builders:
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
+
+  # Form schema generator - generates form state and validation
+  form_schema_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["formSchemaGenerator"]
+    build_extensions: { ".dart": [".form.part"] }
+    auto_apply: dependents
+    build_to: source
+    applies_builders: ["source_gen|combining_builder"]

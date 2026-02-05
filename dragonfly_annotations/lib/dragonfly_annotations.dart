@@ -48,10 +48,72 @@ export 'annotations/component/presentation/feature/dragonfly_feature.dart'
         SideEffect,
         Computed,
         StateSlot;
-// Router annotations
-export 'annotations/navigation/router_config.dart'
-    show DragonflyRouterConfig, DragonflyRoute, RouteTransition, PathParam, QueryParam;
+
+// Router and Screen annotations (with Session/ACL support)
+export 'annotations/navigation/router_config.dart' show DragonflyRouterConfig;
+export 'annotations/session/session_annotations.dart'
+    show
+        DragonflyScreen,
+        ScreenTransition,
+        AccessLevel,
+        DragonflySessionConfig,
+        Authenticated,
+        PathParam,
+        QueryParam;
 export 'annotations/where.dart';
+
+// Form validation annotations
+export 'annotations/form/form_annotations.dart'
+    show
+        // Schema
+        FormSchema,
+        // Base
+        FieldValidator,
+        // String validators
+        Required,
+        Email,
+        MinLength,
+        MaxLength,
+        Pattern,
+        Url,
+        Phone,
+        Alphanumeric,
+        Alpha,
+        Numeric,
+        // Number validators
+        Min,
+        Max,
+        Range,
+        Positive,
+        Negative,
+        // Comparison validators
+        EqualTo,
+        NotEqualTo,
+        // Date validators
+        PastDate,
+        FutureDate,
+        MinAge,
+        // Collection validators
+        MinItems,
+        MaxItems,
+        // Boolean validators
+        MustBeTrue,
+        MustBeFalse,
+        // Custom validator
+        Custom,
+        // Conditional validators
+        RequiredIf,
+        RequiredUnless,
+        // Credit card validators
+        CreditCard,
+        Cvv,
+        ExpiryDate,
+        // Password validators
+        StrongPassword,
+        // Field metadata
+        FormField,
+        FormKeyboardType,
+        FormTextCapitalization;
 
 // Network annotations
 export 'annotations/network/get.dart' show Get;

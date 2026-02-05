@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 part 'character_feature.state_manager.dart';
 
 @DragonflyStateManager(logging: true)
-class CharacterFeature extends Feature<CharacterState>
+class CharacterFeature extends StateManager<CharacterState>
     with _$CharacterFeatureMixin {
   CharacterFeature(@Inject('GetUserList') this._getUserListUseCase)
     : super(const CharacterState.initial());
@@ -22,12 +22,20 @@ class CharacterFeature extends Feature<CharacterState>
 
     emit(const CharacterState.loading());
 
-    logStep('Calling UseCase', {'name': 'Rick', 'ids': [id]});
+    logStep('Calling UseCase', {
+      'name': 'Rick',
+      'ids': [id],
+    });
     final result = await _getUserListUseCase.call("Rick", ["$id"]);
 
     result.fold(
       (error) {
-        logActionEnd('fetchCharacter', durationMs: stopwatch.elapsedMilliseconds, success: false, error: error.toString());
+        logActionEnd(
+          'fetchCharacter',
+          durationMs: stopwatch.elapsedMilliseconds,
+          success: false,
+          error: error.toString(),
+        );
         emit(CharacterState.error(message: error.toString()));
       },
       (response) {
@@ -35,9 +43,17 @@ class CharacterFeature extends Feature<CharacterState>
         logStep('Response received', {'count': characters.length});
         if (characters.isNotEmpty) {
           emit(CharacterState.loaded(character: characters.first));
-          logActionEnd('fetchCharacter', durationMs: stopwatch.elapsedMilliseconds);
+          logActionEnd(
+            'fetchCharacter',
+            durationMs: stopwatch.elapsedMilliseconds,
+          );
         } else {
-          logActionEnd('fetchCharacter', durationMs: stopwatch.elapsedMilliseconds, success: false, error: 'No characters found');
+          logActionEnd(
+            'fetchCharacter',
+            durationMs: stopwatch.elapsedMilliseconds,
+            success: false,
+            error: 'No characters found',
+          );
           emit(const CharacterState.error(message: 'No characters found'));
         }
       },
@@ -56,13 +72,21 @@ class CharacterFeature extends Feature<CharacterState>
 
     result.fold(
       (error) {
-        logActionEnd('fetchAllCharacters', durationMs: stopwatch.elapsedMilliseconds, success: false, error: error.toString());
+        logActionEnd(
+          'fetchAllCharacters',
+          durationMs: stopwatch.elapsedMilliseconds,
+          success: false,
+          error: error.toString(),
+        );
         emit(CharacterState.error(message: error.toString()));
       },
       (response) {
         logStep('Characters loaded', {'count': response.results.length});
         emit(CharacterState.characterList(characters: response.results));
-        logActionEnd('fetchAllCharacters', durationMs: stopwatch.elapsedMilliseconds);
+        logActionEnd(
+          'fetchAllCharacters',
+          durationMs: stopwatch.elapsedMilliseconds,
+        );
       },
     );
   }
@@ -70,7 +94,10 @@ class CharacterFeature extends Feature<CharacterState>
   @StateAction()
   Future<void> deleteCharacter(Character character) async {
     final stopwatch = Stopwatch()..start();
-    logActionStart('deleteCharacter', {'characterId': character.id, 'name': character.name});
+    logActionStart('deleteCharacter', {
+      'characterId': character.id,
+      'name': character.name,
+    });
 
     emit(const CharacterState.loading());
 
@@ -79,9 +106,17 @@ class CharacterFeature extends Feature<CharacterState>
       await Future.delayed(const Duration(seconds: 1));
       emit(const CharacterState.initial());
       sideEffect(const ShowSnackbar('Character deleted successfully'));
-      logActionEnd('deleteCharacter', durationMs: stopwatch.elapsedMilliseconds);
+      logActionEnd(
+        'deleteCharacter',
+        durationMs: stopwatch.elapsedMilliseconds,
+      );
     } catch (e) {
-      logActionEnd('deleteCharacter', durationMs: stopwatch.elapsedMilliseconds, success: false, error: e.toString());
+      logActionEnd(
+        'deleteCharacter',
+        durationMs: stopwatch.elapsedMilliseconds,
+        success: false,
+        error: e.toString(),
+      );
       emit(CharacterState.error(message: e.toString()));
     }
   }

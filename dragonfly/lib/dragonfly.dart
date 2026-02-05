@@ -11,6 +11,7 @@ export 'package:dragonfly/framework/contracts/domain/use_case.dart'
     show UseCase;
 export 'package:dragonfly/framework/exceptions/dragonfly_exception.dart'
     show DragonflyException;
+
 // Navigation
 export 'framework/navigation/router.dart';
 export 'framework/navigation/navigation_extensions.dart';
@@ -40,7 +41,7 @@ export 'package:dragonfly/framework/contracts/models/factory_model_watcher.dart'
 export 'package:dragonfly/framework/constructors/generic_builder_class.dart'
     show GenericBuilderClass;
 
-// BLoC framework (legacy - consider using Feature instead)
+// BLoC framework (legacy - consider using StateManager instead)
 export 'package:dragonfly/framework/bloc/dragonfly_bloc.dart'
     show DragonflyBlocBase, EventHandler, Emitter, DragonflyBlocExtension;
 export 'package:dragonfly/framework/bloc/dragonfly_bloc_provider.dart'
@@ -57,23 +58,40 @@ export 'package:dragonfly/framework/bloc/dragonfly_bloc_selector.dart'
 export 'package:dragonfly/framework/bloc/dragonfly_multi_bloc_provider.dart'
     show DragonflyMultiBlocProvider, DragonflyMultiBlocListener, blocListener;
 
-// Feature framework (recommended)
-export 'package:dragonfly/framework/feature/feature.dart'
+// StateManager framework (recommended)
+export 'package:dragonfly/framework/feature/state_manager.dart'
     show
-        Feature,
-        FeatureSideEffect,
+        StateManager,
+        StateManagerSideEffect,
         NavigateTo,
         ShowSnackbar,
         ShowDialog,
         Pop,
-        FeatureStateListener,
+        StateManagerStateListener,
         SideEffectCallback,
+        StateManagerWidgetBuilder,
+        StateManagerStateComparator,
+        // Backwards compatibility
+        Feature,
+        FeatureSideEffect,
+        FeatureStateListener,
         FeatureWidgetBuilder,
         FeatureStateComparator;
-export 'package:dragonfly/framework/feature/feature_provider.dart'
-    show FeatureProvider, FeatureContextExtension;
-export 'package:dragonfly/framework/feature/feature_builder.dart'
+export 'package:dragonfly/framework/feature/state_manager_provider.dart'
     show
+        StateManagerProvider,
+        StateManagerContextExtension,
+        // Backwards compatibility
+        FeatureProvider,
+        FeatureContextExtension;
+export 'package:dragonfly/framework/feature/state_manager_builder.dart'
+    show
+        StateManagerBuilder,
+        StateManagerListener,
+        StateManagerSideEffectListener,
+        StateManagerConsumer,
+        StateManagerSelector,
+        // Backwards compatibility
         FeatureBuilder,
         FeatureListener,
         FeatureSideEffectListener,
@@ -81,10 +99,45 @@ export 'package:dragonfly/framework/feature/feature_builder.dart'
         FeatureSelector;
 export 'package:dragonfly/framework/feature/dragonfly_screen.dart'
     show
-        DragonflyScreen,
+        DragonflyScreenBase,
         ScreenProvider,
-        FeatureNavigationExtension,
-        DefaultSideEffectHandler;
+        StateManagerNavigationExtension,
+        DefaultSideEffectHandler,
+        // Backwards compatibility
+        FeatureNavigationExtension;
+
+// Session management
+// Note: AccessLevel is exported from dragonfly_annotations, not here to avoid ambiguity
+export 'package:dragonfly/framework/session/session_storage.dart'
+    show SessionStorage, InMemorySessionStorage, HiveSessionStorage;
+export 'package:dragonfly/framework/session/dragonfly_session_manager.dart'
+    show
+        DragonflySessionManager,
+        DragonflySessionConfiguration,
+        SessionState,
+        SessionStateCallback,
+        AccessDeniedCallback,
+        dragonflySession;
+export 'package:dragonfly/framework/session/authenticated_network_adapter.dart'
+    show AuthenticatedNetworkAdapter, AuthenticatedHttpException;
+
+// Form validation framework
+export 'package:dragonfly/framework/form/form_field_state.dart'
+    show FormFieldState;
+export 'package:dragonfly/framework/form/validators.dart'
+    show Validators, Validator, CrossFieldValidator;
+export 'package:dragonfly/framework/form/form_controller.dart'
+    show FormController, FormControllerMixin;
+export 'package:dragonfly/framework/form/validated_widgets.dart'
+    show
+        ValidatedTextField,
+        ValidatedDropdown,
+        ValidatedCheckbox,
+        ValidatedSwitch,
+        ValidatedDatePicker,
+        ValidatedForm,
+        ValidatedSubmitButton,
+        FormStateAccessor;
 
 // Logging framework
 export 'package:dragonfly/framework/logging/dragonfly_log_level.dart'

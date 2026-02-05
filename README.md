@@ -1,14 +1,26 @@
 # 🐉 Dragonfly Framework
 
-A powerful, opinionated Flutter framework for building scalable mobile applications with clean architecture, dependency injection, and reactive state management.
+A powerful, opinionated Flutter framework for building scalable mobile applications with clean architecture, dependency injection, reactive state management, **session management**, and **access control (ACL)**.
+
+## ✨ Key Features
+
+- 🎯 **Feature-based State Management** - Combine state, actions, and side effects in one cohesive unit
+- 💉 **Dependency Injection** - Automatic registration with scopes and named instances
+- 🔐 **Session Management** - Built-in authentication with token handling
+- 🛡️ **Access Control (ACL)** - Role and permission-based route protection
+- 🛣️ **Declarative Routing** - Type-safe routes with automatic provider injection
+- 📝 **Form Validation** - Schema-based validation with 30+ built-in validators
+- 🌐 **Network Layer** - Repository pattern with automatic serialization
+- 📋 **Beautiful Logging** - Formatted logs with emoji icons and network tracing
+- ⚡ **Code Generation** - Generate models, states, repositories, forms, and DI config
 
 ## 📦 Packages
 
 | Package | Description |
 |---------|-------------|
-| `dragonfly` | Core framework with DI, state management, and utilities |
+| `dragonfly` | Core framework with DI, state management, session, and utilities |
 | `dragonfly_annotations` | Annotations for code generation |
-| `dragonfly_builder` | Code generators for models, features, and DI |
+| `dragonfly_builder` | Code generators for models, features, routing, and DI |
 
 ---
 
@@ -80,7 +92,7 @@ dart run build_runner build --delete-conflicting-outputs
 
 ---
 
-## 🎯 Feature System (Recommended)
+## 🎯 Feature System (State Manager)
 
 The Feature pattern is Dragonfly's modern approach to state management, combining state, actions, and side effects in one cohesive unit.
 
@@ -90,9 +102,9 @@ The Feature pattern is Dragonfly's modern approach to state management, combinin
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 
-part 'character_feature.feature.dart';
+part 'character_feature.state_manager.dart';
 
-@DragonflyFeature(logging: true)
+@DragonflyStateManager(logging: true)
 class CharacterFeature extends Feature<CharacterState>
     with _$CharacterFeatureMixin {
   
@@ -101,7 +113,7 @@ class CharacterFeature extends Feature<CharacterState>
 
   final GetCharacterUseCase _getCharacterUseCase;
 
-  @FeatureAction()
+  @StateAction()
   Future<void> fetchCharacter(int id) async {
     emit(const CharacterState.loading());
     
@@ -113,7 +125,7 @@ class CharacterFeature extends Feature<CharacterState>
     );
   }
 
-  @FeatureAction()
+  @StateAction()
   void reset() => emit(const CharacterState.initial());
 }
 ```
@@ -157,8 +169,8 @@ class CharacterScreen extends StatelessWidget {
 
 | Annotation | Description |
 |------------|-------------|
-| `@DragonflyFeature()` | Marks a class as a Feature |
-| `@FeatureAction()` | Marks a method as a user action |
+| `@DragonflyStateManager()` | Marks a class as a Feature (State Manager) |
+| `@StateAction()` | Marks a method as a user action |
 | `@InitialState()` | Marks the initial state getter |
 | `@SideEffect()` | Marks a method as a side effect |
 | `@Computed()` | Marks a derived/computed property |
@@ -166,7 +178,7 @@ class CharacterScreen extends StatelessWidget {
 ### Feature Options
 
 ```dart
-@DragonflyFeature(
+@DragonflyStateManager(
   logging: true,      // Enable state change logging
   injectable: true,   // Auto-register in DI container
   scope: 'user',      // DI scope
@@ -177,7 +189,7 @@ class CharacterScreen extends StatelessWidget {
 ### Side Effects
 
 ```dart
-@FeatureAction()
+@StateAction()
 Future<void> deleteCharacter(Character character) async {
   emit(const CharacterState.loading());
   await _deleteUseCase.call(character.id);
@@ -426,7 +438,7 @@ final named = DragonflyContainer.I.get<UseCase>(instanceName: 'GetCharacter');
 |------------|-------|-------------|
 | `@InjectableUseCase()` | Factory | New instance each time |
 | `@Repository()` | Lazy Singleton | Single instance, lazy created |
-| `@DragonflyFeature()` | Factory | New instance each time |
+| `@DragonflyStateManager()` | Factory | New instance each time |
 | `@Singleton()` | Singleton | Single instance, eager |
 | `@LazySingleton()` | Lazy Singleton | Single instance, lazy |
 
@@ -616,6 +628,712 @@ Dragonfly logs use beautiful **Unicode box-drawing characters** and **emoji icon
 
 ---
 
+## 🛣️ Routing & Navigation
+
+Dragonfly provides a powerful routing system with built-in session management and access control.
+
+### Defining Routes
+
+Use the `@DragonflyScreen` annotation to define routes:
+
+```dart
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
+
+// Public screen (no authentication required)
+@DragonflyScreen(
+  path: '/login',
+  name: 'login',
+  access: AccessLevel.guest,
+)
+class LoginScreen extends StatelessWidget { ... }
+
+// Protected screen (authentication required)
+@DragonflyScreen(
+  path: '/home',
+  name: 'home',
+  initial: true,
+  access: AccessLevel.authenticated,
+  provider: HomeFeature,
+)
+class HomeScreen extends StatelessWidget { ... }
+
+// Role-based access
+@DragonflyScreen(
+  path: '/admin',
+  name: 'admin',
+  access: AccessLevel.rolesRequired,
+  roles: ['admin', 'superadmin'],
+  provider: AdminFeature,
+)
+class AdminScreen extends StatelessWidget { ... }
+
+// Permission-based access
+@DragonflyScreen(
+  path: '/reports',
+  access: AccessLevel.permissionsRequired,
+  permissions: ['view_reports', 'export_data'],
+)
+class ReportsScreen extends StatelessWidget { ... }
+```
+
+### Router Configuration
+
+```dart
+// config/router_config.dart
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
+import 'router_config.router.dart';
+
+@DragonflyRouterConfig()
+class AppRouterConfig with $AppRouterConfig {}
+
+// main.dart
+class MyApp extends StatelessWidget {
+  static final _router = AppRouterConfig();
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      onGenerateRoute: _router.onGenerateRoute,
+      initialRoute: _router.initialRoute,
+    );
+  }
+}
+```
+
+### Screen Options
+
+| Option | Description |
+|--------|-------------|
+| `path` | Route path (e.g., `/home`, `/user/:id`) |
+| `name` | Named route identifier |
+| `initial` | Is this the initial route? |
+| `transition` | Screen transition animation |
+| `provider` | Feature to inject automatically |
+| `access` | Access level (guest, authenticated, roles, permissions) |
+| `roles` | Required roles for access |
+| `permissions` | Required permissions for access |
+| `redirectOnDenied` | Custom redirect when unauthorized |
+| `redirectOnUnauthenticated` | Custom redirect when not logged in |
+
+### Transitions
+
+```dart
+@DragonflyScreen(
+  path: '/details',
+  transition: ScreenTransition.slideRight,
+)
+```
+
+Available transitions:
+- `ScreenTransition.fade` (default)
+- `ScreenTransition.slideRight`
+- `ScreenTransition.slideUp`
+- `ScreenTransition.scale`
+- `ScreenTransition.none`
+- `ScreenTransition.platform`
+
+### Navigation Helpers
+
+```dart
+// Generated methods in router mixin
+_router.navigateTo(context, 'home');
+_router.navigateToPath(context, '/user/123');
+_router.replaceTo(context, 'login');
+_router.resetTo(context, 'home');
+_router.navigateToHome(context);  // After login
+_router.navigateToLogin(context); // After logout
+```
+
+---
+
+## 🔐 Session Management
+
+Dragonfly includes a comprehensive session manager for handling authentication, tokens, and access control.
+
+### Initialization
+
+```dart
+import 'package:dragonfly/dragonfly.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize session manager
+  await DragonflySessionManager.instance.init(
+    config: DragonflySessionConfiguration(
+      loginPath: '/login',
+      homePath: '/home',
+      unauthorizedPath: '/unauthorized',
+      tokenType: 'Bearer',
+      sessionTimeout: const Duration(hours: 24),
+      persistSession: true,
+    ),
+    storage: HiveSessionStorage(await Hive.openBox('session')),
+  );
+
+  // Initialize the app
+  await DragonflyApp(config: AppConfig()).init();
+  
+  runApp(const MyApp());
+}
+```
+
+### Login & Logout
+
+```dart
+// Login with user data, roles, and permissions
+await dragonflySession.login<User>(
+  token: response.accessToken,
+  user: response.user,
+  roles: ['user', 'premium'],
+  permissions: ['read', 'write', 'delete'],
+  expiresIn: const Duration(hours: 24),
+);
+
+// Logout
+await dragonflySession.logout();
+```
+
+### Checking Session State
+
+```dart
+// Check authentication
+if (dragonflySession.isAuthenticated) {
+  // User is logged in
+}
+
+// Get current user
+final user = dragonflySession.getUser<User>(User.fromJson);
+
+// Get user field
+final email = dragonflySession.getUserField<String>('email');
+
+// Get token for API calls
+final token = dragonflySession.token;
+final authHeader = dragonflySession.authorizationHeader; // "Bearer <token>"
+```
+
+### Listening to Session Changes
+
+```dart
+// Stream-based listening
+dragonflySession.stateStream.listen((state) {
+  switch (state) {
+    case SessionState.authenticated:
+      print('User logged in');
+      break;
+    case SessionState.unauthenticated:
+      print('User logged out');
+      break;
+    case SessionState.expired:
+      print('Session expired');
+      break;
+    case SessionState.loading:
+      print('Restoring session...');
+      break;
+  }
+});
+
+// Callback-based listening
+dragonflySession.addStateListener((state) {
+  // Handle state change
+});
+```
+
+### Session Storage Options
+
+```dart
+// In-memory (for testing, non-persistent)
+await DragonflySessionManager.instance.init(
+  storage: InMemorySessionStorage(),
+);
+
+// Hive (encrypted, persistent)
+await DragonflySessionManager.instance.init(
+  storage: HiveSessionStorage(await Hive.openBox('session')),
+);
+
+// Custom storage (implement SessionStorage interface)
+class SecureSessionStorage implements SessionStorage {
+  @override
+  Future<String?> getString(String key) async { ... }
+  @override
+  Future<void> setString(String key, String value) async { ... }
+  // ... implement other methods
+}
+```
+
+---
+
+## 🛡️ Access Control List (ACL)
+
+Dragonfly provides role-based (RBAC) and permission-based access control.
+
+### Access Levels
+
+| Level | Description |
+|-------|-------------|
+| `AccessLevel.guest` | Anyone can access |
+| `AccessLevel.authenticated` | Must be logged in |
+| `AccessLevel.rolesRequired` | Must have specific roles |
+| `AccessLevel.permissionsRequired` | Must have specific permissions |
+
+### Checking Access
+
+```dart
+// Check roles
+if (dragonflySession.hasRole('admin')) { ... }
+if (dragonflySession.hasAnyRole(['admin', 'moderator'])) { ... }
+if (dragonflySession.hasAllRoles(['user', 'verified'])) { ... }
+
+// Check permissions
+if (dragonflySession.hasPermission('delete_users')) { ... }
+if (dragonflySession.hasAnyPermission(['read', 'write'])) { ... }
+if (dragonflySession.hasAllPermissions(['read', 'write', 'delete'])) { ... }
+```
+
+### Managing Roles & Permissions
+
+```dart
+// Add roles
+await dragonflySession.addRoles(['premium', 'verified']);
+
+// Remove roles
+await dragonflySession.removeRoles(['trial']);
+
+// Add permissions
+await dragonflySession.addPermissions(['export_data']);
+
+// Remove permissions
+await dragonflySession.removePermissions(['delete_users']);
+```
+
+### Route Protection
+
+Routes are automatically protected based on `@DragonflyScreen` annotations:
+
+```dart
+@DragonflyScreen(
+  path: '/admin/users',
+  access: AccessLevel.rolesRequired,
+  roles: ['admin'],
+  redirectOnDenied: '/unauthorized',
+  redirectOnUnauthenticated: '/login',
+)
+class AdminUsersScreen extends StatelessWidget { ... }
+```
+
+When a user tries to access a protected route:
+1. If not authenticated → Redirect to `loginPath`
+2. If missing roles/permissions → Redirect to `unauthorizedPath`
+
+### Handling Access Denied
+
+```dart
+await DragonflySessionManager.instance.init(
+  config: DragonflySessionConfiguration(...),
+  onAccessDenied: (reason, redirectPath) {
+    print('Access denied: $reason');
+    print('Redirecting to: $redirectPath');
+    // Show snackbar, log analytics, etc.
+  },
+);
+```
+
+---
+
+## 🔒 Authenticated API Requests
+
+Dragonfly automatically injects authentication tokens into API requests.
+
+### Using AuthenticatedNetworkAdapter
+
+```dart
+// Configure in DragonflyApp
+DragonflyApp(
+  networkConfig: DragonflyNetworkConfig(
+    baseUrl: 'https://api.example.com',
+  ),
+).init();
+
+// Register authenticated adapter
+DragonflyContainer.I.registerLazySingleton<DragonflyBaseNetworkAdapter>(
+  () => AuthenticatedNetworkAdapter(
+    config: networkConfig,
+    enableLogging: true,
+    onTokenExpired: () async {
+      // Handle 401 responses
+      await dragonflySession.logout();
+      // Navigate to login
+    },
+    refreshTokenCallback: () async {
+      // Optionally refresh token before expiration
+      return await authService.refreshToken();
+    },
+  ),
+  instanceName: 'authenticatedNetwork',
+);
+```
+
+### Authenticated Endpoints
+
+```dart
+@Repository(
+  url: '/api',
+  connection: 'authenticatedNetwork', // Use authenticated adapter
+)
+abstract class UserRepository {
+  @Get(path: '/profile')
+  @Authenticated() // Token will be added automatically
+  Future<User> getProfile();
+
+  @Post(path: '/login')
+  // No @Authenticated - public endpoint
+  Future<AuthResponse> login(@Body() LoginRequest request);
+}
+```
+
+### Token Handling
+
+The `AuthenticatedNetworkAdapter`:
+- Automatically adds `Authorization: Bearer <token>` header
+- Logs all requests/responses
+- Handles 401 Unauthorized (calls `onTokenExpired`)
+- Supports token refresh before expiration
+
+---
+
+## 📝 Form Validation
+
+Dragonfly provides a powerful schema-based form validation system with code generation, integrated with StateManager.
+
+### Defining a Form Schema
+
+```dart
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
+
+part 'login_form.form.dart';
+
+@FormSchema()
+class LoginForm {
+  @Required(message: 'Email is required')
+  @Email(message: 'Please enter a valid email')
+  final String email;
+
+  @Required(message: 'Password is required')
+  @MinLength(8, message: 'Password must be at least 8 characters')
+  @StrongPassword(
+    requireUppercase: true,
+    requireLowercase: true,
+    requireDigit: true,
+  )
+  final String password;
+
+  @MustBeTrue(message: 'You must accept the terms')
+  final bool acceptTerms;
+
+  const LoginForm({
+    this.email = '',
+    this.password = '',
+    this.acceptTerms = false,
+  });
+}
+```
+
+### Generated Code
+
+The `@FormSchema` annotation generates:
+- **`LoginFormState`** - Form state class tracking values, errors, and touched state
+- **`LoginFormField`** - Enum of field names for type-safe references
+- **`LoginFormFormController`** - Mixin for StateManager integration
+
+### Available Validators
+
+#### String Validators
+| Validator | Description |
+|-----------|-------------|
+| `@Required()` | Field cannot be empty |
+| `@Email()` | Valid email format |
+| `@MinLength(n)` | Minimum string length |
+| `@MaxLength(n)` | Maximum string length |
+| `@Pattern(regex)` | Matches regex pattern |
+| `@Url()` | Valid URL format |
+| `@Phone()` | Valid phone number |
+| `@Alpha()` | Only letters |
+| `@Numeric()` | Only numbers |
+| `@Alphanumeric()` | Letters and numbers only |
+
+#### Number Validators
+| Validator | Description |
+|-----------|-------------|
+| `@Min(n)` | Minimum value |
+| `@Max(n)` | Maximum value |
+| `@Range(min, max)` | Value within range |
+| `@Positive()` | Must be positive |
+| `@Negative()` | Must be negative |
+
+#### Password Validators
+| Validator | Description |
+|-----------|-------------|
+| `@StrongPassword()` | Configurable password strength |
+
+```dart
+@StrongPassword(
+  minLength: 8,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireDigit: true,
+  requireSpecial: false,
+)
+final String password;
+```
+
+#### Boolean Validators
+| Validator | Description |
+|-----------|-------------|
+| `@MustBeTrue()` | Must be checked/true |
+| `@MustBeFalse()` | Must be unchecked/false |
+
+#### Date Validators
+| Validator | Description |
+|-----------|-------------|
+| `@PastDate()` | Date must be in the past |
+| `@FutureDate()` | Date must be in the future |
+| `@MinAge(years)` | Minimum age requirement |
+
+#### Collection Validators
+| Validator | Description |
+|-----------|-------------|
+| `@MinItems(n)` | Minimum list items |
+| `@MaxItems(n)` | Maximum list items |
+
+#### Cross-Field Validators
+| Validator | Description |
+|-----------|-------------|
+| `@EqualTo('field')` | Must equal another field |
+| `@NotEqualTo('field')` | Must differ from another field |
+| `@RequiredIf('field', value)` | Required when condition met |
+| `@RequiredUnless('field', value)` | Required unless condition met |
+
+#### Payment Validators
+| Validator | Description |
+|-----------|-------------|
+| `@CreditCard()` | Valid credit card (Luhn) |
+| `@Cvv()` | Valid CVV format |
+| `@ExpiryDate()` | Valid and not expired |
+
+### Integrating with StateManager
+
+```dart
+@DragonflyStateManager(logging: true)
+class LoginStateManager extends StateManager<LoginState>
+    with _$LoginStateManagerMixin, LoginFormFormController<LoginState> {
+  
+  LoginStateManager() : super(const LoginState.initial());
+
+  // Required: Implement formState getter
+  @override
+  LoginFormState get formState => state.form;
+
+  // Required: Implement updateFormState
+  @override
+  void updateFormState(LoginFormState newFormState) {
+    emit(state.copyWith(form: newFormState));
+  }
+
+  // Generated methods available:
+  // - updateEmail(String value)
+  // - updatePassword(String value)
+  // - updateAcceptTerms(bool value)
+  // - touchEmail()
+  // - touchPassword()
+  // - touchAcceptTerms()
+  // - validateAllFields() -> bool
+  // - resetAllFields()
+
+  @StateAction()
+  Future<void> login() async {
+    // Validate all fields first
+    if (!validateAllFields()) {
+      return; // Form has errors
+    }
+
+    emit(const LoginState.loading());
+    // ... perform login
+  }
+}
+```
+
+### Using Validated Widgets
+
+Dragonfly provides pre-built widgets that integrate with form validation:
+
+```dart
+class LoginScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final stateManager = context.stateManager<LoginStateManager>();
+
+    return ValidatedForm(
+      child: Column(
+        children: [
+          // Email field with auto-validation
+          ValidatedTextField<LoginStateManager, LoginState>(
+            fieldName: 'email',
+            formSelector: (state) => state.form,
+            onChanged: stateManager.updateEmail,
+            onBlur: stateManager.touchEmail,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              prefixIcon: Icon(Icons.email),
+            ),
+            keyboardType: TextInputType.emailAddress,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Password field
+          ValidatedTextField<LoginStateManager, LoginState>(
+            fieldName: 'password',
+            formSelector: (state) => state.form,
+            onChanged: stateManager.updatePassword,
+            onBlur: stateManager.touchPassword,
+            decoration: const InputDecoration(
+              labelText: 'Password',
+              prefixIcon: Icon(Icons.lock),
+            ),
+            obscureText: true,
+          ),
+
+          const SizedBox(height: 16),
+
+          // Checkbox for terms
+          ValidatedCheckbox<LoginStateManager, LoginState>(
+            fieldName: 'acceptTerms',
+            formSelector: (state) => state.form,
+            onChanged: (v) => stateManager.updateAcceptTerms(v ?? false),
+            title: const Text('I accept the terms and conditions'),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Submit button
+          ValidatedSubmitButton<LoginStateManager, LoginState>(
+            formSelector: (state) => state.form,
+            onSubmit: stateManager.login,
+            loadingSelector: (state) => state is LoginStateLoading,
+            child: const Text('Sign In'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+### Available Validated Widgets
+
+| Widget | Description |
+|--------|-------------|
+| `ValidatedTextField` | Text input with validation |
+| `ValidatedDropdown` | Dropdown with validation |
+| `ValidatedCheckbox` | Checkbox with validation |
+| `ValidatedSwitch` | Switch with validation |
+| `ValidatedDatePicker` | Date picker with validation |
+| `ValidatedSubmitButton` | Submit button that disables when invalid |
+| `ValidatedForm` | Form wrapper |
+
+### Form Schema Options
+
+```dart
+@FormSchema(
+  copyWith: true,         // Generate copyWith method
+  validateOnChange: true, // Validate when value changes
+  validateOnBlur: true,   // Validate when field loses focus
+  stateName: 'MyFormState', // Custom state class name
+)
+```
+
+### Field Metadata
+
+Add display hints for form fields:
+
+```dart
+@FormField(
+  label: 'Email Address',
+  hint: 'Enter your email',
+  helpText: 'We will never share your email',
+  keyboardType: FormKeyboardType.emailAddress,
+  obscureText: false,
+  textCapitalization: FormTextCapitalization.none,
+)
+final String email;
+```
+
+### Manual Validation
+
+```dart
+// Validate all fields
+if (stateManager.validateAllFields()) {
+  // Form is valid, proceed
+}
+
+// Check individual field
+final emailError = stateManager.formState.email.error;
+final isEmailValid = stateManager.formState.email.isValid;
+final isEmailTouched = stateManager.formState.email.touched;
+
+// Check form state
+final isFormValid = stateManager.formState.isValid;
+final isDirty = stateManager.formState.isDirty;
+final isTouched = stateManager.formState.isTouched;
+
+// Get all values
+final values = stateManager.formState.values; // Map<String, dynamic>
+
+// Get all errors
+final errors = stateManager.formState.activeErrors; // Map<String, String>
+```
+
+### Example: Registration Form with Cross-Field Validation
+
+```dart
+@FormSchema()
+class RegistrationForm {
+  @Required()
+  @Email()
+  final String email;
+
+  @Required()
+  @StrongPassword(requireSpecial: true)
+  final String password;
+
+  @Required()
+  @EqualTo('password', message: 'Passwords do not match')
+  final String confirmPassword;
+
+  final bool isCompany;
+
+  @RequiredIf('isCompany', true, message: 'Company name is required')
+  @MinLength(2)
+  final String companyName;
+
+  @MinAge(18, message: 'You must be 18 or older')
+  final DateTime? dateOfBirth;
+
+  const RegistrationForm({
+    this.email = '',
+    this.password = '',
+    this.confirmPassword = '',
+    this.isCompany = false,
+    this.companyName = '',
+    this.dateOfBirth,
+  });
+}
+```
+
+---
+
 ## 🔧 Utilities
 
 ### Either Type
@@ -700,9 +1418,9 @@ lib/
 
 | BLoC Pattern | Dragonfly Feature |
 |--------------|-------------------|
-| `Event` class | `@FeatureAction()` methods |
+| `Event` class | `@StateAction()` methods |
 | `State` class | Same `@StateModel()` |
-| `Bloc` class | `Feature<S>` class |
+| `Bloc` class | `Feature<S>` class with `@DragonflyStateManager()` |
 | `BlocBuilder` | `FeatureBuilder` |
 | `BlocListener` | `FeatureListener` |
 | `context.read<Bloc>().add(Event)` | `feature.methodName()` |

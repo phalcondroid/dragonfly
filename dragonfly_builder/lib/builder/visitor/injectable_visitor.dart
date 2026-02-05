@@ -277,17 +277,18 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
     }
   }
 
-  /// Process @DragonflyStateManager annotated classes (Features)
+  /// Process @DragonflyStateManager annotated classes (StateManagers/Features)
   void _processDragonflyStateManager(ClassElement element) {
-    // Only process if it extends Feature
-    bool extendsFeature = false;
+    // Only process if it extends StateManager or Feature (backwards compatibility)
+    bool extendsStateManager = false;
     for (final supertype in element.allSupertypes) {
-      if (supertype.element.name == 'Feature') {
-        extendsFeature = true;
+      final name = supertype.element.name;
+      if (name == 'StateManager' || name == 'Feature') {
+        extendsStateManager = true;
         break;
       }
     }
-    if (!extendsFeature) return;
+    if (!extendsStateManager) return;
 
     final annotation =
         ConstantReader(_stateManagerChecker.firstAnnotationOfExact(element));

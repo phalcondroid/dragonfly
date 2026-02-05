@@ -4,6 +4,7 @@ import 'package:dragonfly_builder/builder/generators/dragonfly_feature_generator
 import 'package:dragonfly_builder/builder/generators/dragonfly_view_generator.dart';
 import 'package:dragonfly_builder/builder/generators/event_model_generator.dart';
 import 'package:dragonfly_builder/builder/generators/factory_model_generator.dart';
+import 'package:dragonfly_builder/builder/generators/form_schema_generator.dart';
 import 'package:dragonfly_builder/builder/generators/injectable_config_generator.dart';
 import 'package:dragonfly_builder/builder/generators/repository_generator.dart';
 import 'package:dragonfly_builder/builder/generators/state_model_generator.dart';
@@ -126,3 +127,18 @@ Builder routerBuilder(BuilderOptions options) {
     generatedExtension: '.router.dart',
   );
 }
+
+/// Builder for @FormSchema annotated classes.
+///
+/// Generates form state and controller classes with:
+/// - FormState class to track field values, errors, and touched state
+/// - FormController mixin for StateManager integration
+/// - Field enum for type-safe field references
+/// - Validation logic based on field annotations
+///
+/// Output extension: `.form.dart`
+Builder formSchemaGenerator(BuilderOptions options) => PartBuilder(
+      [FormSchemaGenerator()],
+      '.form.dart',
+      options: options,
+    );

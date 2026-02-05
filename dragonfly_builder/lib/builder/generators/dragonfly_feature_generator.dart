@@ -9,20 +9,25 @@ import 'package:source_gen/source_gen.dart';
 ///
 /// This generator creates:
 /// - A mixin with helper methods for the state manager
-/// - A typed `when` method for state handling
 /// - A provider widget for easy injection
-/// - Registration in DI if injectable is true
+/// - Individual state builder widgets for each state variant
+/// - Extension methods for using the state manager in widgets
 ///
 /// Example input:
 /// ```dart
 /// @DragonflyStateManager()
-/// class CharacterFeature extends Feature<CharacterState> {
-///   @InitialState()
-///   CharacterState get initialState => const CharacterState.initial();
-///
+/// class CharacterStateManager extends StateManager<CharacterState> {
 ///   @StateAction()
 ///   Future<void> fetchCharacter(int id) async { ... }
 /// }
+/// ```
+///
+/// Generated output includes widgets like:
+/// ```dart
+/// CharacterLoaded(
+///   builder: (Character character) => Widget,
+///   buildWhen: (oldState, newState) => bool,
+/// )
 /// ```
 class DragonflyStateManagerGenerator
     extends GeneratorForAnnotation<DragonflyStateManager> {
@@ -62,7 +67,7 @@ class DragonflyStateManagerGenerator
     final stateVariants = await _findStateVariants(buildStep, stateType);
 
     try {
-      final code = _generateViewCode(
+      final code = _generateStateManagerCode(
         className: className,
         stateType: stateType,
         logging: logging,
@@ -80,9 +85,10 @@ class DragonflyStateManagerGenerator
   }
 
   String _extractStateType(ClassElement element) {
-    // Look for Feature<S> in supertype
+    // Look for StateManager<S> or Feature<S> in supertype
     for (final supertype in element.allSupertypes) {
-      if (supertype.element.name == 'Feature') {
+      if (supertype.element.name == 'StateManager' ||
+          supertype.element.name == 'Feature') {
         final typeArgs = supertype.typeArguments;
         if (typeArgs.isNotEmpty) {
           return typeArgs.first.getDisplayString(withNullability: false);
@@ -224,7 +230,23 @@ class DragonflyStateManagerGenerator
     return s[0].toUpperCase() + s.substring(1);
   }
 
-  String _generateViewCode({
+  String _uncapitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toLowerCase() + s.substring(1);
+  }
+
+  /// Gets the base name without "StateManager" or "Feature" suffix
+  String _getBaseName(String className) {
+    if (className.endsWith('StateManager')) {
+      return className.substring(0, className.length - 12);
+    }
+    if (className.endsWith('Feature')) {
+      return className.substring(0, className.length - 7);
+    }
+    return className;
+  }
+
+  String _generateStateManagerCode({
     required String className,
     required String stateType,
     required bool logging,
@@ -234,6 +256,7 @@ class DragonflyStateManagerGenerator
     required List<_StateVariant> stateVariants,
   }) {
     final buffer = StringBuffer();
+    final baseName = _getBaseName(className);
 
     // Generate mixin
     _generateMixin(buffer, className, stateType, logging, actions, computedProps, stateVariants);
@@ -245,8 +268,14 @@ class DragonflyStateManagerGenerator
 
     buffer.writeln();
 
-    // Generate screen base class
-    _generateScreenClass(buffer, className, stateType, stateVariants);
+    // Generate individual state builder widgets for each variant
+    if (stateVariants.isNotEmpty) {
+      _generateStateBuilderWidgets(buffer, className, stateType, baseName, stateVariants);
+      buffer.writeln();
+    }
+
+    // Generate extension methods
+    _generateExtensionMethods(buffer, className, stateType, baseName, stateVariants);
 
     return buffer.toString();
   }
@@ -264,15 +293,11 @@ class DragonflyStateManagerGenerator
     buffer.writeln('///');
     buffer.writeln('/// Provides logging configuration.');
     buffer.writeln('/// State pattern matching (when, maybeWhen, map) is available directly on the state.');
-    buffer.writeln('mixin _\$${className}Mixin on Feature<$stateType> {');
+    buffer.writeln('mixin _\$${className}Mixin on StateManager<$stateType> {');
 
     // Override loggingEnabled
     buffer.writeln('  @override');
     buffer.writeln('  bool get loggingEnabled => $logging;');
-
-    // NOTE: when, maybeWhen, map methods are NOT generated here
-    // because they already exist on the State class itself.
-    // Use: state.when(...), state.maybeWhen(...), state.map(...)
 
     buffer.writeln('}');
   }
@@ -297,8 +322,8 @@ class DragonflyStateManagerGenerator
     buffer.writeln('    required this.child,');
     buffer.writeln('  });');
     buffer.writeln();
-    buffer.writeln('  /// Optional factory to create the feature.');
-    buffer.writeln('  /// If not provided, gets the feature from DI.');
+    buffer.writeln('  /// Optional factory to create the state manager.');
+    buffer.writeln('  /// If not provided, gets the state manager from DI.');
     buffer.writeln('  final $className Function(BuildContext context)? create;');
     buffer.writeln();
     buffer.writeln('  /// The child widget.');
@@ -306,7 +331,7 @@ class DragonflyStateManagerGenerator
     buffer.writeln();
     buffer.writeln('  @override');
     buffer.writeln('  Widget build(BuildContext context) {');
-    buffer.writeln('    return FeatureProvider<$className>(');
+    buffer.writeln('    return StateManagerProvider<$className>(');
     buffer.writeln('      create: create ?? (_) => DragonflyContainer.I.get<$className>(),');
     buffer.writeln('      child: child,');
     buffer.writeln('    );');
@@ -314,33 +339,159 @@ class DragonflyStateManagerGenerator
     buffer.writeln('}');
   }
 
-  void _generateScreenClass(
+  void _generateStateBuilderWidgets(
     StringBuffer buffer,
     String className,
     String stateType,
+    String baseName,
+    List<_StateVariant> stateVariants,
+  ) {
+    for (final variant in stateVariants) {
+      _generateSingleStateBuilder(buffer, className, stateType, baseName, variant);
+      buffer.writeln();
+    }
+  }
+
+  void _generateSingleStateBuilder(
+    StringBuffer buffer,
+    String className,
+    String stateType,
+    String baseName,
+    _StateVariant variant,
+  ) {
+    final widgetName = '$baseName${_capitalize(variant.name)}';
+    final hasParams = variant.params.isNotEmpty;
+
+    // Generate builder function type
+    String builderType;
+    if (hasParams) {
+      final paramTypes = variant.params.map((p) => '${p.type} ${p.name}').join(', ');
+      builderType = 'Widget Function($paramTypes)';
+    } else {
+      builderType = 'Widget Function()';
+    }
+
+    buffer.writeln('/// Builder widget that only builds when state is [${variant.className}].');
+    buffer.writeln('///');
+    buffer.writeln('/// Usage:');
+    buffer.writeln('/// ```dart');
+    if (hasParams) {
+      final exampleParams = variant.params.map((p) => p.name).join(', ');
+      buffer.writeln('/// $widgetName(');
+      buffer.writeln('///   builder: ($exampleParams) => MyWidget($exampleParams),');
+      buffer.writeln('/// )');
+    } else {
+      buffer.writeln('/// $widgetName(');
+      buffer.writeln('///   builder: () => const MyWidget(),');
+      buffer.writeln('/// )');
+    }
+    buffer.writeln('/// ```');
+    buffer.writeln('class $widgetName extends StatelessWidget {');
+    buffer.writeln('  const $widgetName({');
+    buffer.writeln('    super.key,');
+    buffer.writeln('    required this.builder,');
+    buffer.writeln('    this.buildWhen,');
+    buffer.writeln('    this.orElse,');
+    if (hasParams) {
+      for (final param in variant.params) {
+        final nullableType = param.type.endsWith('?') ? param.type : '${param.type}?';
+        buffer.writeln('    this.initial${_capitalize(param.name)},');
+      }
+    }
+    buffer.writeln('  });');
+    buffer.writeln();
+    buffer.writeln('  /// Builder function called with state parameters when state is [${variant.className}].');
+    buffer.writeln('  final $builderType builder;');
+    buffer.writeln();
+    buffer.writeln('  /// Optional function to determine if the builder should be called.');
+    buffer.writeln('  /// Receives the previous and current state.');
+    buffer.writeln('  final bool Function($stateType previous, $stateType current)? buildWhen;');
+    buffer.writeln();
+    buffer.writeln('  /// Optional widget to show when state is not [${variant.className}].');
+    buffer.writeln('  /// Defaults to an empty SizedBox.');
+    buffer.writeln('  final Widget Function()? orElse;');
+
+    // Add initial data parameters if the state has parameters
+    if (hasParams) {
+      buffer.writeln();
+      for (final param in variant.params) {
+        final nullableType = param.type.endsWith('?') ? param.type : '${param.type}?';
+        buffer.writeln('  /// Initial value for ${param.name} before state loads.');
+        buffer.writeln('  final $nullableType initial${_capitalize(param.name)};');
+      }
+    }
+
+    buffer.writeln();
+    buffer.writeln('  @override');
+    buffer.writeln('  Widget build(BuildContext context) {');
+    buffer.writeln('    return StateManagerBuilder<$className, $stateType>(');
+    buffer.writeln('      buildWhen: buildWhen,');
+    buffer.writeln('      builder: (context, state) {');
+    buffer.writeln('        if (state is ${variant.className}) {');
+    if (hasParams) {
+      final paramNames = variant.params.map((p) => 'state.${p.name}').join(', ');
+      buffer.writeln('          return builder($paramNames);');
+    } else {
+      buffer.writeln('          return builder();');
+    }
+    buffer.writeln('        }');
+
+    // Handle initial data if provided
+    if (hasParams) {
+      buffer.writeln('        // Check if initial data is provided');
+      final hasInitialCheck = variant.params.map((p) => 'initial${_capitalize(p.name)} != null').join(' && ');
+      buffer.writeln('        if ($hasInitialCheck) {');
+      final initialParams = variant.params.map((p) => 'initial${_capitalize(p.name)}!').join(', ');
+      buffer.writeln('          return builder($initialParams);');
+      buffer.writeln('        }');
+    }
+
+    buffer.writeln('        return orElse?.call() ?? const SizedBox.shrink();');
+    buffer.writeln('      },');
+    buffer.writeln('    );');
+    buffer.writeln('  }');
+    buffer.writeln('}');
+  }
+
+  void _generateExtensionMethods(
+    StringBuffer buffer,
+    String className,
+    String stateType,
+    String baseName,
     List<_StateVariant> stateVariants,
   ) {
     buffer.writeln('/// Extension methods for using $className in widgets.');
     buffer.writeln('extension ${className}BuildContextExtension on BuildContext {');
     buffer.writeln('  /// Gets the [$className] from the widget tree.');
-    buffer.writeln('  $className get ${_uncapitalize(className)} => feature<$className>();');
+    buffer.writeln('  $className get ${_uncapitalize(className)} => stateManager<$className>();');
     buffer.writeln();
 
-    // Generate when builder if we have variants
+    // Generate convenience getter for backward compatibility
+    final baseLower = _uncapitalize(baseName);
+    if (_uncapitalize(className) != '${baseLower}Feature') {
+      buffer.writeln('  /// Alias for backward compatibility.');
+      buffer.writeln('  @Deprecated(\'Use ${_uncapitalize(className)} instead\')');
+      buffer.writeln('  $className get ${baseLower}Feature => stateManager<$className>();');
+      buffer.writeln();
+    }
+
+    // Generate when builder if we have variants (keeping for backward compatibility)
     if (stateVariants.isNotEmpty) {
       final callbackParams = stateVariants.map((v) {
         if (v.params.isEmpty) {
           return 'required Widget Function() on${_capitalize(v.name)}';
         } else {
           final paramTypes = v.params.map((p) => '${p.type} ${p.name}').join(', ');
-          return 'required Widget Function($paramTypes) on${_capitalize(v.name)}';}
+          return 'required Widget Function($paramTypes) on${_capitalize(v.name)}';
+        }
       }).join(',\n    ');
 
       buffer.writeln('  /// Builds a widget based on the current state of [$className].');
+      buffer.writeln('  /// Consider using individual state builders like [${baseName}Loaded] instead.');
       buffer.writeln('  Widget ${_uncapitalize(className)}Builder({');
       buffer.writeln('    $callbackParams,');
       buffer.writeln('  }) {');
-      buffer.writeln('    return FeatureBuilder<$className, $stateType>(');
+      buffer.writeln('    return StateManagerBuilder<$className, $stateType>(');
       buffer.writeln('      builder: (context, state) {');
       buffer.writeln('        return state.when(');
 
@@ -361,11 +512,6 @@ class DragonflyStateManagerGenerator
     }
 
     buffer.writeln('}');
-  }
-
-  String _uncapitalize(String s) {
-    if (s.isEmpty) return s;
-    return s[0].toLowerCase() + s.substring(1);
   }
 }
 

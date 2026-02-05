@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:dragonfly/framework/feature/feature.dart';
-import 'package:dragonfly/framework/feature/feature_provider.dart';
-import 'package:dragonfly/framework/feature/feature_builder.dart';
+import 'package:dragonfly/framework/feature/state_manager.dart';
+import 'package:dragonfly/framework/feature/state_manager_provider.dart';
+import 'package:dragonfly/framework/feature/state_manager_builder.dart';
 import 'package:dragonfly/framework/di/dragonfly_container.dart';
 
-/// Base class for screens that use a Dragonfly Feature.
+/// Base class for screens that use a Dragonfly StateManager.
 ///
-/// This abstract class provides automatic feature injection and
-/// convenient access to feature methods.
+/// This abstract class provides automatic state manager injection and
+/// convenient access to state manager methods.
 ///
 /// Example:
 /// ```dart
-/// class CharacterScreen extends DragonflyScreen<CharacterFeature, CharacterState> {
+/// class CharacterScreen extends DragonflyScreenBase<CharacterStateManager, CharacterState> {
 ///   const CharacterScreen({super.key});
 ///
 ///   @override
-///   Widget build(BuildContext context, CharacterFeature feature, CharacterState state) {
+///   Widget buildScreen(BuildContext context, CharacterStateManager stateManager, CharacterState state) {
 ///     return Scaffold(
 ///       appBar: AppBar(
 ///         title: const Text('Character'),
 ///         actions: [
 ///           IconButton(
 ///             icon: const Icon(Icons.refresh),
-///             onPressed: feature.refresh,
+///             onPressed: stateManager.refresh,
 ///           ),
 ///         ],
 ///       ),
 ///       body: state.when(
-///         initial: () => _InitialView(onFetch: () => feature.fetchCharacter(1)),
+///         initial: () => _InitialView(onFetch: () => stateManager.fetchCharacter(1)),
 ///         loading: () => const CircularProgressIndicator(),
 ///         loaded: (character) => _CharacterDetail(character: character),
 ///         error: (message) => _ErrorView(message: message),
@@ -36,68 +36,68 @@ import 'package:dragonfly/framework/di/dragonfly_container.dart';
 ///   }
 /// }
 /// ```
-abstract class DragonflyScreen<F extends Feature<S>, S> extends StatelessWidget {
-  const DragonflyScreen({super.key});
+abstract class DragonflyScreenBase<SM extends StateManager<S>, S> extends StatelessWidget {
+  const DragonflyScreenBase({super.key});
 
-  /// Builds the screen with access to the feature and current state.
-  Widget buildScreen(BuildContext context, F feature, S state);
+  /// Builds the screen with access to the state manager and current state.
+  Widget buildScreen(BuildContext context, SM stateManager, S state);
 
   @override
   Widget build(BuildContext context) {
-    return FeatureBuilder<F, S>(
+    return StateManagerBuilder<SM, S>(
       builder: (context, state) {
-        final feature = context.feature<F>();
-        return buildScreen(context, feature, state);
+        final sm = context.stateManager<SM>();
+        return buildScreen(context, sm, state);
       },
     );
   }
 }
 
-/// A screen wrapper that automatically provides a feature.
+/// A screen wrapper that automatically provides a state manager.
 ///
-/// Use this to wrap a screen that needs a feature but doesn't extend
-/// [DragonflyScreen].
+/// Use this to wrap a screen that needs a state manager but doesn't extend
+/// [DragonflyScreenBase].
 ///
 /// Example:
 /// ```dart
 /// // In your routes:
-/// ScreenProvider<CharacterFeature>(
+/// ScreenProvider<CharacterStateManager>(
 ///   child: const CharacterView(),
 /// )
 /// ```
-class ScreenProvider<F extends Feature<dynamic>> extends StatelessWidget {
+class ScreenProvider<SM extends StateManager<dynamic>> extends StatelessWidget {
   const ScreenProvider({
     super.key,
     this.create,
     required this.child,
   });
 
-  /// Optional factory to create the feature.
-  /// If not provided, gets the feature from DI.
-  final F Function(BuildContext context)? create;
+  /// Optional factory to create the state manager.
+  /// If not provided, gets the state manager from DI.
+  final SM Function(BuildContext context)? create;
 
   /// The child widget.
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return FeatureProvider<F>(
-      create: create ?? (_) => DragonflyContainer.I.get<F>(),
+    return StateManagerProvider<SM>(
+      create: create ?? (_) => DragonflyContainer.I.get<SM>(),
       child: child,
     );
   }
 }
 
-/// Extension methods for easier navigation with features.
-extension FeatureNavigationExtension on BuildContext {
-  /// Pushes a route and provides a feature to it.
-  Future<T?> pushFeatureRoute<F extends Feature<dynamic>, T>({
+/// Extension methods for easier navigation with state managers.
+extension StateManagerNavigationExtension on BuildContext {
+  /// Pushes a route and provides a state manager to it.
+  Future<T?> pushStateManagerRoute<SM extends StateManager<dynamic>, T>({
     required Widget child,
-    F Function(BuildContext)? create,
+    SM Function(BuildContext)? create,
   }) {
     return Navigator.of(this).push<T>(
       MaterialPageRoute(
-        builder: (context) => ScreenProvider<F>(
+        builder: (context) => ScreenProvider<SM>(
           create: create,
           child: child,
         ),
@@ -106,7 +106,7 @@ extension FeatureNavigationExtension on BuildContext {
   }
 
   /// Pushes a named route.
-  Future<T?> pushFeatureNamed<T>(String routeName, {Object? arguments}) {
+  Future<T?> pushNamed<T>(String routeName, {Object? arguments}) {
     return Navigator.of(this).pushNamed<T>(routeName, arguments: arguments);
   }
 }
@@ -117,11 +117,11 @@ extension FeatureNavigationExtension on BuildContext {
 ///
 /// Example:
 /// ```dart
-/// DefaultSideEffectHandler<CharacterFeature>(
+/// DefaultSideEffectHandler<CharacterStateManager>(
 ///   child: const CharacterScreen(),
 /// )
 /// ```
-class DefaultSideEffectHandler<F extends Feature<dynamic>> extends StatelessWidget {
+class DefaultSideEffectHandler<SM extends StateManager<dynamic>> extends StatelessWidget {
   const DefaultSideEffectHandler({
     super.key,
     required this.child,
@@ -137,17 +137,17 @@ class DefaultSideEffectHandler<F extends Feature<dynamic>> extends StatelessWidg
   final void Function(BuildContext, ShowSnackbar)? onSnackbar;
   final void Function(BuildContext, ShowDialog)? onDialog;
   final void Function(BuildContext, Pop)? onPop;
-  final void Function(BuildContext, FeatureSideEffect)? onUnknown;
+  final void Function(BuildContext, StateManagerSideEffect)? onUnknown;
 
   @override
   Widget build(BuildContext context) {
-    return FeatureSideEffectListener<F>(
+    return StateManagerSideEffectListener<SM>(
       listener: (context, effect) => _handleEffect(context, effect),
       child: child,
     );
   }
 
-  void _handleEffect(BuildContext context, FeatureSideEffect effect) {
+  void _handleEffect(BuildContext context, StateManagerSideEffect effect) {
     switch (effect) {
       case NavigateTo():
         if (onNavigate != null) {
@@ -210,5 +210,22 @@ class DefaultSideEffectHandler<F extends Feature<dynamic>> extends StatelessWidg
 
   void _defaultPop(BuildContext context, Pop effect) {
     Navigator.of(context).pop(effect.result);
+  }
+}
+
+// Backwards compatibility aliases
+@Deprecated('Use StateManagerNavigationExtension instead')
+extension FeatureNavigationExtension on BuildContext {
+  @Deprecated('Use pushStateManagerRoute instead')
+  Future<T?> pushFeatureRoute<F extends StateManager<dynamic>, T>({
+    required Widget child,
+    F Function(BuildContext)? create,
+  }) {
+    return pushStateManagerRoute<F, T>(child: child, create: create);
+  }
+
+  @Deprecated('Use pushNamed instead')
+  Future<T?> pushFeatureNamed<T>(String routeName, {Object? arguments}) {
+    return pushNamed<T>(routeName, arguments: arguments);
   }
 }

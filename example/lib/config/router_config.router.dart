@@ -5,32 +5,78 @@
 // **************************************************************************
 
 import 'package:flutter/material.dart';
+import 'package:dragonfly/dragonfly.dart';
+import 'package:dragonfly_annotations/dragonfly_annotations.dart'
+    show AccessLevel;
 import 'package:example/components/characters/presentation/screens/character_screen.dart';
 import 'package:example/components/characters/presentation/features/character_feature.dart';
 
-/// Generated router configuration.
+/// Generated router configuration with session/ACL support.
 mixin $AppRouterConfig {
   /// Map of route paths to widget builders.
   Map<String, WidgetBuilder> get routes => {
         '/': (context) =>
             CharacterFeatureProvider(child: const CharacterScreen()),
+        '/character-alt': (context) =>
+            CharacterFeatureProvider(child: const CharacterScreenAlternative()),
+      };
+
+  /// Route access configurations.
+  Map<String, _RouteAccessConfig> get routeConfigs => {
+        '/': _RouteAccessConfig(
+          accessLevel: AccessLevel.guest,
+          roles: const [],
+          permissions: const [],
+        ),
+        '/character-alt': _RouteAccessConfig(
+          accessLevel: AccessLevel.guest,
+          roles: const [],
+          permissions: const [],
+        ),
       };
 
   /// Map of route names to paths.
   Map<String, String> get namedRoutes => {
         'characters': '/',
+        'characters-alt': '/character-alt',
       };
 
   /// The initial route for the application.
   String get initialRoute => '/';
 
-  /// Generates a route for the given settings.
+  /// Get the session manager.
+  DragonflySessionManager get session => DragonflySessionManager.instance;
+
+  /// Generates a route for the given settings with ACL checks.
   Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     final routeName = settings.name;
     if (routeName == null) return null;
 
-    // First, try exact match
+    // Get route config
+    final config = routeConfigs[routeName];
     final builder = routes[routeName];
+
+    // Check access if config exists
+    if (config != null) {
+      final redirectPath = session.checkAccess(
+        accessLevel: config.accessLevel,
+        requiredRoles: config.roles,
+        requiredPermissions: config.permissions,
+        customRedirectOnDenied: config.redirectOnDenied,
+        customRedirectOnUnauthenticated: config.redirectOnUnauthenticated,
+      );
+
+      if (redirectPath != null && redirectPath != routeName) {
+        // Redirect to login/unauthorized
+        return _buildRoute(
+          RouteSettings(name: redirectPath),
+          routes[redirectPath] ?? (context) => const SizedBox(),
+          'fade',
+        );
+      }
+    }
+
+    // Build the route if access granted
     if (builder != null) {
       return _buildRoute(settings, builder, _getTransition(routeName));
     }
@@ -40,6 +86,22 @@ mixin $AppRouterConfig {
       if (entry.key.contains(':')) {
         final match = _matchRoute(entry.key, routeName);
         if (match != null) {
+          // Check access for dynamic routes
+          final dynamicConfig = routeConfigs[entry.key];
+          if (dynamicConfig != null) {
+            final redirectPath = session.checkAccess(
+              accessLevel: dynamicConfig.accessLevel,
+              requiredRoles: dynamicConfig.roles,
+              requiredPermissions: dynamicConfig.permissions,
+            );
+            if (redirectPath != null) {
+              return _buildRoute(
+                RouteSettings(name: redirectPath),
+                routes[redirectPath] ?? (context) => const SizedBox(),
+                'fade',
+              );
+            }
+          }
           return _buildRoute(
             RouteSettings(name: routeName, arguments: match),
             entry.value,
@@ -56,6 +118,8 @@ mixin $AppRouterConfig {
   String _getTransition(String path) {
     switch (path) {
       case '/':
+        return 'fade';
+      case '/character-alt':
         return 'fade';
       default:
         return 'fade';
@@ -140,7 +204,6 @@ mixin $AppRouterConfig {
   }
 
   /// Matches a route pattern against a path.
-  /// Returns the extracted parameters if matched, null otherwise.
   Map<String, String>? _matchRoute(String pattern, String path) {
     final patternSegments = pattern.split('/');
     final pathSegments = path.split('/');
@@ -154,11 +217,9 @@ mixin $AppRouterConfig {
       final pathSeg = pathSegments[i];
 
       if (patternSeg.startsWith(':')) {
-        // Dynamic segment
         final paramName = patternSeg.substring(1);
         params[paramName] = pathSeg;
       } else if (patternSeg != pathSeg) {
-        // Static segment mismatch
         return null;
       }
     }
@@ -166,7 +227,7 @@ mixin $AppRouterConfig {
     return params;
   }
 
-  /// Navigates to a route by name.
+  /// Navigates to a route by name (with ACL check).
   void navigateTo(BuildContext context, String name, {Object? arguments}) {
     final path = namedRoutes[name];
     if (path != null) {
@@ -195,4 +256,37 @@ mixin $AppRouterConfig {
           .pushNamedAndRemoveUntil(path, (_) => false, arguments: arguments);
     }
   }
+
+  /// Navigate to home (after login).
+  void navigateToHome(BuildContext context) {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      session.config.homePath,
+      (_) => false,
+    );
+  }
+
+  /// Navigate to login (after logout).
+  void navigateToLogin(BuildContext context) {
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      session.config.loginPath,
+      (_) => false,
+    );
+  }
+}
+
+/// Internal route access configuration.
+class _RouteAccessConfig {
+  final AccessLevel accessLevel;
+  final List<String> roles;
+  final List<String> permissions;
+  final String? redirectOnDenied;
+  final String? redirectOnUnauthenticated;
+
+  const _RouteAccessConfig({
+    required this.accessLevel,
+    this.roles = const [],
+    this.permissions = const [],
+    this.redirectOnDenied,
+    this.redirectOnUnauthenticated,
+  });
 }
