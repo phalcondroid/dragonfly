@@ -63,7 +63,7 @@ class CreateFromJsonBuilder {
     }
 
     return visitor.genericTypes
-        .map((t) => t.getDisplayString(withNullability: false))
+        .map((t) => t.getDisplayString())
         .toList();
   }
 

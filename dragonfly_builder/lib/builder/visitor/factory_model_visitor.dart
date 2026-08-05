@@ -2,7 +2,7 @@ import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/visitor.dart';
+import 'package:analyzer/dart/element/visitor2.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:dragonfly_builder/builder/helper/metadata_extractor.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
@@ -15,7 +15,7 @@ import 'package:source_gen/source_gen.dart';
 /// - Generic type parameters
 /// - Constructor parameters (converted to model fields)
 /// - Field annotations for custom JSON mapping
-class FactoryModelVisitor extends SimpleElementVisitor<void> {
+class FactoryModelVisitor extends SimpleElementVisitor2<void> {
   /// The properties extracted from the constructor parameters.
   List<FactoryModelField> properties = [];
 
@@ -36,7 +36,8 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
     // Capture generic type parameters from class declaration
     if (element.typeParameters.isNotEmpty) {
       isGeneric = true;
-      _genericTypeNames = element.typeParameters.map((t) => t.name).toSet();
+      _genericTypeNames =
+          element.typeParameters.map((t) => t.name ?? '').toSet();
     }
   }
 
@@ -59,7 +60,8 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
     final classElement = element.enclosingElement as ClassElement;
     if (classElement.typeParameters.isNotEmpty) {
       isGeneric = true;
-      _genericTypeNames = classElement.typeParameters.map((t) => t.name).toSet();
+      _genericTypeNames =
+          classElement.typeParameters.map((t) => t.name ?? '').toSet();
 
       // Also capture the actual type arguments from return type
       genericTypes.addAll(element.returnType.typeArguments);
@@ -74,7 +76,7 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
     }
 
     // Process constructor parameters
-    for (final param in element.parameters) {
+    for (final param in element.formalParameters) {
       _fillProperty(param, param.type);
     }
   }
@@ -92,15 +94,15 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
 
   /// Gets the @Field annotation from an element if present.
   DartObject? _getFieldAnnotation(Element element) {
-    return const TypeChecker.fromRuntime(Field).firstAnnotationOf(
+    return const TypeChecker.typeNamed(Field, inPackage: 'dragonfly_annotations').firstAnnotationOf(
       element,
       throwOnUnresolved: false,
     );
   }
 
   /// Extracts property information from a constructor parameter.
-  void _fillProperty(ParameterElement param, DartType type) {
-    final typeString = type.getDisplayString(withNullability: true);
+  void _fillProperty(FormalParameterElement param, DartType type) {
+    final typeString = type.getDisplayString();
     final cleanTypeString = typeString.replaceAll('?', '');
 
     // Check if this type is a generic type parameter
@@ -187,7 +189,7 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
 
   /// Resolves the @Field annotation values.
   (bool, String?, Object?) _resolveFieldAnnotation(
-    ParameterElement element,
+    FormalParameterElement element,
     DartType type,
   ) {
     final rawAnnotation = _getFieldAnnotation(element);
@@ -219,7 +221,7 @@ class FactoryModelVisitor extends SimpleElementVisitor<void> {
 
   /// Converts annotation value to appropriate Dart literal.
   Object? _getDefaultValue(ConstantReader reader, DartType type) {
-    final typeString = type.getDisplayString(withNullability: false);
+    final typeString = type.getDisplayString();
 
     return switch (typeString) {
       'String' => "'${reader.stringValue}'",

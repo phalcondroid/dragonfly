@@ -35,7 +35,7 @@ import 'package:source_gen/source_gen.dart';
 /// ```
 class DragonflyBlocGenerator
     extends GeneratorForAnnotation<DragonflyBloc> {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
   @override
   String generateForAnnotatedElement(
@@ -50,7 +50,7 @@ class DragonflyBlocGenerator
       );
     }
 
-    final className = element.name;
+    final className = element.name ?? '';
     final eventType = _getTypeName(annotation.read('event'));
     final stateType = _getTypeName(annotation.read('state'));
     final enableLogging = annotation.read('enableLogging').boolValue;
@@ -76,7 +76,7 @@ class DragonflyBlocGenerator
 
   String _getTypeName(ConstantReader reader) {
     final type = reader.typeValue;
-    return type.getDisplayString(withNullability: false);
+    return type.getDisplayString();
   }
 
   /// Find event variant classes by analyzing the imports and looking for

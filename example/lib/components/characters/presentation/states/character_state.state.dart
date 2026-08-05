@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'character_state.dart';
 
@@ -162,10 +163,7 @@ class CharacterStateCharacterList extends CharacterState {
     return characters.hashCode;
   }
 
-  static bool _listEquals<T>(
-    List<T>? a,
-    List<T>? b,
-  ) {
+  static bool _listEquals<T>(List<T>? a, List<T>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -175,10 +173,7 @@ class CharacterStateCharacterList extends CharacterState {
     return true;
   }
 
-  static bool _mapEquals<K, V>(
-    Map<K, V>? a,
-    Map<K, V>? b,
-  ) {
+  static bool _mapEquals<K, V>(Map<K, V>? a, Map<K, V>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -188,10 +183,7 @@ class CharacterStateCharacterList extends CharacterState {
     return true;
   }
 
-  static bool _setEquals<T>(
-    Set<T>? a,
-    Set<T>? b,
-  ) {
+  static bool _setEquals<T>(Set<T>? a, Set<T>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -205,7 +197,8 @@ class CharacterStateCharacterList extends CharacterState {
 
   CharacterStateCharacterList copyWith({List<Character>? characters}) {
     return CharacterStateCharacterList(
-        characters: characters ?? this.characters);
+      characters: characters ?? this.characters,
+    );
   }
 }
 

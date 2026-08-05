@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'info.dart';
 
@@ -7,39 +8,35 @@ part of 'info.dart';
 // **************************************************************************
 
 class _$Info implements FactoryModelWatcher, Info {
-  _$Info({
-    required this.count,
-    required this.pages,
-    this.next,
-    this.prev,
-  });
+  _$Info({required this.count, required this.pages, this.next, this.prev});
 
   factory _$Info.fromJson(Map<String, Object?> json) {
     return _$Info(
-        count: JsonDatatypeMapper.mapForGeneric<int>(
-          json,
-          'count',
-          defaultValue: null,
-          mustWithDefault: false,
-        ),
-        pages: JsonDatatypeMapper.mapForGeneric<int>(
-          json,
-          'pages',
-          defaultValue: null,
-          mustWithDefault: false,
-        ),
-        next: JsonDatatypeMapper.mapForGeneric<String?>(
-          json,
-          'next',
-          defaultValue: null,
-          mustWithDefault: false,
-        ),
-        prev: JsonDatatypeMapper.mapForGeneric<String?>(
-          json,
-          'prev',
-          defaultValue: null,
-          mustWithDefault: false,
-        ));
+      count: JsonDatatypeMapper.mapForGeneric<int>(
+        json,
+        'count',
+        defaultValue: null,
+        mustWithDefault: false,
+      ),
+      pages: JsonDatatypeMapper.mapForGeneric<int>(
+        json,
+        'pages',
+        defaultValue: null,
+        mustWithDefault: false,
+      ),
+      next: JsonDatatypeMapper.mapForGeneric<String?>(
+        json,
+        'next',
+        defaultValue: null,
+        mustWithDefault: false,
+      ),
+      prev: JsonDatatypeMapper.mapForGeneric<String?>(
+        json,
+        'prev',
+        defaultValue: null,
+        mustWithDefault: false,
+      ),
+    );
   }
 
   @override
@@ -63,7 +60,7 @@ class _$Info implements FactoryModelWatcher, Info {
       'count': count,
       'pages': pages,
       'next': next,
-      'prev': prev
+      'prev': prev,
     };
   }
 

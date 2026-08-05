@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:dragonfly/framework/di/dragonfly_container.dart';
 import 'package:dragonfly/framework/logging/dragonfly_log_manager.dart';
+import 'package:dragonfly/framework/state/action_scheduler.dart';
 
 /// Base class for side effects that can be emitted from a StateManager.
 abstract class StateManagerSideEffect {
@@ -86,6 +87,9 @@ abstract class StateManager<S> {
 
   /// Active subscriptions managed by this state manager.
   final Map<String, StreamSubscription> _subscriptions = {};
+
+  /// Debounce/throttle scheduler backing [scheduleAction].
+  final ActionScheduler _scheduler = ActionScheduler();
 
   /// The current state of this state manager.
   S get state => _state;
@@ -304,6 +308,42 @@ abstract class StateManager<S> {
     _subscriptions[key]?.resume();
   }
 
+  /// Runs [body] under the debounce/throttle policy declared for an action.
+  ///
+  /// This is what makes `@StateAction(debounce: …)` and
+  /// `@StateAction(throttle: …)` actually take effect — the generated `actions`
+  /// façade routes through here. You can also call it directly:
+  ///
+  /// ```dart
+  /// void search(String query) => scheduleAction(
+  ///       'search',
+  ///       () => _runSearch(query),
+  ///       debounce: const Duration(milliseconds: 300),
+  ///     );
+  /// ```
+  ///
+  /// Every pending call is cancelled on [dispose], so a debounced action can
+  /// never fire against a disposed manager. Returns `false` when the call was
+  /// dropped by a throttle gate.
+  bool scheduleAction(
+    String key,
+    void Function() body, {
+    Duration? debounce,
+    Duration? throttle,
+  }) {
+    if (_disposed) return false;
+    return _scheduler.run(key, body, debounce: debounce, throttle: throttle);
+  }
+
+  /// Cancels a pending debounced action and reopens its throttle gate.
+  void cancelScheduledAction(String key) => _scheduler.cancel(key);
+
+  /// Runs a pending debounced action now rather than waiting out its delay.
+  void flushScheduledAction(String key) => _scheduler.flush(key);
+
+  /// Whether [key] currently has a debounced action waiting to fire.
+  bool isActionPending(String key) => _scheduler.isPending(key);
+
   /// Gets a use case from the DI container.
   T useCase<T extends Object>() {
     if (loggingEnabled) {
@@ -326,6 +366,7 @@ abstract class StateManager<S> {
       _log.viewDispose(viewName: _stateManagerName);
     }
 
+    _scheduler.dispose();
     cancelAllSubscriptions();
     onDispose();
     _stateController.close();

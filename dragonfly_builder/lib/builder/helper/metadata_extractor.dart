@@ -5,7 +5,7 @@ import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:source_gen/source_gen.dart';
 
 class MedatadaExtractor {
-  static TypeChecker typeChecker(Type type) => TypeChecker.fromRuntime(type);
+  static TypeChecker typeChecker(Type type) => TypeChecker.typeNamed(type, inPackage: 'dragonfly_annotations');
 
   static Iterable<ConstantReader> getMethodAnnotations(
     MethodElement method,
@@ -38,14 +38,20 @@ class MedatadaExtractor {
 
   static dynamic getFromElement(Element element, Type type, String field) {
     Iterable<DartObject> annotations =
-        TypeChecker.fromRuntime(type).annotationsOf(element);
+        TypeChecker.typeNamed(type, inPackage: 'dragonfly_annotations').annotationsOf(element);
     for (DartObject item in annotations) {
       return castResultByType(item.getField(field));
     }
   }
 
   static HttpAnnotations getMethodType(MethodElement element) {
-    for (final ElementAnnotation item in element.metadata) {
+    // Checked before the HTTP verbs: a @Subscribe method is not an HTTP call.
+    if (TypeChecker.typeNamed(Subscribe, inPackage: 'dragonfly_annotations')
+        .hasAnnotationOfExact(element)) {
+      return HttpAnnotations.subscribe;
+    }
+
+    for (final ElementAnnotation item in element.metadata.annotations) {
       if (item.toString().contains("@Get")) {
         return HttpAnnotations.get;
       }
@@ -86,6 +92,7 @@ class MedatadaExtractor {
       HttpAnnotations.patch => Patch,
       HttpAnnotations.put => Put,
       HttpAnnotations.delete => Delete,
+      HttpAnnotations.subscribe => Subscribe,
       _ => null
     };
 

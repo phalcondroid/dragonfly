@@ -31,11 +31,11 @@ import 'package:source_gen/source_gen.dart';
 /// ```
 class DragonflyStateManagerGenerator
     extends GeneratorForAnnotation<DragonflyStateManager> {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
-  static final _actionChecker = TypeChecker.fromRuntime(StateAction);
-  static final _computedChecker = TypeChecker.fromRuntime(Computed);
-  static final _initialStateChecker = TypeChecker.fromRuntime(InitialState);
+  static final _actionChecker = TypeChecker.typeNamed(StateAction, inPackage: 'dragonfly_annotations');
+  static final _computedChecker = TypeChecker.typeNamed(Computed, inPackage: 'dragonfly_annotations');
+  static final _initialStateChecker = TypeChecker.typeNamed(InitialState, inPackage: 'dragonfly_annotations');
 
   @override
   Future<String> generateForAnnotatedElement(
@@ -50,7 +50,7 @@ class DragonflyStateManagerGenerator
       );
     }
 
-    final className = element.name;
+    final className = element.name ?? '';
     final logging = annotation.read('logging').boolValue;
     final injectable = annotation.read('injectable').boolValue;
 
@@ -91,15 +91,15 @@ class DragonflyStateManagerGenerator
           supertype.element.name == 'Feature') {
         final typeArgs = supertype.typeArguments;
         if (typeArgs.isNotEmpty) {
-          return typeArgs.first.getDisplayString(withNullability: false);
+          return typeArgs.first.getDisplayString();
         }
       }
     }
 
     // Fallback: try to infer from initialState getter
-    for (final accessor in element.accessors) {
+    for (final accessor in element.getters) {
       if (_initialStateChecker.hasAnnotationOfExact(accessor)) {
-        return accessor.returnType.getDisplayString(withNullability: false);
+        return accessor.returnType.getDisplayString();
       }
     }
 
@@ -137,10 +137,10 @@ class DragonflyStateManagerGenerator
           }
         }
 
-        final params = method.parameters.map((p) {
+        final params = method.formalParameters.map((p) {
           return _ParamInfo(
-            name: p.name,
-            type: p.type.getDisplayString(withNullability: true),
+            name: p.name ?? '',
+            type: p.type.getDisplayString(),
             isRequired: p.isRequired,
             isNamed: p.isNamed,
             hasDefault: p.hasDefaultValue,
@@ -149,8 +149,8 @@ class DragonflyStateManagerGenerator
         }).toList();
 
         intents.add(_IntentInfo(
-          name: method.name,
-          returnType: method.returnType.getDisplayString(withNullability: false),
+          name: method.name ?? '',
+          returnType: method.returnType.getDisplayString(),
           isAsync: method.returnType.isDartAsyncFuture ||
               method.returnType.isDartAsyncFutureOr,
           params: params,
@@ -167,11 +167,11 @@ class DragonflyStateManagerGenerator
   List<_ComputedInfo> _extractComputedProperties(ClassElement element) {
     final computed = <_ComputedInfo>[];
 
-    for (final accessor in element.accessors) {
-      if (accessor.isGetter && _computedChecker.hasAnnotationOfExact(accessor)) {
+    for (final accessor in element.getters) {
+      if (_computedChecker.hasAnnotationOfExact(accessor)) {
         computed.add(_ComputedInfo(
-          name: accessor.name,
-          type: accessor.returnType.getDisplayString(withNullability: false),
+          name: accessor.name ?? '',
+          type: accessor.returnType.getDisplayString(),
         ));
       }
     }
@@ -192,16 +192,16 @@ class DragonflyStateManagerGenerator
       try {
         final library = await buildStep.resolver.libraryFor(assetId);
 
-        for (final element in library.topLevelElements) {
-          if (element is ClassElement && element.name == stateType) {
+        for (final element in library.classes) {
+          if (element.name == stateType) {
             // Found the state class, extract variants from constructors
             for (final constructor in element.constructors) {
-              if (constructor.isFactory && constructor.name.isNotEmpty) {
-                final variantName = constructor.name;
-                final params = constructor.parameters.map((p) {
+              if (constructor.isFactory && (constructor.name ?? '').isNotEmpty) {
+                final variantName = constructor.name!;
+                final params = constructor.formalParameters.map((p) {
                   return _ParamInfo(
-                    name: p.name,
-                    type: p.type.getDisplayString(withNullability: true),
+                    name: p.name ?? '',
+                    type: p.type.getDisplayString(),
                     isRequired: p.isRequired,
                     isNamed: p.isNamed,
                   );
@@ -289,17 +289,122 @@ class DragonflyStateManagerGenerator
     List<_ComputedInfo> computedProps,
     List<_StateVariant> stateVariants,
   ) {
+    // Actions carrying a debounce/throttle policy get a scheduled entry point.
+    final scheduled = actions
+        .where((a) => a.debounce != null || a.throttle != null)
+        .toList();
+
     buffer.writeln('/// Generated mixin for $className.');
     buffer.writeln('///');
     buffer.writeln('/// Provides logging configuration.');
-    buffer.writeln('/// State pattern matching (when, maybeWhen, map) is available directly on the state.');
+    buffer.writeln(
+        '/// State pattern matching (when, maybeWhen, map) is available directly on the state.');
+    if (scheduled.isNotEmpty) {
+      buffer.writeln(
+          '/// Also exposes [actions] for the @StateAction methods that declare');
+      buffer.writeln('/// a debounce or throttle policy.');
+    }
     buffer.writeln('mixin _\$${className}Mixin on StateManager<$stateType> {');
 
     // Override loggingEnabled
     buffer.writeln('  @override');
     buffer.writeln('  bool get loggingEnabled => $logging;');
 
+    if (scheduled.isNotEmpty) {
+      buffer.writeln();
+      buffer.writeln('  /// Rate-limited entry points for this manager\'s actions.');
+      buffer.writeln('  ///');
+      buffer.writeln('  /// Calling `actions.name(...)` applies the debounce or throttle');
+      buffer.writeln('  /// declared on `@StateAction`; calling `name(...)` directly still');
+      buffer.writeln('  /// runs immediately.');
+      buffer.writeln(
+          '  late final ${className}Actions actions = ${className}Actions(this as $className);');
+    }
+
     buffer.writeln('}');
+
+    if (scheduled.isNotEmpty) {
+      _generateActionsFacade(buffer, className, scheduled);
+    }
+  }
+
+  /// Emits the façade that routes annotated actions through
+  /// [StateManager.scheduleAction], which is what gives `@StateAction`'s
+  /// `debounce`/`throttle` arguments their effect.
+  void _generateActionsFacade(
+    StringBuffer buffer,
+    String className,
+    List<_IntentInfo> scheduled,
+  ) {
+    buffer.writeln();
+    buffer.writeln('/// Rate-limited entry points for [$className].');
+    buffer.writeln('///');
+    buffer.writeln('/// Generated from the `@StateAction` methods that declare a debounce or');
+    buffer.writeln('/// throttle. Pending calls are cancelled when the manager is disposed.');
+    buffer.writeln('class ${className}Actions {');
+    buffer.writeln('  const ${className}Actions(this._manager);');
+    buffer.writeln();
+    buffer.writeln('  final $className _manager;');
+
+    for (final action in scheduled) {
+      final signature = _buildActionSignature(action);
+      final forwarded = _buildActionForwarding(action);
+      final policy = <String>[
+        if (action.debounce != null)
+          'debounce: const Duration(microseconds: ${action.debounce!.inMicroseconds})',
+        if (action.throttle != null)
+          'throttle: const Duration(microseconds: ${action.throttle!.inMicroseconds})',
+      ].join(', ');
+
+      buffer.writeln();
+      final description = <String>[
+        if (action.debounce != null)
+          'debounced by ${action.debounce!.inMilliseconds}ms',
+        if (action.throttle != null)
+          'throttled to one call per ${action.throttle!.inMilliseconds}ms',
+      ].join(', ');
+      buffer.writeln('  /// Runs [$className.${action.name}], $description.');
+      buffer.writeln('  ///');
+      buffer.writeln('  /// Returns `false` when a throttle gate dropped the call.');
+      buffer.writeln('  bool ${action.name}($signature) {');
+      buffer.writeln('    return _manager.scheduleAction(');
+      buffer.writeln("      '${action.name}',");
+      buffer.writeln('      () => _manager.${action.name}($forwarded),');
+      buffer.writeln('      $policy,');
+      buffer.writeln('    );');
+      buffer.writeln('  }');
+    }
+
+    buffer.writeln('}');
+  }
+
+  /// Reproduces the action's parameter list on the façade method.
+  String _buildActionSignature(_IntentInfo action) {
+    final positional = <String>[];
+    final named = <String>[];
+
+    for (final param in action.params) {
+      if (param.isNamed) {
+        final prefix = param.isRequired ? 'required ' : '';
+        final suffix = param.hasDefault ? ' = ${param.defaultValue}' : '';
+        named.add('$prefix${param.type} ${param.name}$suffix');
+      } else {
+        positional.add('${param.type} ${param.name}');
+      }
+    }
+
+    final parts = <String>[
+      ...positional,
+      if (named.isNotEmpty) '{${named.join(', ')}}',
+    ];
+    return parts.join(', ');
+  }
+
+  /// Reproduces the argument list when forwarding to the real method.
+  String _buildActionForwarding(_IntentInfo action) {
+    return action.params
+        .map((p) => p.isNamed ? '${p.name}: ${p.name}' : p.name)
+        .join(', ');
   }
 
   void _generateProviderWidget(

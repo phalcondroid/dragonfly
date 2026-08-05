@@ -2,6 +2,15 @@ library;
 
 export 'package:dragonfly/framework/config/dragonfly_app.dart'
     show DragonflyApp;
+// App configuration. These were previously reachable only by importing
+// framework/config/dragonfly_config.dart directly.
+export 'package:dragonfly/framework/config/dragonfly_config.dart'
+    show
+        DragonflyConfig,
+        DragonflyInjector,
+        DragonflyInstanceConfig,
+        DragonflyHttpBaseOptions,
+        DragonflyRealtimeInstanceConfig;
 export 'package:dragonfly/framework/config/dragonfly_local_storage_config.dart'
     show DragonflyLocalStorageConfig;
 export 'package:dragonfly/framework/config/dragonfly_network_config.dart'
@@ -32,6 +41,20 @@ export 'package:dragonfly/framework/di/environment_filter.dart'
     show EnvironmentFilter;
 export 'package:dragonfly/framework/network/adapter/dragonfly_network_http_adapter.dart'
     show DragonflyNetworkHttpAdapter;
+
+// Realtime / sockets. Generated Stream-returning repository methods resolve a
+// DragonflyRealtimeAdapter from the container by connection name.
+export 'package:dragonfly/framework/network/adapter/dragonfly_realtime_adapter.dart'
+    show
+        DragonflyRealtimeAdapter,
+        DragonflyRealtimeState,
+        DragonflyRealtimeException;
+export 'package:dragonfly/framework/network/adapter/dragonfly_web_socket_adapter.dart'
+    show DragonflyWebSocketAdapter, DragonflySocketConnection, WebSocketConnection;
+export 'package:dragonfly/framework/network/config/dragonfly_realtime_config.dart'
+    show DragonflyRealtimeConfig;
+export 'package:dragonfly/framework/network/enums/dragonfly_network_names_constants.dart'
+    show defaultHttpNetwork, defaultRealtimeNetwork;
 export 'package:dragonfly/framework/types/enums/http_methods.dart'
     show HttpMethods;
 export 'package:dragonfly/framework/mapper/json_datatype_mapper.dart'
@@ -97,6 +120,15 @@ export 'package:dragonfly/framework/feature/state_manager_builder.dart'
         FeatureSideEffectListener,
         FeatureConsumer,
         FeatureSelector;
+// View state management (current generation).
+// StateScope replaces the StateManagerProvider + DefaultSideEffectHandler stack;
+// StateView/StateSelector replace hand-written StateManagerBuilder wiring.
+export 'package:dragonfly/framework/state/action_scheduler.dart'
+    show ActionScheduler;
+export 'package:dragonfly/framework/state/state_scope.dart' show StateScope;
+export 'package:dragonfly/framework/state/state_view.dart'
+    show StateView, StateSelector;
+
 export 'package:dragonfly/framework/feature/dragonfly_screen.dart'
     show
         DragonflyScreenBase,

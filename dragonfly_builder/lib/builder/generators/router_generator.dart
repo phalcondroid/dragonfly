@@ -10,10 +10,10 @@ import 'package:source_gen/source_gen.dart';
 /// This generator scans for [DragonflyScreen] annotations
 /// and creates a router configuration with session/ACL support.
 class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
-  final _formatter = DartFormatter();
-  static final _screenChecker = TypeChecker.fromRuntime(DragonflyScreen);
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
+  static final _screenChecker = TypeChecker.typeNamed(DragonflyScreen, inPackage: 'dragonfly_annotations');
   static final _stateManagerChecker =
-      TypeChecker.fromRuntime(DragonflyStateManager);
+      TypeChecker.typeNamed(DragonflyStateManager, inPackage: 'dragonfly_annotations');
 
   @override
   Future<String> generateForAnnotatedElement(
@@ -40,7 +40,7 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
             in reader.annotatedWith(_stateManagerChecker)) {
           if (annotatedElement.element is ClassElement) {
             final classElement = annotatedElement.element as ClassElement;
-            final featureName = classElement.name;
+            final featureName = classElement.name ?? '';
             final featureImport = assetId.uri.toString();
             featureImports[featureName] = featureImport;
           }
@@ -104,7 +104,7 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
             if (providerReader != null && !providerReader.isNull) {
               final providerType = providerReader.typeValue;
               final providerTypeName =
-                  providerType.getDisplayString(withNullability: false);
+                  providerType.getDisplayString();
               providerName = '${providerTypeName}Provider';
 
               // Get the import for the feature file
@@ -114,12 +114,12 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
                 final providerElement = providerType.element;
                 if (providerElement != null) {
                   providerImport =
-                      providerElement.librarySource?.uri.toString();
+                      providerElement.library?.uri.toString();
                 }
               }
             }
 
-            final className = classElement.name;
+            final className = classElement.name ?? '';
             final importUri = assetId.uri.toString();
 
             // Add screen import

@@ -11,6 +11,9 @@ class ReturnType {
   /// True if the return type is a List
   final bool isList;
 
+  /// True if the return type is a Stream (a realtime subscription)
+  final bool isStream;
+
   /// List of generic type arguments (e.g., ["Character"] for ServiceResponse<Character>)
   final List<String> generics;
 
@@ -25,6 +28,7 @@ class ReturnType {
     required this.raw,
     required this.name,
     this.isList = false,
+    this.isStream = false,
     this.generics = const [],
   });
 }

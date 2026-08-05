@@ -1,9 +1,9 @@
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/dart/element/visitor.dart';
+import 'package:analyzer/dart/element/visitor2.dart';
 import '../types/method_repository_type.dart';
 import '../helper/metadata_extractor.dart';
 
-class UseCaseVisitor extends SimpleElementVisitor<void> {
+class UseCaseVisitor extends SimpleElementVisitor2<void> {
   late String className;
   final fields = <String, dynamic>{};
   final Map<String, dynamic> metaData = {};

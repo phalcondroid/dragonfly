@@ -2,14 +2,16 @@ class ReturnHelper {
   String getTypeFromReturn(String name) {
     var sanitized = name.replaceAll('*', '').replaceAll('?', '').trim();
     sanitized = _unwrapGeneric(sanitized, 'Future');
+    sanitized = _unwrapGeneric(sanitized, 'Stream');
     sanitized = _unwrapGeneric(sanitized, 'List');
     return sanitized;
   }
 
   String getMainClassName(String name) {
     var sanitized = name.replaceAll('*', '').replaceAll('?', '').trim();
-    // Unwrap Future first
+    // Unwrap the async wrapper first
     sanitized = _unwrapGeneric(sanitized, 'Future');
+    sanitized = _unwrapGeneric(sanitized, 'Stream');
     // Get the base class name (before any generic brackets)
     return _getBaseClassName(sanitized);
   }
@@ -26,10 +28,16 @@ class ReturnHelper {
     return name.contains('List<');
   }
 
+  /// True when the method returns a realtime subscription.
+  bool isReturnStream(String name) {
+    return name.replaceAll('*', '').trim().startsWith('Stream<');
+  }
+
   List<String> extractGenerics(String name) {
     var sanitized = name.replaceAll('*', '').replaceAll('?', '').trim();
-    // Unwrap Future first
+    // Unwrap the async wrapper first
     sanitized = _unwrapGeneric(sanitized, 'Future');
+    sanitized = _unwrapGeneric(sanitized, 'Stream');
 
     // If no generics, return empty list
     final bracketIndex = sanitized.indexOf('<');

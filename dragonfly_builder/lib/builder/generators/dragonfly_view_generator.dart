@@ -36,7 +36,7 @@ import 'package:source_gen/source_gen.dart';
 /// ```
 class DragonflyBlocViewGenerator
     extends GeneratorForAnnotation<DragonflyBlocView> {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
   @override
   Future<String> generateForAnnotatedElement(
@@ -51,7 +51,7 @@ class DragonflyBlocViewGenerator
       );
     }
 
-    final className = element.name;
+    final className = element.name ?? '';
     final blocType = _getTypeName(annotation.read('bloc'));
     final eventType = _getTypeName(annotation.read('event'));
     final stateType = _getTypeName(annotation.read('state'));
@@ -81,7 +81,7 @@ class DragonflyBlocViewGenerator
 
   String _getTypeName(ConstantReader reader) {
     final type = reader.typeValue;
-    return type.getDisplayString(withNullability: false);
+    return type.getDisplayString();
   }
 
   /// Finds state variants by scanning the codebase for the state class.
@@ -98,16 +98,16 @@ class DragonflyBlocViewGenerator
       try {
         final library = await buildStep.resolver.libraryFor(assetId);
 
-        for (final element in library.topLevelElements) {
-          if (element is ClassElement && element.name == stateType) {
+        for (final element in library.classes) {
+          if (element.name == stateType) {
             // Found the state class, extract variants from constructors
             for (final constructor in element.constructors) {
-              if (constructor.isFactory && constructor.name.isNotEmpty) {
-                final variantName = constructor.name;
-                final params = constructor.parameters.map((p) {
+              if (constructor.isFactory && (constructor.name ?? '').isNotEmpty) {
+                final variantName = constructor.name!;
+                final params = constructor.formalParameters.map((p) {
                   return _StateParam(
-                    name: p.name,
-                    type: p.type.getDisplayString(withNullability: true),
+                    name: p.name ?? '',
+                    type: p.type.getDisplayString(),
                     isRequired: p.isRequired,
                   );
                 }).toList();

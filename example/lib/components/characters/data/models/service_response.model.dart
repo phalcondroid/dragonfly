@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'service_response.dart';
 
@@ -7,25 +8,23 @@ part of 'service_response.dart';
 // **************************************************************************
 
 class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
-  _$ServiceResponse({
-    required this.info,
-    required this.results,
-  });
+  _$ServiceResponse({required this.info, required this.results});
 
   factory _$ServiceResponse.fromJson(
     Map<String, Object?> json,
     T Function(Object? json) fromJsonT,
   ) {
     return _$ServiceResponse(
-        info: JsonDatatypeMapper.mapNestedObject<Info>(
-          json,
-          'info',
-          (map) => Info.fromJson(map),
-        ),
-        results: JsonDatatypeMapper.mapGenericListForTypeParameter<T>(
-          json['results'] as List?,
-          fromJsonT,
-        ));
+      info: JsonDatatypeMapper.mapNestedObject<Info>(
+        json,
+        'info',
+        (map) => Info.fromJson(map),
+      ),
+      results: JsonDatatypeMapper.mapGenericListForTypeParameter<T>(
+        json['results'] as List?,
+        fromJsonT,
+      ),
+    );
   }
 
   @override
@@ -37,14 +36,14 @@ class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
   Map<String, dynamic> toJson(dynamic Function(T value) _toJsonT) {
     return {
       'info': info.toJson(),
-      'results': results.map((e) => _toJsonT(e)).toList()
+      'results': results.map((e) => _toJsonT(e)).toList(),
     };
   }
 
   Map<String, Object?> toMap(dynamic Function(T value) _toJsonT) {
     return <String, Object?>{
       'info': info.toJson(),
-      'results': results.map((e) => _toJsonT(e)).toList()
+      'results': results.map((e) => _toJsonT(e)).toList(),
     };
   }
 
@@ -66,10 +65,7 @@ class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
     return 'ServiceResponse(info: $info, results: $results)';
   }
 
-  static bool _listEquals<T>(
-    List<T>? a,
-    List<T>? b,
-  ) {
+  static bool _listEquals<T>(List<T>? a, List<T>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -79,10 +75,7 @@ class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
     return true;
   }
 
-  static bool _mapEquals<K, V>(
-    Map<K, V>? a,
-    Map<K, V>? b,
-  ) {
+  static bool _mapEquals<K, V>(Map<K, V>? a, Map<K, V>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -92,10 +85,7 @@ class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
     return true;
   }
 
-  static bool _setEquals<T>(
-    Set<T>? a,
-    Set<T>? b,
-  ) {
+  static bool _setEquals<T>(Set<T>? a, Set<T>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;

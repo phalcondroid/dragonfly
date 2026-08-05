@@ -8,7 +8,7 @@ import '../visitor/factory_model_visitor.dart';
 import '../models/factory_model_metadata.dart';
 
 class FactoryModelRegistry {
-  static final _factoryModelChecker = TypeChecker.fromRuntime(FactoryModel);
+  static final _factoryModelChecker = TypeChecker.typeNamed(FactoryModel, inPackage: 'dragonfly_annotations');
 
   /// Native/primitive types that are not classes
   static const _nativeTypes = {
@@ -39,9 +39,8 @@ class FactoryModelRegistry {
     await for (final assetId in buildStep.findAssets(glob)) {
       try {
         final library = await buildStep.resolver.libraryFor(assetId);
-        for (final element in library.topLevelElements) {
-          if (element is ClassElement &&
-              _factoryModelChecker.hasAnnotationOf(element)) {
+        for (final element in library.classes) {
+          if (_factoryModelChecker.hasAnnotationOf(element)) {
             final metadata = _extractMetadata(element, assetId.path);
             if (metadata != null) {
               registry[metadata.modelName] = metadata;
@@ -80,7 +79,7 @@ class FactoryModelRegistry {
     //    "====>>>>>>>>> element registry ${element.name} - ${element.displayName}");
 
     return FactoryModelMetadata(
-      modelName: element.name,
+      modelName: element.name ?? '',
       importPath: importPath,
       isGeneric: isGeneric,
       isList: isList,
@@ -106,13 +105,13 @@ class FactoryModelRegistry {
       // Get the bound if any (e.g., T extends Object)
       String? bound;
       if (typeParam.bound != null &&
-          typeParam.bound!.getDisplayString(withNullability: false) !=
+          typeParam.bound!.getDisplayString() !=
               'Object') {
-        bound = typeParam.bound!.getDisplayString(withNullability: false);
+        bound = typeParam.bound!.getDisplayString();
       }
 
       params.add(GenericTypeParamMetadata(
-        name: typeParam.name,
+        name: typeParam.name ?? '',
         bound: bound,
         index: i,
       ));
@@ -141,8 +140,8 @@ class FactoryModelRegistry {
     final params = <FromJsonParamMetadata>[];
     var requiresConverter = false;
 
-    for (final param in fromJsonConstructor.parameters) {
-      final paramType = param.type.getDisplayString(withNullability: true);
+    for (final param in fromJsonConstructor.formalParameters) {
+      final paramType = param.type.getDisplayString();
 
       // Check if this is a generic converter function
       final converterInfo =
@@ -158,7 +157,7 @@ class FactoryModelRegistry {
           paramType == 'Map<String, Object?>';
 
       params.add(FromJsonParamMetadata(
-        name: param.name,
+        name: param.name ?? '',
         type: paramType,
         isRequired: param.isRequired,
         isPositional: param.isPositional,
@@ -185,7 +184,7 @@ class FactoryModelRegistry {
     }
 
     final returnTypeStr =
-        type.returnType.getDisplayString(withNullability: false);
+        type.returnType.getDisplayString();
 
     // Check if the return type matches any of our generic params
     if (genericParamNames.contains(returnTypeStr)) {

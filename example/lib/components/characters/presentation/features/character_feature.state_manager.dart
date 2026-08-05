@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'character_feature.dart';
 
@@ -10,9 +11,52 @@ part of 'character_feature.dart';
 ///
 /// Provides logging configuration.
 /// State pattern matching (when, maybeWhen, map) is available directly on the state.
+/// Also exposes [actions] for the @StateAction methods that declare
+/// a debounce or throttle policy.
 mixin _$CharacterFeatureMixin on StateManager<CharacterState> {
   @override
   bool get loggingEnabled => true;
+
+  /// Rate-limited entry points for this manager's actions.
+  ///
+  /// Calling `actions.name(...)` applies the debounce or throttle
+  /// declared on `@StateAction`; calling `name(...)` directly still
+  /// runs immediately.
+  late final CharacterFeatureActions actions = CharacterFeatureActions(
+    this as CharacterFeature,
+  );
+}
+
+/// Rate-limited entry points for [CharacterFeature].
+///
+/// Generated from the `@StateAction` methods that declare a debounce or
+/// throttle. Pending calls are cancelled when the manager is disposed.
+class CharacterFeatureActions {
+  const CharacterFeatureActions(this._manager);
+
+  final CharacterFeature _manager;
+
+  /// Runs [CharacterFeature.searchByName], debounced by 300ms.
+  ///
+  /// Returns `false` when a throttle gate dropped the call.
+  bool searchByName(String name) {
+    return _manager.scheduleAction(
+      'searchByName',
+      () => _manager.searchByName(name),
+      debounce: const Duration(microseconds: 300000),
+    );
+  }
+
+  /// Runs [CharacterFeature.refreshThrottled], throttled to one call per 1000ms.
+  ///
+  /// Returns `false` when a throttle gate dropped the call.
+  bool refreshThrottled() {
+    return _manager.scheduleAction(
+      'refreshThrottled',
+      () => _manager.refreshThrottled(),
+      throttle: const Duration(microseconds: 1000000),
+    );
+  }
 }
 
 /// Provider widget that injects [CharacterFeature] into the widget tree.
@@ -24,11 +68,7 @@ mixin _$CharacterFeatureMixin on StateManager<CharacterState> {
 /// )
 /// ```
 class CharacterFeatureProvider extends StatelessWidget {
-  const CharacterFeatureProvider({
-    super.key,
-    this.create,
-    required this.child,
-  });
+  const CharacterFeatureProvider({super.key, this.create, required this.child});
 
   /// Optional factory to create the state manager.
   /// If not provided, gets the state manager from DI.
@@ -68,7 +108,7 @@ class CharacterInitial extends StatelessWidget {
   /// Optional function to determine if the builder should be called.
   /// Receives the previous and current state.
   final bool Function(CharacterState previous, CharacterState current)?
-      buildWhen;
+  buildWhen;
 
   /// Optional widget to show when state is not [CharacterStateInitial].
   /// Defaults to an empty SizedBox.
@@ -110,7 +150,7 @@ class CharacterLoading extends StatelessWidget {
   /// Optional function to determine if the builder should be called.
   /// Receives the previous and current state.
   final bool Function(CharacterState previous, CharacterState current)?
-      buildWhen;
+  buildWhen;
 
   /// Optional widget to show when state is not [CharacterStateLoading].
   /// Defaults to an empty SizedBox.
@@ -153,7 +193,7 @@ class CharacterLoaded extends StatelessWidget {
   /// Optional function to determine if the builder should be called.
   /// Receives the previous and current state.
   final bool Function(CharacterState previous, CharacterState current)?
-      buildWhen;
+  buildWhen;
 
   /// Optional widget to show when state is not [CharacterStateLoaded].
   /// Defaults to an empty SizedBox.
@@ -203,7 +243,7 @@ class CharacterCharacterList extends StatelessWidget {
   /// Optional function to determine if the builder should be called.
   /// Receives the previous and current state.
   final bool Function(CharacterState previous, CharacterState current)?
-      buildWhen;
+  buildWhen;
 
   /// Optional widget to show when state is not [CharacterStateCharacterList].
   /// Defaults to an empty SizedBox.
@@ -253,7 +293,7 @@ class CharacterError extends StatelessWidget {
   /// Optional function to determine if the builder should be called.
   /// Receives the previous and current state.
   final bool Function(CharacterState previous, CharacterState current)?
-      buildWhen;
+  buildWhen;
 
   /// Optional widget to show when state is not [CharacterStateError].
   /// Defaults to an empty SizedBox.

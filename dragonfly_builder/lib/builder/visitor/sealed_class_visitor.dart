@@ -1,7 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/visitor.dart';
+import 'package:analyzer/dart/element/visitor2.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
 
 /// Represents a variant (factory constructor) in a sealed class.
@@ -30,7 +30,7 @@ class SealedVariant {
 ///
 /// This visitor extracts information about factory constructors in sealed classes
 /// to generate pattern matching methods and subclasses.
-class SealedClassVisitor extends SimpleElementVisitor<void> {
+class SealedClassVisitor extends SimpleElementVisitor2<void> {
   /// The name of the base sealed class.
   String? className;
 
@@ -59,7 +59,7 @@ class SealedClassVisitor extends SimpleElementVisitor<void> {
     }
 
     // Extract variant name (part after the dot in factory ClassName.variantName)
-    final variantName = element.name.isEmpty ? '' : element.name;
+    final variantName = element.name ?? '';
     final isDefault = variantName.isEmpty;
 
     // Skip fromJson factories
@@ -98,9 +98,9 @@ class SealedClassVisitor extends SimpleElementVisitor<void> {
 
   /// Extracts parameters from a constructor element.
   List<FactoryModelField> _extractParameters(ConstructorElement element) {
-    return element.parameters.map((param) {
+    return element.formalParameters.map((param) {
       final type = param.type;
-      final typeString = type.getDisplayString(withNullability: true);
+      final typeString = type.getDisplayString();
 
       final bool isClass = !(type.isDartCoreBool ||
           type.isDartCoreDouble ||
@@ -120,7 +120,7 @@ class SealedClassVisitor extends SimpleElementVisitor<void> {
       }
 
       return FactoryModelField(
-        name: param.name,
+        name: param.name ?? '',
         fieldName: null,
         isFieldName: false,
         value: param.hasDefaultValue ? param.defaultValueCode : null,

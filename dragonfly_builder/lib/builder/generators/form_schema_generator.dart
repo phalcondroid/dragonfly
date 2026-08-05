@@ -13,42 +13,42 @@ import 'package:source_gen/source_gen.dart';
 /// - Field enum for type-safe field references
 /// - Validation logic based on field annotations
 class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
   // Validator type checkers
-  static final _requiredChecker = TypeChecker.fromRuntime(Required);
-  static final _emailChecker = TypeChecker.fromRuntime(Email);
-  static final _minLengthChecker = TypeChecker.fromRuntime(MinLength);
-  static final _maxLengthChecker = TypeChecker.fromRuntime(MaxLength);
-  static final _patternChecker = TypeChecker.fromRuntime(Pattern);
-  static final _urlChecker = TypeChecker.fromRuntime(Url);
-  static final _phoneChecker = TypeChecker.fromRuntime(Phone);
-  static final _alphanumericChecker = TypeChecker.fromRuntime(Alphanumeric);
-  static final _alphaChecker = TypeChecker.fromRuntime(Alpha);
-  static final _numericChecker = TypeChecker.fromRuntime(Numeric);
-  static final _minChecker = TypeChecker.fromRuntime(Min);
-  static final _maxChecker = TypeChecker.fromRuntime(Max);
-  static final _rangeChecker = TypeChecker.fromRuntime(Range);
-  static final _positiveChecker = TypeChecker.fromRuntime(Positive);
-  static final _negativeChecker = TypeChecker.fromRuntime(Negative);
-  static final _equalToChecker = TypeChecker.fromRuntime(EqualTo);
-  static final _notEqualToChecker = TypeChecker.fromRuntime(NotEqualTo);
-  static final _pastDateChecker = TypeChecker.fromRuntime(PastDate);
-  static final _futureDateChecker = TypeChecker.fromRuntime(FutureDate);
-  static final _minAgeChecker = TypeChecker.fromRuntime(MinAge);
-  static final _minItemsChecker = TypeChecker.fromRuntime(MinItems);
-  static final _maxItemsChecker = TypeChecker.fromRuntime(MaxItems);
-  static final _mustBeTrueChecker = TypeChecker.fromRuntime(MustBeTrue);
-  static final _mustBeFalseChecker = TypeChecker.fromRuntime(MustBeFalse);
+  static final _requiredChecker = TypeChecker.typeNamed(Required, inPackage: 'dragonfly_annotations');
+  static final _emailChecker = TypeChecker.typeNamed(Email, inPackage: 'dragonfly_annotations');
+  static final _minLengthChecker = TypeChecker.typeNamed(MinLength, inPackage: 'dragonfly_annotations');
+  static final _maxLengthChecker = TypeChecker.typeNamed(MaxLength, inPackage: 'dragonfly_annotations');
+  static final _patternChecker = TypeChecker.typeNamed(Pattern, inPackage: 'dragonfly_annotations');
+  static final _urlChecker = TypeChecker.typeNamed(Url, inPackage: 'dragonfly_annotations');
+  static final _phoneChecker = TypeChecker.typeNamed(Phone, inPackage: 'dragonfly_annotations');
+  static final _alphanumericChecker = TypeChecker.typeNamed(Alphanumeric, inPackage: 'dragonfly_annotations');
+  static final _alphaChecker = TypeChecker.typeNamed(Alpha, inPackage: 'dragonfly_annotations');
+  static final _numericChecker = TypeChecker.typeNamed(Numeric, inPackage: 'dragonfly_annotations');
+  static final _minChecker = TypeChecker.typeNamed(Min, inPackage: 'dragonfly_annotations');
+  static final _maxChecker = TypeChecker.typeNamed(Max, inPackage: 'dragonfly_annotations');
+  static final _rangeChecker = TypeChecker.typeNamed(Range, inPackage: 'dragonfly_annotations');
+  static final _positiveChecker = TypeChecker.typeNamed(Positive, inPackage: 'dragonfly_annotations');
+  static final _negativeChecker = TypeChecker.typeNamed(Negative, inPackage: 'dragonfly_annotations');
+  static final _equalToChecker = TypeChecker.typeNamed(EqualTo, inPackage: 'dragonfly_annotations');
+  static final _notEqualToChecker = TypeChecker.typeNamed(NotEqualTo, inPackage: 'dragonfly_annotations');
+  static final _pastDateChecker = TypeChecker.typeNamed(PastDate, inPackage: 'dragonfly_annotations');
+  static final _futureDateChecker = TypeChecker.typeNamed(FutureDate, inPackage: 'dragonfly_annotations');
+  static final _minAgeChecker = TypeChecker.typeNamed(MinAge, inPackage: 'dragonfly_annotations');
+  static final _minItemsChecker = TypeChecker.typeNamed(MinItems, inPackage: 'dragonfly_annotations');
+  static final _maxItemsChecker = TypeChecker.typeNamed(MaxItems, inPackage: 'dragonfly_annotations');
+  static final _mustBeTrueChecker = TypeChecker.typeNamed(MustBeTrue, inPackage: 'dragonfly_annotations');
+  static final _mustBeFalseChecker = TypeChecker.typeNamed(MustBeFalse, inPackage: 'dragonfly_annotations');
   // ignore: unused_field - Reserved for future custom validator support
-  static final _customChecker = TypeChecker.fromRuntime(Custom);
-  static final _requiredIfChecker = TypeChecker.fromRuntime(RequiredIf);
-  static final _requiredUnlessChecker = TypeChecker.fromRuntime(RequiredUnless);
-  static final _creditCardChecker = TypeChecker.fromRuntime(CreditCard);
-  static final _cvvChecker = TypeChecker.fromRuntime(Cvv);
-  static final _expiryDateChecker = TypeChecker.fromRuntime(ExpiryDate);
-  static final _strongPasswordChecker = TypeChecker.fromRuntime(StrongPassword);
-  static final _formFieldChecker = TypeChecker.fromRuntime(FormField);
+  static final _customChecker = TypeChecker.typeNamed(Custom, inPackage: 'dragonfly_annotations');
+  static final _requiredIfChecker = TypeChecker.typeNamed(RequiredIf, inPackage: 'dragonfly_annotations');
+  static final _requiredUnlessChecker = TypeChecker.typeNamed(RequiredUnless, inPackage: 'dragonfly_annotations');
+  static final _creditCardChecker = TypeChecker.typeNamed(CreditCard, inPackage: 'dragonfly_annotations');
+  static final _cvvChecker = TypeChecker.typeNamed(Cvv, inPackage: 'dragonfly_annotations');
+  static final _expiryDateChecker = TypeChecker.typeNamed(ExpiryDate, inPackage: 'dragonfly_annotations');
+  static final _strongPasswordChecker = TypeChecker.typeNamed(StrongPassword, inPackage: 'dragonfly_annotations');
+  static final _formFieldChecker = TypeChecker.typeNamed(FormField, inPackage: 'dragonfly_annotations');
 
   @override
   String generateForAnnotatedElement(
@@ -63,7 +63,7 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
       );
     }
 
-    final className = element.name;
+    final className = element.name ?? '';
     final generateCopyWith = annotation.read('copyWith').boolValue;
     final validateOnChange = annotation.read('validateOnChange').boolValue;
     final validateOnBlur = annotation.read('validateOnBlur').boolValue;
@@ -115,8 +115,8 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
       final metadata = _getFieldMetadata(field);
 
       fields.add(_FieldInfo(
-        name: field.name,
-        type: field.type.getDisplayString(withNullability: false),
+        name: field.name ?? '',
+        type: field.type.getDisplayString(),
         dartType: field.type,
         validators: validators,
         crossValidators: crossValidators,

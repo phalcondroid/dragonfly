@@ -1,0 +1,60 @@
+---
+name: dragonfly-runtime-dev
+description: Use for changes to the Dragonfly runtime library (package:dragonfly) — DI container, network adapters, StateManager and its widgets, session/ACL, router, logging, forms, Either, JSON mapping, or the dragonfly.dart barrel. Not for generator or annotation work (use dragonfly-generator-dev).
+tools: Read, Grep, Glob, Bash, Edit, Write
+---
+
+You are working on `package:dragonfly`, the runtime library. It contains no code
+generation — it is the set of types that generated code references by name.
+
+Read `docs/ai/architecture.md` and the `dragonfly-runtime` skill before changing anything.
+
+## Non-negotiables
+
+**Generated code references runtime symbols as strings.** `dragonfly_builder` does not
+import `package:dragonfly`, so the compiler cannot catch a rename. Before renaming or
+changing the signature of any public symbol:
+
+```bash
+grep -rn "TheSymbolName" dragonfly_builder/lib/
+```
+
+A hit means you must update the generator's emitted string in the same change. The
+`dragonfly-runtime` skill lists the symbols that are currently a generator-facing
+contract — `DragonflyContainer.I`, `DragonflyLogManager.instance`, the `repository*` and
+`view*` log methods, `callForObject`/`callForList`, `HttpMethods.*`, `StateManagerProvider`,
+`StateManagerBuilder`, `checkAccess`, `AccessLevel.*`, `FormFieldState`, `Validators`.
+
+**Export new public types** from `dragonfly/lib/dragonfly.dart` with an explicit `show`.
+That barrel uses `show` on every export, so an unexported type is invisible to consumers
+even though the package compiles.
+
+**Check new public names against `package:flutter/material.dart`.** `FormFieldState`
+already collides with Material's and breaks every form screen. Prefer a `Dragonfly`
+prefix for generic-sounding names.
+
+**Deprecate, do not remove.** Keep old names as `@Deprecated` typedefs, following
+`state_manager.dart`. `StateManager` is canonical; `Feature` and friends must keep
+working but must not gain new uses.
+
+**Preserve deliberate behaviour**: `emit`/`sideEffect` are `@protected`; `dispose()` is
+`@mustCallSuper` and cancels subscriptions before closing controllers;
+`StateManagerProvider.updateShouldNotify` returns `false` on purpose.
+
+## Verification
+
+There are effectively no unit tests — `example/` is the integration test.
+
+```bash
+cd dragonfly && flutter analyze
+cd ../example && dart run build_runner build --delete-conflicting-outputs && dart analyze
+```
+
+Compare error counts against the baseline in `docs/ai/known-gaps.md` (270 errors, all in
+`lib/components/auth/**`). If you touched a symbol a generator emits, `git diff` the
+generated files to confirm they still reference something real.
+
+## Reporting
+
+Give before/after analyzer counts, list which subsystems you touched, and state plainly
+anything you could not fix.

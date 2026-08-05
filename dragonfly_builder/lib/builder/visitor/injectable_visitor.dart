@@ -1,6 +1,6 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:analyzer/dart/element/visitor.dart';
+import 'package:analyzer/dart/element/visitor2.dart';
 import 'package:build/build.dart';
 import 'package:dragonfly_annotations/annotations/component/presentation/dragonfly_bloc.dart';
 import 'package:dragonfly_annotations/annotations/component/presentation/feature/dragonfly_feature.dart';
@@ -13,17 +13,17 @@ import 'package:dragonfly_builder/builder/models/injectable_type.dart';
 import 'package:source_gen/source_gen.dart';
 
 /// Visitor that collects all injectable dependencies from a library
-class InjectableVisitor extends SimpleElementVisitor<void> {
+class InjectableVisitor extends SimpleElementVisitor2<void> {
   final List<DependencyConfig> dependencies = [];
   final BuildStep buildStep;
 
   // Type checkers for annotations
-  static final _useCaseChecker = TypeChecker.fromRuntime(InjectableUseCase);
-  static final _repositoryChecker = TypeChecker.fromRuntime(Repository);
-  static final _blocChecker = TypeChecker.fromRuntime(DragonflyBloc);
-  static final _stateManagerChecker = TypeChecker.fromRuntime(DragonflyStateManager);
-  static final _injectChecker = TypeChecker.fromRuntime(Inject);
-  static final _namedChecker = TypeChecker.fromRuntime(Named);
+  static final _useCaseChecker = TypeChecker.typeNamed(InjectableUseCase, inPackage: 'dragonfly_annotations');
+  static final _repositoryChecker = TypeChecker.typeNamed(Repository, inPackage: 'dragonfly_annotations');
+  static final _blocChecker = TypeChecker.typeNamed(DragonflyBloc, inPackage: 'dragonfly_annotations');
+  static final _stateManagerChecker = TypeChecker.typeNamed(DragonflyStateManager, inPackage: 'dragonfly_annotations');
+  static final _injectChecker = TypeChecker.typeNamed(Inject, inPackage: 'dragonfly_annotations');
+  static final _namedChecker = TypeChecker.typeNamed(Named, inPackage: 'dragonfly_annotations');
 
   InjectableVisitor(this.buildStep);
 
@@ -95,16 +95,16 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
     try {
       final constructor = element.constructors.first;
 
-      final deps = constructor.parameters.map((param) {
+      final deps = constructor.formalParameters.map((param) {
         // Check for @Inject or @Named annotation on the parameter
         final paramInstanceName = _getParameterInstanceName(param);
 
         return InjectedDependency(
           type: ImportableType(
-            name: param.type.getDisplayString(withNullability: false),
-            import: param.type.element?.librarySource?.uri.toString(),
+            name: param.type.getDisplayString(),
+            import: param.type.element?.library?.uri.toString(),
           ),
-          paramName: param.name,
+          paramName: param.name ?? '',
           isPositional: param.isPositional,
           instanceName: paramInstanceName,
         );
@@ -112,8 +112,8 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
 
       // Create dependency config
       final typeImpl = ImportableType(
-        name: element.name,
-        import: element.librarySource.uri.toString(),
+        name: element.name ?? '',
+        import: element.library.uri.toString(),
       );
 
       // Extract type with all type arguments and their imports
@@ -139,7 +139,7 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
   }
 
   /// Extract instance name from @Inject or @Named annotation on a parameter
-  String? _getParameterInstanceName(ParameterElement param) {
+  String? _getParameterInstanceName(FormalParameterElement param) {
     // Check for @Inject annotation
     if (_injectChecker.hasAnnotationOfExact(param)) {
       final injectAnnotation =
@@ -159,9 +159,9 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
 
   /// Recursively extracts ImportableType with all type arguments and their imports
   ImportableType _extractImportableType(DartType dartType) {
-    final typeName = dartType.getDisplayString(withNullability: false);
+    final typeName = dartType.getDisplayString();
     final element = dartType.element;
-    final import = element?.librarySource?.uri.toString();
+    final import = element?.library?.uri.toString();
 
     // Extract type arguments recursively
     final typeArguments = <ImportableType>[];
@@ -204,8 +204,8 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
       // For repositories, we register the abstract class
       // The factory constructor redirects to the generated implementation
       final typeImpl = ImportableType(
-        name: element.name,
-        import: element.librarySource.uri.toString(),
+        name: element.name ?? '',
+        import: element.library.uri.toString(),
       );
 
       // Extract type with all type arguments and their imports
@@ -243,23 +243,23 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
       final constructor = element.constructors.first;
 
       // Extract constructor dependencies with @Inject support
-      final deps = constructor.parameters.map((param) {
+      final deps = constructor.formalParameters.map((param) {
         final paramInstanceName = _getParameterInstanceName(param);
 
         return InjectedDependency(
           type: ImportableType(
-            name: param.type.getDisplayString(withNullability: false),
-            import: param.type.element?.librarySource?.uri.toString(),
+            name: param.type.getDisplayString(),
+            import: param.type.element?.library?.uri.toString(),
           ),
-          paramName: param.name,
+          paramName: param.name ?? '',
           isPositional: param.isPositional,
           instanceName: paramInstanceName,
         );
       }).toList();
 
       final typeImpl = ImportableType(
-        name: element.name,
-        import: element.librarySource.uri.toString(),
+        name: element.name ?? '',
+        import: element.library.uri.toString(),
       );
 
       final config = DependencyConfig(
@@ -309,23 +309,23 @@ class InjectableVisitor extends SimpleElementVisitor<void> {
       final constructor = element.constructors.first;
 
       // Extract constructor dependencies with @Inject support
-      final deps = constructor.parameters.map((param) {
+      final deps = constructor.formalParameters.map((param) {
         final paramInstanceName = _getParameterInstanceName(param);
 
         return InjectedDependency(
           type: ImportableType(
-            name: param.type.getDisplayString(withNullability: false),
-            import: param.type.element?.librarySource?.uri.toString(),
+            name: param.type.getDisplayString(),
+            import: param.type.element?.library?.uri.toString(),
           ),
-          paramName: param.name,
+          paramName: param.name ?? '',
           isPositional: param.isPositional,
           instanceName: paramInstanceName,
         );
       }).toList();
 
       final typeImpl = ImportableType(
-        name: element.name,
-        import: element.librarySource.uri.toString(),
+        name: element.name ?? '',
+        import: element.library.uri.toString(),
       );
 
       final config = DependencyConfig(

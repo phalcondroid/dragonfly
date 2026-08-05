@@ -47,6 +47,19 @@ class DragonflyApp {
       config.initConfig();
     }
 
+    // Register realtime transports before the DI graph, so repositories that
+    // resolve one at construction time find it.
+    for (final realtime in config.realtimeConfigs) {
+      realtime.initConfig();
+      if (enableLogging) {
+        log.info(
+          'Realtime connection registered: ${realtime.connectionName} '
+          '(${realtime.config.url})',
+          source: 'DragonflyApp',
+        );
+      }
+    }
+
     // Run custom injection
     await config.injector?.inject!(DragonflyContainer.I);
 

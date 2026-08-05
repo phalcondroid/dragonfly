@@ -27,10 +27,8 @@ class InjectableConfigGenerator
     await for (final assetId in buildStep.findAssets(glob)) {
       try {
         final library = await buildStep.resolver.libraryFor(assetId);
-        for (final element in library.topLevelElements) {
-          if (element is ClassElement) {
-            visitor.visitClassElement(element);
-          }
+        for (final element in library.classes) {
+          visitor.visitClassElement(element);
         }
       } catch (e) {
         // Ignore files that can't be resolved
@@ -89,7 +87,7 @@ class InjectableConfigGenerator
 
     // Format the code
     try {
-      return DartFormatter().format(code.toString());
+      return DartFormatter(languageVersion: DartFormatter.latestLanguageVersion).format(code.toString());
     } catch (e) {
       log.warning('Failed to format generated code: $e');
       return code.toString();

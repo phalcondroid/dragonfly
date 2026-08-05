@@ -162,4 +162,26 @@ class CharacterFeature extends StateManager<CharacterState>
   void reset() {
     emit(const CharacterState.initial());
   }
+
+  /// Typing-driven search.
+  ///
+  /// The debounce is applied by the generated `actions` façade, so the UI calls
+  /// `feature.actions.searchByName(query)` on every keystroke and only the last
+  /// one within 300ms reaches the network.
+  @StateAction(debounce: Duration(milliseconds: 300))
+  Future<void> searchByName(String name) async {
+    emit(const CharacterState.loading());
+
+    final result = await _getUserListUseCase.call(name, const []);
+
+    result.fold(
+      (error) => emit(CharacterState.error(message: error.toString())),
+      (response) =>
+          emit(CharacterState.characterList(characters: response.results)),
+    );
+  }
+
+  /// Guarded against double taps by a throttle window.
+  @StateAction(throttle: Duration(seconds: 1))
+  void refreshThrottled() => fetchAllCharacters();
 }

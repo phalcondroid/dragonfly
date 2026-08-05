@@ -125,3 +125,4 @@ export 'annotations/network/delete.dart' show Delete;
 export 'annotations/network/put.dart' show Put;
 export 'annotations/network/body.dart' show Body;
 export 'annotations/network/header.dart' show Header;
+export 'annotations/network/subscribe.dart' show Subscribe;

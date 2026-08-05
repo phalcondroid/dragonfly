@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'origin.dart';
 
@@ -7,25 +8,23 @@ part of 'origin.dart';
 // **************************************************************************
 
 class _$Origin implements FactoryModelWatcher, Origin {
-  _$Origin({
-    required this.name,
-    required this.url,
-  });
+  _$Origin({required this.name, required this.url});
 
   factory _$Origin.fromJson(Map<String, Object?> json) {
     return _$Origin(
-        name: JsonDatatypeMapper.mapForGeneric<String>(
-          json,
-          'name',
-          defaultValue: null,
-          mustWithDefault: false,
-        ),
-        url: JsonDatatypeMapper.mapForGeneric<String>(
-          json,
-          'url',
-          defaultValue: null,
-          mustWithDefault: false,
-        ));
+      name: JsonDatatypeMapper.mapForGeneric<String>(
+        json,
+        'name',
+        defaultValue: null,
+        mustWithDefault: false,
+      ),
+      url: JsonDatatypeMapper.mapForGeneric<String>(
+        json,
+        'url',
+        defaultValue: null,
+        mustWithDefault: false,
+      ),
+    );
   }
 
   @override

@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 part of 'service_response_double.dart';
 
@@ -20,12 +21,13 @@ class _$ServiceResponseDouble<T, R>
     R Function(Object? json) fromJsonR,
   ) {
     return _$ServiceResponseDouble(
-        info: (json['info'] as Map<String, Object?>?) ?? <String, dynamic>{},
-        result: JsonDatatypeMapper.mapGenericListForTypeParameter<R>(
-          json['result'] as List?,
-          fromJsonR,
-        ),
-        res: fromJsonT(json['res']));
+      info: (json['info'] as Map<String, Object?>?) ?? <String, dynamic>{},
+      result: JsonDatatypeMapper.mapGenericListForTypeParameter<R>(
+        json['result'] as List?,
+        fromJsonR,
+      ),
+      res: fromJsonT(json['res']),
+    );
   }
 
   @override
@@ -44,7 +46,7 @@ class _$ServiceResponseDouble<T, R>
     return {
       'info': info,
       'result': result.map((e) => _toJsonR(e)).toList(),
-      'res': _toJsonT(res)
+      'res': _toJsonT(res),
     };
   }
 
@@ -55,7 +57,7 @@ class _$ServiceResponseDouble<T, R>
     return <String, Object?>{
       'info': info,
       'result': result.map((e) => _toJsonR(e)).toList(),
-      'res': _toJsonT(res)
+      'res': _toJsonT(res),
     };
   }
 
@@ -78,10 +80,7 @@ class _$ServiceResponseDouble<T, R>
     return 'ServiceResponseDouble(info: $info, result: $result, res: $res)';
   }
 
-  static bool _listEquals<T>(
-    List<T>? a,
-    List<T>? b,
-  ) {
+  static bool _listEquals<T>(List<T>? a, List<T>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -91,10 +90,7 @@ class _$ServiceResponseDouble<T, R>
     return true;
   }
 
-  static bool _mapEquals<K, V>(
-    Map<K, V>? a,
-    Map<K, V>? b,
-  ) {
+  static bool _mapEquals<K, V>(Map<K, V>? a, Map<K, V>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;
@@ -104,10 +100,7 @@ class _$ServiceResponseDouble<T, R>
     return true;
   }
 
-  static bool _setEquals<T>(
-    Set<T>? a,
-    Set<T>? b,
-  ) {
+  static bool _setEquals<T>(Set<T>? a, Set<T>? b) {
     if (identical(a, b)) return true;
     if (a == null || b == null) return false;
     if (a.length != b.length) return false;

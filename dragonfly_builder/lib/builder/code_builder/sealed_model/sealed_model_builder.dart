@@ -11,7 +11,7 @@ import 'package:dragonfly_builder/builder/visitor/sealed_class_visitor.dart';
 /// - Sealed subclasses for each variant
 /// - Optional copyWith, equals, hashCode, toString methods
 class SealedModelBuilder {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
   /// Generates the complete code for a sealed model.
   ///

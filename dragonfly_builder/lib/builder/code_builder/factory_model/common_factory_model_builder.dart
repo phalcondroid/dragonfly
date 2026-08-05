@@ -8,7 +8,7 @@ import 'package:dragonfly_builder/builder/visitor/factory_model_visitor.dart';
 
 /// Builder for creating factory model classes.
 class CommonFactoryModelBuilder {
-  final _formatter = DartFormatter();
+  final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
 
   /// Creates the generated model class.
   ///
@@ -34,7 +34,7 @@ class CommonFactoryModelBuilder {
     FactoryModelConfig config,
   ) {
     final genericTypeNames = visitor.genericTypes
-        .map((t) => t.getDisplayString(withNullability: false))
+        .map((t) => t.getDisplayString())
         .toList();
 
     final genericSuffix = config.isGeneric && genericTypeNames.isNotEmpty
@@ -46,7 +46,7 @@ class CommonFactoryModelBuilder {
       if (config.isGeneric && visitor.genericTypes.isNotEmpty) {
         cls.types.addAll(
           visitor.genericTypes.map(
-            (t) => cb.Reference(t.getDisplayString(withNullability: false)),
+            (t) => cb.Reference(t.getDisplayString()),
           ),
         );
       }
@@ -95,7 +95,7 @@ class CommonFactoryModelBuilder {
     FactoryModelConfig config,
   ) {
     final genericTypeNames = visitor.genericTypes
-        .map((t) => t.getDisplayString(withNullability: false))
+        .map((t) => t.getDisplayString())
         .toList();
 
     final genericSuffix = config.isGeneric && genericTypeNames.isNotEmpty

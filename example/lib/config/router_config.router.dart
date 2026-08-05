@@ -1,4 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// dart format width=80
 
 // **************************************************************************
 // RouterGenerator
@@ -8,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart'
     show AccessLevel;
+import 'package:example/components/auth/presentation/screens/login_screen.dart';
+import 'package:example/components/auth/presentation/features/login_state_manager.dart';
 import 'package:example/components/characters/presentation/screens/character_screen.dart';
 import 'package:example/components/characters/presentation/features/character_feature.dart';
 
@@ -15,31 +18,38 @@ import 'package:example/components/characters/presentation/features/character_fe
 mixin $AppRouterConfig {
   /// Map of route paths to widget builders.
   Map<String, WidgetBuilder> get routes => {
-        '/': (context) =>
-            CharacterFeatureProvider(child: const CharacterScreen()),
-        '/character-alt': (context) =>
-            CharacterFeatureProvider(child: const CharacterScreenAlternative()),
-      };
+    '/login': (context) =>
+        LoginStateManagerProvider(child: const LoginScreen()),
+    '/': (context) => CharacterFeatureProvider(child: const CharacterScreen()),
+    '/character-alt': (context) =>
+        CharacterFeatureProvider(child: const CharacterScreenAlternative()),
+  };
 
   /// Route access configurations.
   Map<String, _RouteAccessConfig> get routeConfigs => {
-        '/': _RouteAccessConfig(
-          accessLevel: AccessLevel.guest,
-          roles: const [],
-          permissions: const [],
-        ),
-        '/character-alt': _RouteAccessConfig(
-          accessLevel: AccessLevel.guest,
-          roles: const [],
-          permissions: const [],
-        ),
-      };
+    '/login': _RouteAccessConfig(
+      accessLevel: AccessLevel.guest,
+      roles: const [],
+      permissions: const [],
+    ),
+    '/': _RouteAccessConfig(
+      accessLevel: AccessLevel.guest,
+      roles: const [],
+      permissions: const [],
+    ),
+    '/character-alt': _RouteAccessConfig(
+      accessLevel: AccessLevel.guest,
+      roles: const [],
+      permissions: const [],
+    ),
+  };
 
   /// Map of route names to paths.
   Map<String, String> get namedRoutes => {
-        'characters': '/',
-        'characters-alt': '/character-alt',
-      };
+    'login': '/login',
+    'characters': '/',
+    'characters-alt': '/character-alt',
+  };
 
   /// The initial route for the application.
   String get initialRoute => '/';
@@ -117,6 +127,8 @@ mixin $AppRouterConfig {
   /// Gets the transition type for a route.
   String _getTransition(String path) {
     switch (path) {
+      case '/login':
+        return 'fade';
       case '/':
         return 'fade';
       case '/character-alt':
@@ -145,13 +157,13 @@ mixin $AppRouterConfig {
           pageBuilder: (context, _, __) => builder(context),
           transitionsBuilder: (context, animation, _, child) {
             return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1.0, 0.0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              )),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(1.0, 0.0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
               child: child,
             );
           },
@@ -162,13 +174,13 @@ mixin $AppRouterConfig {
           pageBuilder: (context, _, __) => builder(context),
           transitionsBuilder: (context, animation, _, child) {
             return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.0, 1.0),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              )),
+              position:
+                  Tween<Offset>(
+                    begin: const Offset(0.0, 1.0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+                  ),
               child: child,
             );
           },
@@ -187,10 +199,7 @@ mixin $AppRouterConfig {
           },
         );
       case 'platform':
-        return MaterialPageRoute(
-          settings: settings,
-          builder: builder,
-        );
+        return MaterialPageRoute(settings: settings, builder: builder);
       case 'fade':
       default:
         return PageRouteBuilder(
@@ -252,25 +261,24 @@ mixin $AppRouterConfig {
   void resetTo(BuildContext context, String name, {Object? arguments}) {
     final path = namedRoutes[name];
     if (path != null) {
-      Navigator.of(context)
-          .pushNamedAndRemoveUntil(path, (_) => false, arguments: arguments);
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(path, (_) => false, arguments: arguments);
     }
   }
 
   /// Navigate to home (after login).
   void navigateToHome(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      session.config.homePath,
-      (_) => false,
-    );
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(session.config.homePath, (_) => false);
   }
 
   /// Navigate to login (after logout).
   void navigateToLogin(BuildContext context) {
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      session.config.loginPath,
-      (_) => false,
-    );
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(session.config.loginPath, (_) => false);
   }
 }
 

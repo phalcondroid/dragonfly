@@ -8,7 +8,7 @@ import 'package:example/components/characters/data/models/service_response_doubl
 
 part "character_repository.repository.dart";
 
-@Repository(url: "character")
+@Repository(url: "character", realtimeConnection: "events")
 abstract class CharacterRepository {
   factory CharacterRepository() = _CharacterRepository;
 
@@ -23,4 +23,13 @@ abstract class CharacterRepository {
     @Path() String name,
     @Query() List<String> julian,
   );
+
+  /// Realtime: one character per frame on the `character.created` channel.
+  @Subscribe(channel: "character.created")
+  Stream<Character> onCharacterCreated();
+
+  /// Realtime: a batch of characters per frame. Channel defaults to the
+  /// method name, so this subscribes to `onCharacterBatch`.
+  @Subscribe()
+  Stream<List<Character>> onCharacterBatch();
 }
