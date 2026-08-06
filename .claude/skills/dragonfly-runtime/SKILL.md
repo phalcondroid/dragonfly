@@ -121,10 +121,11 @@ something real.
 are implemented — they await / check completion of async singletons. `DragonflyContainer.reset()`
 clears all scopes for test teardown.
 
-**Network** — generated repositories look up the **concrete**
-`DragonflyNetworkHttpAdapter`, not the `DragonflyBaseNetworkAdapter` interface. A new
-adapter registered under the interface type will not be found. Adding a transport (e.g.
-sockets) requires touching the generator, not just the runtime.
+**Network** — generated repositories resolve `DragonflyBaseNetworkAdapter` by
+instance name from the DI container. Both the interface and the concrete
+`DragonflyNetworkHttpAdapter` are registered, so either can be resolved. Custom
+adapters implement `DragonflyBaseNetworkAdapter` and are registered via
+`DragonflyAdapterConfig` subclasses in `DragonflyConfig.adapters`.
 
 **State management (v2)** — `DragonflyController.emit` is `@protected`; keep it that way —
 only generated controllers mutate state. `dispose()` must stay idempotent and cancel the

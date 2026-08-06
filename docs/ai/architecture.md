@@ -126,8 +126,10 @@ Two lines wide on purpose: generated repositories only ever call these two metho
 - `_validateResponse` throws `DragonflyHttpException(message, statusCode, body)` on
   status ≥ 400.
 
-`AuthenticatedNetworkAdapter` (`framework/session/`) wraps the same interface and adds the
+`DragonflyAuthenticatedAdapter` (`framework/session/`) wraps **any**
+`DragonflyBaseNetworkAdapter` and adds the
 session token, 401 handling via `onTokenExpired`, and an optional `refreshTokenCallback`.
+The deprecated `AuthenticatedNetworkAdapter` (HTTP-only) is kept for backward compat.
 
 ### Realtime transport
 
@@ -151,7 +153,7 @@ abstract interface class DragonflyRealtimeAdapter {
 `WebSocketChannel`, which is what makes it testable and leaves room for other
 transports. `WebSocketConnection` is the production binding.
 
-Registered by connection name through `DragonflyRealtimeInstanceConfig`, under **both**
+Registered by connection name through `DragonflyWebSocketAdapterConfig`, under **both**
 `DragonflyRealtimeAdapter` and `DragonflyWebSocketAdapter` — generated code asks for the
 interface. Connects lazily on first `listen`.
 
@@ -160,27 +162,43 @@ subscribe-deduplication rule.
 
 ### Adapter registration by connection name
 
-`DragonflyInstanceConfig.initConfig()` registers a `DragonflyNetworkHttpAdapter` **under a
-string name**, defaulting to the `defaultHttpNetwork` constant:
+**New pattern (preferred):** Subclass `DragonflyAdapterConfig` and add instances to
+`DragonflyConfig.adapters`. Built-in subclasses:
+
+- `DragonflyHttpAdapterConfig` — registers `DragonflyNetworkHttpAdapter` under
+  `connectionName` and `DragonflyAuthenticatedAdapter` under
+  `'$connectionName:authenticated'`.
+- `DragonflyWebSocketAdapterConfig` — registers `DragonflyWebSocketAdapter` under
+  `connectionName`.
 
 ```dart
-DragonflyContainer.I.registerSingleton(
-    DragonflyNetworkHttpAdapter(config: config), instanceName: connectionName);
+class AppConfig extends DragonflyConfig {
+  @override
+  List<DragonflyAdapterConfig> get adapters => [
+    DragonflyHttpAdapterConfig(options: DragonflyHttpBaseOptions(baseUrl: 'https://...')),
+    DragonflyWebSocketAdapterConfig(config: DragonflyRealtimeConfig(url: 'wss://...')),
+  ];
+}
 ```
 
-`@Repository(connection: 'x')` makes the generated code do
-`DragonflyContainer.I.get<DragonflyNetworkHttpAdapter>(instanceName: 'x')`. Multiple named
-backends are configured by adding more `DragonflyInstanceConfig` entries to
-`DragonflyConfig.instanceConfigs`.
+`DragonflyApp.init()` iterates `config.adapters` and calls `initConfig(container)` on each.
 
-Note the generated HTTP lookup asks for the **concrete** `DragonflyNetworkHttpAdapter`, not
-the `DragonflyBaseNetworkAdapter` interface — so a custom adapter registered only under the
-interface type will not be found by generated repositories. Worth fixing; the realtime path
-deliberately does the opposite, resolving `DragonflyRealtimeAdapter` (the interface) and
-registering the implementation under both.
+**Deprecated pattern** (still works): `instanceConfigs` (`DragonflyInstanceConfig`) and
+`realtimeConfigs` (`DragonflyRealtimeInstanceConfig`) are kept for backward compat.
+Internally they mirror the same logic as their replacement classes.
 
-Realtime transports are registered the same way, from `DragonflyConfig.realtimeConfigs`,
-and selected with `@Repository(realtimeConnection: 'x')`.
+### Resolution at runtime
+
+Generated repositories resolve adapters from the DI container:
+
+- HTTP methods → `DragonflyContainer.I.get<DragonflyBaseNetworkAdapter>(instanceName: connectionName)`
+- `@Authenticated` methods → `instanceName: '$connectionName:authenticated'`
+- `@Subscribe` methods → `DragonflyContainer.I.get<DragonflyRealtimeAdapter>(instanceName: realtimeConnection)`
+
+Both HTTP and realtime adapters are registered under the **interface** type
+(`DragonflyBaseNetworkAdapter` / `DragonflyRealtimeAdapter`) and the concrete type
+(`DragonflyNetworkHttpAdapter` / `DragonflyWebSocketAdapter`). Generated code resolves
+the interface.
 
 ---
 
@@ -362,7 +380,9 @@ await DragonflyApp(config: AppConfig()).init();
 ```
 
 `DragonflyApp.init()` in order: configures the log manager → prints the banner →
-`initConfig()` on every `DragonflyInstanceConfig` (registering network adapters) →
+`initConfig(container)` on every entry in `config.adapters` (registering network adapters,
+both built-in and custom) → also processes deprecated `instanceConfigs` and
+`realtimeConfigs` for backward compat →
 `await config.injector?.inject!(DragonflyContainer.I)`.
 
 That last callback is where the app calls its generated `initDragonflyContainer()` and

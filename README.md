@@ -274,8 +274,9 @@ abstract class CharacterRepository {
 | `@Header(item:)` | Request header | Static `{key: value}` merged into headers |
 | `@Authenticated()` | Session token | Resolves `'<conn>:authenticated'` adapter |
 
-Network adapters (`DragonflyBaseNetworkAdapter`) are registered per connection name.
-The `baseUrl` and `connectTimeout` come from `DragonflyInstanceConfig`.
+Network adapters (`DragonflyBaseNetworkAdapter`) are registered per connection name
+through `DragonflyHttpAdapterConfig` (HTTP) and `DragonflyWebSocketAdapterConfig`
+(WebSocket), or custom `DragonflyAdapterConfig` subclasses.
 
 ---
 
@@ -677,20 +678,18 @@ Duplicates throw `DragonflyException` (get_it semantics). Set
 ```dart
 class AppConfig extends DragonflyConfig {
   @override
-  List<DragonflyInstanceConfig> get instanceConfigs => [
-    const DragonflyInstanceConfig(
-      options: DragonflyHttpBaseOptions(
-        baseUrl: "https://api.example.com/",
-        connectTimeout: const Duration(seconds: 5),
+  List<DragonflyAdapterConfig> get adapters => [
+    DragonflyHttpAdapterConfig(
+      options: const DragonflyHttpBaseOptions(
+        baseUrl: 'https://api.example.com/',
+        connectTimeout: Duration(seconds: 5),
       ),
     ),
-  ];
-
-  @override
-  List<DragonflyRealtimeInstanceConfig> get realtimeConfigs => [
-    const DragonflyRealtimeInstanceConfig(
-      connectionName: "events",
-      config: DragonflyRealtimeConfig(url: "wss://echo.websocket.org"),
+    DragonflyWebSocketAdapterConfig(
+      connectionName: 'events',
+      config: const DragonflyRealtimeConfig(
+        url: 'wss://echo.websocket.org',
+      ),
     ),
   ];
 
@@ -703,9 +702,41 @@ class AppConfig extends DragonflyConfig {
 }
 ```
 
-An `AuthenticatedNetworkAdapter` is registered automatically for every connection
-under `'<name>:authenticated'`. `@Authenticated()` on a repository method resolves
-it.
+> `instanceConfigs` and `realtimeConfigs` are deprecated — use the unified
+> `adapters` list instead.
+
+### Custom adapters
+
+Subclass `DragonflyAdapterConfig` to register custom transport adapters (WebRTC,
+gRPC, GraphQL, MQTT, etc.):
+
+```dart
+class WebRTCAdapterConfig extends DragonflyAdapterConfig {
+  final String connectionName;
+  const WebRTCAdapterConfig({required this.connectionName});
+
+  @override
+  void initConfig(DragonflyContainer container) {
+    container.registerSingleton<DragonflyBaseNetworkAdapter>(
+      WebRTCAdapter(),
+      instanceName: connectionName,
+    );
+  }
+}
+
+// Then add it to the adapters list:
+@override
+List<DragonflyAdapterConfig> get adapters => [
+  DragonflyHttpAdapterConfig(options: ...),
+  WebRTCAdapterConfig(connectionName: 'webrtc'),
+];
+```
+
+The new `DragonflyAuthenticatedAdapter` wraps **any** `DragonflyBaseNetworkAdapter`
+to inject session tokens, making authentication transport-agnostic.
+
+An authenticated adapter is registered automatically for every HTTP connection
+under `'<name>:authenticated'`. `@Authenticated()` on a repository method resolves it.
 
 ---
 

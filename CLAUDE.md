@@ -203,8 +203,8 @@ documentation-checklist. The rule:
 ### Routing lives on the config class, not in a separate file
 
 `@RouterConfig()` must be placed on the `DragonflyConfig` subclass — the same
-class that declares `instanceConfigs`, `realtimeConfigs`, and the `injector`.
-One config object delivers everything: DI, network, session, and routing.
+class that declares `adapters`, `instanceConfigs`, `realtimeConfigs`, and the
+`injector`. One config object delivers everything: DI, network, session, and routing.
 
 ```dart
 @RouterConfig()

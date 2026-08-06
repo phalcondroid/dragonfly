@@ -47,7 +47,7 @@ must stay in sync with the source code. An outdated doc is a bug.
 
 | Artifact | Rule |
 |----------|------|
-| `AppConfig` subclass | `@RouterConfig()` must be on the `DragonflyConfig` subclass — the same class that declares `instanceConfigs`, `realtimeConfigs`, and `injector`. Never create a separate `router_config.dart` file. The generated `.router.dart` is imported (not `part`-ed). `main.dart` passes the config instance to both `DragonflyApp.init()` and `MaterialApp`. |
+| `AppConfig` subclass | `@RouterConfig()` must be on the `DragonflyConfig` subclass — the same class that declares `adapters`, `instanceConfigs`, `realtimeConfigs`, and `injector`. Never create a separate `router_config.dart` file. The generated `.router.dart` is imported (not `part`-ed). `main.dart` passes the config instance to both `DragonflyApp.init()` and `MaterialApp`. |
 
 ### 4. Example (integration test)
 

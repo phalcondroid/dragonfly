@@ -20,7 +20,7 @@ class Repository {
   final String? instanceName;
 
   /// Connection name of the realtime transport used by this repository's
-  /// `@Subscribe` methods. Must match a `DragonflyRealtimeInstanceConfig`
+  /// `@Subscribe` methods. Must match a `DragonflyWebSocketAdapterConfig`
   /// registered in the app config.
   final String realtimeConnection;
 

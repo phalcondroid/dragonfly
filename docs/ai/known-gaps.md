@@ -26,14 +26,14 @@ stale `Feature`/`@StateAction` examples — are removed.
 
 ---
 
-## 3. Repository parameters — RESOLVED 2026-08-05
+## 3. Repository parameters / adapter refactoring — RESOLVED 2026-08-05 (updated 2026-08-06)
 
 `@Path`, `@Query`, `@Body` and `@Header` are fully wired in the repository generator.
 `@Subscribe` parameters pass a real params map. `@Authenticated` resolves the
-session-aware adapter. The `DragonflyNetworkHttpAdapter` was refactored with a rich
-`requestObject`/`requestList` API (separate `query`, `body` and `headers` arguments) and
-hooks (`beforeRequest`, `buildHeaders`, `afterResponse`) so `AuthenticatedNetworkAdapter`
-extends it without duplicating 250 lines.
+session-aware adapter. Adapters are now pluggable via `DragonflyAdapterConfig` subclasses;
+custom transports register in `DragonflyConfig.adapters`. The new
+`DragonflyAuthenticatedAdapter` wraps any `DragonflyBaseNetworkAdapter` (not just HTTP).
+Hook methods (`beforeRequest`, `buildHeaders`, `afterResponse`) live on the base adapter.
 
 ---
 
