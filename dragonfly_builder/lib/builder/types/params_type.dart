@@ -9,11 +9,16 @@ class ParamsType extends BlankType {
   final ValueType valueType;
   final List<Map<String, String>>? valueAsList;
 
+  /// Static header entries from `@Header(item:)`; only set when
+  /// [type] is [ParamsAnnotations.header].
+  final Map<String, String>? headerItems;
+
   const ParamsType(
       {required super.name,
       required super.value,
       required this.paramDataType,
       required this.type,
       required this.valueType,
-      this.valueAsList});
+      this.valueAsList,
+      this.headerItems});
 }

@@ -33,7 +33,7 @@ A hit means you must update the generator's emitted string in the same change.
 | `repositoryStart` / `repositorySuccess` / `repositoryError` | repository generator |
 | `DragonflyNetworkHttpAdapter`, `callForObject`, `callForList` | repository generator |
 | `HttpMethods.get/post/put/patch/delete` | repository generator |
-| `StateManager<S>`, `StateManagerProvider<T>`, `StateManagerBuilder<SM, S>` | state manager generator |
+| `DragonflyController<S>`, `DragonflyStateBuilder<S>`, `DragonflyContainer` | state manager + view generators |
 | `DragonflySessionManager.instance`, `checkAccess(...)` | router generator |
 | `AccessLevel.*` | router generator |
 | `FormFieldState`, `Validators`, `Validator`, `CrossFieldValidator`, `FormController` | form schema generator |
@@ -83,16 +83,20 @@ exports; prefer a `Dragonfly` prefix for anything generic-sounding.
 
 ### 4. Deprecate rather than break
 
-The established pattern, from `state_manager.dart`:
+The established pattern, from the v2 annotation renames:
 
 ```dart
-@Deprecated('Use StateManager instead')
-typedef Feature<S> = StateManager<S>;
+@Deprecated('Use @UseCase instead')
+typedef InjectableUseCase = UseCase;
 ```
 
 Keep the old name working, mark it, add
 `// ignore_for_file: deprecated_member_use_from_same_package` to files that must reference
-it. `StateManager` is canonical; never introduce new uses of `Feature`.
+it. Canonical names are the unprefixed ones (`@UseCase`, `@Screen`, `@StateManager`,
+`@Event`, `@StateView`); never introduce new uses of the `Dragonfly`-prefixed aliases.
+Exception to this rule: the v2 state stack (`StateManager<S>`, `Feature`, bloc/) was a
+documented clean break — deleting an API wholesale is acceptable only as an explicit,
+standalone task, never as a side effect.
 
 ### 5. Verify against the example
 
@@ -121,10 +125,11 @@ today relies on double registration being harmless.
 adapter registered under the interface type will not be found. Adding a transport (e.g.
 sockets) requires touching the generator, not just the runtime.
 
-**StateManager** — `emit` and `sideEffect` are `@protected`; keep them that way. `dispose()`
-is `@mustCallSuper` and must keep cancelling subscriptions before closing controllers.
-`StateManagerProvider`'s `updateShouldNotify` returns `false` on purpose — rebuilds come
-from the stream, not from inherited-widget propagation. Do not "fix" it to `true`.
+**State management (v2)** — `DragonflyController.emit` is `@protected`; keep it that way —
+only generated controllers mutate state. `dispose()` must stay idempotent and cancel the
+`ActionScheduler` before closing the stream. Controllers are DI **lazy singletons**; that
+is what lets the `$Manager` view mixin resolve without a `BuildContext`, so do not
+re-register them as factories without redesigning the view mixin too.
 
 **Session** — `checkAccess` is called by generated routers; its return contract is
 "redirect path, or `null` to allow". Changing that silently breaks every generated router.

@@ -116,7 +116,7 @@ class FactoryModelVisitor extends SimpleElementVisitor2<void> {
     final bool isClass = _isClassType(param.type, cleanTypeString);
 
     // Handle List types
-    String listType = MedatadaExtractor.getContentOfTag(typeString);
+    String listType = MetadataExtractor.getContentOfTag(typeString);
     final bool isListClass =
         param.type.isDartCoreList && _isClassType(null, listType.replaceAll('?', ''));
 

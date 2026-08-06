@@ -47,26 +47,3 @@ class Field {
     this.toJson = true,
   });
 }
-
-/// Annotation to mark a field as ignored during serialization/deserialization.
-class JsonIgnore {
-  const JsonIgnore();
-}
-
-/// Annotation to provide a custom key for JSON serialization.
-class JsonKey {
-  /// The JSON key name.
-  final String name;
-
-  /// Default value if null.
-  final Object? defaultValue;
-
-  /// Whether to include if null.
-  final bool includeIfNull;
-
-  const JsonKey({
-    required this.name,
-    this.defaultValue,
-    this.includeIfNull = true,
-  });
-}

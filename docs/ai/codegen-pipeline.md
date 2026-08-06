@@ -5,7 +5,7 @@ modifying a generator.
 
 ---
 
-## The ten builders
+## The eight builders
 
 Every builder is declared in **two** places. Both are required.
 
@@ -17,17 +17,16 @@ Every builder is declared in **two** places. Both are required.
 | ----------------------------------- | -------------------------------- | ------------------ | --------------- |
 | `repository_generator`              | `repositoryGenerator`            | `.repository.dart` | `PartBuilder`   |
 | `factory_model_generator`           | `factoryModelGenerator`          | `.model.dart`      | `PartBuilder`   |
-| `event_model_generator`             | `eventModelGenerator`            | `.event.dart`      | `PartBuilder`   |
 | `state_model_generator`             | `stateModelGenerator`            | `.state.dart`      | `PartBuilder`   |
-| `dragonfly_bloc_generator`          | `dragonflyBlocGenerator`         | `.bloc.dart`       | `PartBuilder`   |
-| `dragonfly_bloc_view_generator`     | `dragonflyBlocViewGenerator`     | `.blocview.dart`   | `PartBuilder`   |
-| `dragonfly_state_manager_generator` | `dragonflyStateManagerGenerator` | `.state_manager.dart` | `PartBuilder` |
+| `state_manager_generator`           | `stateManagerGenerator`          | `.state_manager.dart` | `PartBuilder` |
+| `view_generator`                    | `viewGenerator`                  | `.view.dart`       | `PartBuilder`   |
 | `form_schema_generator`             | `formSchemaGenerator`            | `.form.dart`       | `PartBuilder`   |
 | `injectable_config_builder`         | `injectableConfigBuilder`        | `.config.dart`     | `LibraryBuilder`|
 | `router_generator`                  | `routerBuilder`                  | `.router.dart`     | `LibraryBuilder`|
 
-All ten use `auto_apply: dependents` and `build_to: source`, so outputs land next to
-the source file and are committed to the repo.
+All eight use `auto_apply: dependents` and `build_to: source`, so outputs land next to
+the source file and are committed to the repo. (`event_model_generator` and the two
+bloc generators were deleted in the v2 state-management clean break.)
 
 ### PartBuilder vs LibraryBuilder — the extension gotcha
 
@@ -90,7 +89,13 @@ GeneratorForAnnotation<TheAnnotation>
        └─ code_builder → DartEmitter → DartFormatter().format(...)
 ```
 
-Example: `FactoryModelGenerator`, `StateModelGenerator`, `DragonflyStateManagerGenerator`.
+Example: `FactoryModelGenerator`, `StateModelGenerator`, `StateManagerGenerator`.
+
+`StateManagerGenerator` and `ViewGenerator` share one analysis pass,
+`StateManagerDescriber.describe` (`helper/state_manager_descriptor.dart`): given the
+`@StateManager` class it produces the descriptor both generators emit from (modes,
+events, variants, auto loading/error flags). Change dispatch semantics in exactly one
+place or the controller and the view mixin disagree.
 
 ### Shape B — whole-package scanners
 
@@ -111,9 +116,13 @@ await for (final assetId in buildStep.findAssets(glob)) {
 
 | Scanner                                      | Why it scans                                              |
 | -------------------------------------------- | --------------------------------------------------------- |
-| `InjectableConfigGenerator`                  | Find every `@InjectableUseCase` / `@Repository` / `@DragonflyStateManager` / `@DragonflyBloc` in the package to build one DI graph |
-| `RouterGenerator`                            | Find every `@DragonflyScreen` plus every state manager, to map routes to providers |
+| `InjectableConfigGenerator`                  | Find every `@UseCase` / `@Repository` / `@StateManager` in the package to build one DI graph (state managers produce two registrations: delegate factory + controller lazy singleton) |
+| `RouterGenerator`                            | Find every `@Screen` to map routes and their ACL config |
 | `FactoryModelRegistry` (used by `RepositoryGenerator`) | Learn each `@FactoryModel`'s generics and `fromJson` shape so the repository can emit the right `fromJson` call |
+
+Note `ViewGenerator` is **not** a scanner: it resolves the bound `@StateManager` class
+directly through the annotation's `Type` argument, which is also how it learns the
+manager's mode and variants without globbing.
 
 **The `catch { continue; }` in all three is a real hazard.** A library that fails to
 resolve — because *its own* generated part is missing or broken — is skipped without a

@@ -1,41 +1,96 @@
 import 'package:analyzer/dart/element/element.dart';
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:dragonfly_builder/builder/types/enums/params_annotations.dart';
 import 'package:dragonfly_builder/builder/types/params_type.dart';
+import 'package:source_gen/source_gen.dart';
 
-/// Resolves repository method parameters into [ParamsType].
+/// Resolves repository method parameters into [ParamsType], classifying each
+/// by its binding annotation: `@Path`, `@Query`, `@Body` or `@Header`.
 ///
-/// This previously read `metadata.annotations.first` unconditionally, which
-/// threw `Bad state: No element` for any unannotated parameter — and because
-/// `RepositoryVisitor.visitMethodElement` swallows exceptions, the whole method
-/// then vanished from the generated repository with no error. Unannotated
-/// parameters are now tolerated.
+/// Unannotated parameters are classified [ParamsAnnotations.none]; the
+/// repository generator binds those as query parameters by default.
 class ParameterHelper {
-  List<ParamsType> parametersResolver(
-      List<FormalParameterElement> parameters) {
-    final params = <ParamsType>[];
+  static final _pathChecker =
+      TypeChecker.typeNamed(Path, inPackage: 'dragonfly_annotations');
+  static final _queryChecker =
+      TypeChecker.typeNamed(Query, inPackage: 'dragonfly_annotations');
+  static final _bodyChecker =
+      TypeChecker.typeNamed(Body, inPackage: 'dragonfly_annotations');
+  static final _headerChecker =
+      TypeChecker.typeNamed(Header, inPackage: 'dragonfly_annotations');
 
-    for (final param in parameters) {
-      final annotations = param.metadata.annotations;
-      final source = annotations.isEmpty ? '' : annotations.first.toString();
-
-      params.add(ParamsType(
-        name: param.displayName,
-        paramDataType: '${param.type}',
-        value: source.isEmpty ? '' : source.split(' ').first,
-        type: _classify(source),
-        valueType: ValueType.simple,
-      ));
-    }
-
-    return params;
+  List<ParamsType> parametersResolver(List<FormalParameterElement> parameters) {
+    return parameters.map(_resolve).toList();
   }
 
-  /// Maps a parameter's annotation to its binding kind.
-  ///
-  /// Nothing downstream consumes this yet — the repository generator still
-  /// passes `null` for params and body. See docs/ai/known-gaps.md #2.
-  ParamsAnnotations _classify(String source) {
-    if (source.contains('@Query')) return ParamsAnnotations.query;
-    return ParamsAnnotations.path;
+  ParamsType _resolve(FormalParameterElement param) {
+    final name = param.name ?? '';
+    final dataType = param.type.getDisplayString();
+
+    if (_pathChecker.hasAnnotationOfExact(param)) {
+      return ParamsType(
+        name: name,
+        value: _placeholderName(_pathChecker, param, name),
+        paramDataType: dataType,
+        type: ParamsAnnotations.path,
+        valueType: ValueType.simple,
+      );
+    }
+
+    if (_queryChecker.hasAnnotationOfExact(param)) {
+      return ParamsType(
+        name: name,
+        value: _placeholderName(_queryChecker, param, name),
+        paramDataType: dataType,
+        type: ParamsAnnotations.query,
+        valueType: ValueType.simple,
+      );
+    }
+
+    if (_bodyChecker.hasAnnotationOfExact(param)) {
+      return ParamsType(
+        name: name,
+        value: name,
+        paramDataType: dataType,
+        type: ParamsAnnotations.body,
+        valueType: ValueType.simple,
+      );
+    }
+
+    if (_headerChecker.hasAnnotationOfExact(param)) {
+      final annotation = _headerChecker.firstAnnotationOfExact(param);
+      final items = <String, String>{};
+      ConstantReader(annotation).peek('item')?.mapValue.forEach((k, v) {
+        final key = k?.toStringValue();
+        final value = v?.toStringValue();
+        if (key != null && value != null) items[key] = value;
+      });
+      return ParamsType(
+        name: name,
+        value: name,
+        paramDataType: dataType,
+        type: ParamsAnnotations.header,
+        valueType: ValueType.simple,
+        headerItems: items,
+      );
+    }
+
+    return ParamsType(
+      name: name,
+      value: name,
+      paramDataType: dataType,
+      type: ParamsAnnotations.none,
+      valueType: ValueType.simple,
+    );
+  }
+
+  /// Reads the annotation's `value`, falling back to the parameter name when
+  /// empty (`@Path() int id` binds the `{id}` placeholder).
+  String _placeholderName(
+      TypeChecker checker, FormalParameterElement param, String fallback) {
+    final annotation = checker.firstAnnotationOfExact(param);
+    if (annotation == null) return fallback;
+    final value = ConstantReader(annotation).peek('value')?.stringValue;
+    return (value == null || value.isEmpty) ? fallback : value;
   }
 }

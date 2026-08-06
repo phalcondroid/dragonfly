@@ -38,14 +38,14 @@ constructor; `LibraryBuilder` declares `.x.dart` and omits `applies_builders`.
 propagate or throw `InvalidGenerationSourceError`. Do not add `catch (e) { print(...);
 return ""; }` to new code.
 
-**Emit canonical names only** — `StateManager`, `@DragonflyStateManager`, `@StateAction`.
+**Emit canonical names only** — `@StateManager`, `@Event`, `@StateView`, `@UseCase`, `@Screen`. Never the deleted v1 stack (`StateManager<S>`, `@StateAction`, bloc types).
 Never emit `Feature`, `@DragonflyFeature`, `@DragonflyView`, or `FeatureBuilder`.
 
-**Do not rename the known typos** (`MedatadaExtractor`, `repositoriy/`, `inyectar.dart`,
-`HttpAnnotations.unknow`) as a side effect of other work.
+The four historically-misspelled identifiers were corrected in August 2026; do not
+reintroduce the old spellings.
 
 ## Reporting
 
 State the before/after analyzer error counts, name the generated files you inspected, and
-call out explicitly anything you left broken. `example/`'s `auth` component is already
-broken (270 errors) — distinguish that from anything you caused.
+call out explicitly anything you left broken. `example/` analyzes clean (**0 errors**)
+across both components — any regression is yours.

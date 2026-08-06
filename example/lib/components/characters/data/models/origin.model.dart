@@ -37,6 +37,7 @@ class _$Origin implements FactoryModelWatcher, Origin {
     return {'name': name, 'url': url};
   }
 
+  @override
   Map<String, Object?> toMap() {
     return <String, Object?>{'name': name, 'url': url};
   }

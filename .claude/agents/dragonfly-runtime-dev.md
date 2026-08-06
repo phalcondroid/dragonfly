@@ -22,8 +22,8 @@ grep -rn "TheSymbolName" dragonfly_builder/lib/
 A hit means you must update the generator's emitted string in the same change. The
 `dragonfly-runtime` skill lists the symbols that are currently a generator-facing
 contract — `DragonflyContainer.I`, `DragonflyLogManager.instance`, the `repository*` and
-`view*` log methods, `callForObject`/`callForList`, `HttpMethods.*`, `StateManagerProvider`,
-`StateManagerBuilder`, `checkAccess`, `AccessLevel.*`, `FormFieldState`, `Validators`.
+`view*` log methods, `callForObject`/`callForList`, `HttpMethods.*`, `DragonflyController`,
+`DragonflyStateBuilder`, `checkAccess`, `AccessLevel.*`, `FormFieldState`, `Validators`.
 
 **Export new public types** from `dragonfly/lib/dragonfly.dart` with an explicit `show`.
 That barrel uses `show` on every export, so an unexported type is invisible to consumers
@@ -39,7 +39,7 @@ working but must not gain new uses.
 
 **Preserve deliberate behaviour**: `emit`/`sideEffect` are `@protected`; `dispose()` is
 `@mustCallSuper` and cancels subscriptions before closing controllers;
-`StateManagerProvider.updateShouldNotify` returns `false` on purpose.
+`DragonflyStateBuilder` reads `controller.state` synchronously on creation — the first frame must build with real state, not a blank.
 
 ## Verification
 

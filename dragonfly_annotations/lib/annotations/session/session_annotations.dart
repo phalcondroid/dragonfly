@@ -20,24 +20,18 @@ enum AccessLevel {
 
 /// Annotation for defining a screen in the Dragonfly Router with session support.
 ///
-/// This replaces `@DragonflyRoute` and adds session/ACL capabilities.
-///
 /// Example:
 /// ```dart
 /// // Public screen (no auth required)
-/// @DragonflyScreen(path: '/login', access: AccessLevel.guest)
+/// @Screen(path: '/login', access: AccessLevel.guest)
 /// class LoginScreen extends StatelessWidget { ... }
 ///
 /// // Protected screen (auth required)
-/// @DragonflyScreen(
-///   path: '/home',
-///   access: AccessLevel.authenticated,
-///   provider: HomeFeature,
-/// )
+/// @Screen(path: '/home', access: AccessLevel.authenticated)
 /// class HomeScreen extends StatelessWidget { ... }
 ///
 /// // Role-based access
-/// @DragonflyScreen(
+/// @Screen(
 ///   path: '/admin',
 ///   access: AccessLevel.rolesRequired,
 ///   roles: ['admin', 'superadmin'],
@@ -45,7 +39,7 @@ enum AccessLevel {
 /// class AdminScreen extends StatelessWidget { ... }
 ///
 /// // Permission-based access
-/// @DragonflyScreen(
+/// @Screen(
 ///   path: '/reports',
 ///   access: AccessLevel.permissionsRequired,
 ///   permissions: ['view_reports', 'export_data'],
@@ -54,7 +48,7 @@ enum AccessLevel {
 /// ```
 @immutable
 @Target({TargetKind.classType})
-class DragonflyScreen {
+class Screen {
   /// The path for this screen (e.g., '/home', '/character/:id').
   final String path;
 
@@ -69,9 +63,6 @@ class DragonflyScreen {
 
   /// Optional duration for the transition animation.
   final Duration? transitionDuration;
-
-  /// Optional Feature type to wrap the screen with its generated Provider.
-  final Type? provider;
 
   /// Access level for this screen.
   final AccessLevel access;
@@ -88,13 +79,12 @@ class DragonflyScreen {
   /// Redirect path when not authenticated (defaults to session config).
   final String? redirectOnUnauthenticated;
 
-  const DragonflyScreen({
+  const Screen({
     required this.path,
     this.name,
     this.initial = false,
     this.transition = ScreenTransition.fade,
     this.transitionDuration,
-    this.provider,
     this.access = AccessLevel.guest,
     this.roles = const [],
     this.permissions = const [],
@@ -102,6 +92,10 @@ class DragonflyScreen {
     this.redirectOnUnauthenticated,
   });
 }
+
+/// Backwards compatibility alias.
+@Deprecated('Use @Screen instead')
+typedef DragonflyScreen = Screen;
 
 /// Available screen transitions.
 enum ScreenTransition {
@@ -130,7 +124,7 @@ enum ScreenTransition {
 ///
 /// Example:
 /// ```dart
-/// @DragonflySessionConfig(
+/// @SessionConfig(
 ///   loginPath: '/login',
 ///   homePath: '/home',
 ///   unauthorizedPath: '/unauthorized',
@@ -142,7 +136,7 @@ enum ScreenTransition {
 /// ```
 @immutable
 @Target({TargetKind.classType})
-class DragonflySessionConfig {
+class SessionConfig {
   /// Path to redirect unauthenticated users.
   final String loginPath;
 
@@ -170,7 +164,7 @@ class DragonflySessionConfig {
   /// Header name for the authorization token.
   final String authHeaderName;
 
-  const DragonflySessionConfig({
+  const SessionConfig({
     this.loginPath = '/login',
     this.homePath = '/home',
     this.unauthorizedPath = '/unauthorized',
@@ -182,6 +176,10 @@ class DragonflySessionConfig {
     this.authHeaderName = 'Authorization',
   });
 }
+
+/// Backwards compatibility alias.
+@Deprecated('Use @SessionConfig instead')
+typedef DragonflySessionConfig = SessionConfig;
 
 /// Marks a network endpoint as requiring authentication.
 ///

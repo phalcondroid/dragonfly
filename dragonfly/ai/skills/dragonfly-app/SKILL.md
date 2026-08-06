@@ -11,9 +11,9 @@ everything else is generated.
 
 ## Non-negotiables
 
-1. **Never hand-edit a generated file.** `*.model.dart`, `*.state.dart`, `*.event.dart`,
-   `*.repository.dart`, `*.form.dart`, `*.state_manager.dart`, `*.config.dart`,
-   `*.router.dart`. Change the annotated source and rerun the generator.
+1. **Never hand-edit a generated file.** `*.model.dart`, `*.state.dart`,
+   `*.repository.dart`, `*.form.dart`, `*.state_manager.dart`, `*.view.dart`,
+   `*.config.dart`, `*.router.dart`. Change the annotated source and rerun the generator.
 2. **Always regenerate, then analyze.**
    ```bash
    dart run build_runner build --delete-conflicting-outputs
@@ -21,9 +21,12 @@ everything else is generated.
    ```
    `build_runner` reports success even when a generator failed and wrote an empty file.
    `dart analyze` is the real check.
-3. **Use `StateManager`, never `Feature`.** `Feature`, `@DragonflyFeature`,
-   `@DragonflyView`, `@ViewAction`, `FeatureBuilder`, and `context.feature<T>()` are
-   deprecated aliases.
+3. **State management is v2 only.** `@StateManager` on a plain class, `@Event` methods
+   that return values, `@StateView(Manager)` widgets with the generated `$Manager`
+   mixin. The old stack (`StateManager<S>`, `Feature`, `@StateAction`, `StateScope`,
+   bloc types) was deleted — do not use it. Annotations are unprefixed: `@UseCase`,
+   `@Screen`, `@RouterConfig`, `@InjectableInit` (the `Dragonfly`-prefixed aliases still
+   work but are deprecated).
 
 ---
 
@@ -38,11 +41,11 @@ lib/components/<component>/
 │   ├── models/      @FactoryModel
 │   └── repositories/@Repository
 ├── domain/
-│   └── use_cases/   @InjectableUseCase
+│   └── use_cases/   @UseCase
 └── presentation/
-    ├── states/      @StateModel
-    ├── features/    @DragonflyStateManager
-    └── screens/     @DragonflyScreen
+    ├── states/      @StateModel (optional — only for StateModel mode)
+    ├── features/    @StateManager
+    └── screens/     @Screen + @StateView
 ```
 
 ---
@@ -179,9 +182,8 @@ void onInit() {
 ## Use cases
 
 ```dart
-@InjectableUseCase(instanceName: 'GetUserList')
-class GetUserListUseCase
-    implements UseCase<Map<String, dynamic>, Error, ServiceResponse<Character>> {
+@UseCase(instanceName: 'GetUserList')
+class GetUserListUseCase {
   final CharacterRepository userRepository;
   const GetUserListUseCase(this.userRepository);
 
@@ -194,8 +196,9 @@ class GetUserListUseCase
 }
 ```
 
-Registered as a **factory**. `UseCase` enforces no `call` signature — for a checked one,
-implement `UseCaseWithParams<Params, Error, Response>` or `UseCaseNoParams<Error, Response>`.
+Registered as a **factory**. A use case is a plain class with a hand-written `call`
+method — there is no contract interface (the old `UseCase` contract was deleted; the
+name belongs to the annotation).
 
 `Either`: `fold(onLeft, onRight)`, `isLeft`/`isRight`, `getOrElse(value)`,
 `getOrElseCompute(fn)`, `Either.tryCatch`, `Either.tryCatchAsync`, `Either.fromNullable`.
@@ -221,187 +224,177 @@ sealed class CharacterState with _$CharacterState {
 
 Generates `when`, `maybeWhen`, `map`, `maybeMap`, equality, and `toString`.
 
-**Design the variants carefully** — the state manager generator produces one builder
-widget per variant, which is where most of the boilerplate savings come from.
+**Design the variants carefully** — the view generator produces one typed
+`build<Variant>` builder per variant, which is where most of the boilerplate savings
+come from. Declare a zero-arg `initial` factory if you bind a `@StateManager(state:)`
+to this model; `loading` and `error({required String message})` factories enable
+automatic loading/error emission.
 
 ---
 
 ## State managers
 
+A state manager is a **plain class** — no base class, no mixin, no `emit`. The
+generator wraps it in a `$XController` that owns the state and is registered in DI as a
+lazy singleton.
+
+### StateModel mode — you design the state
+
 ```dart
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
-import 'package:flutter/material.dart';
 
-part 'character_feature.state_manager.dart';
+part 'character_state_manager.state_manager.dart';
 
-@DragonflyStateManager(logging: true)
-class CharacterFeature extends StateManager<CharacterState>
-    with _$CharacterFeatureMixin {
-  CharacterFeature(@Inject('GetUserList') this._useCase)
-      : super(const CharacterState.initial());
+@StateManager(state: CharacterState, logging: true)
+class CharacterStateManager {
+  CharacterStateManager(@Inject('GetUserList') this._useCase);
 
   final GetUserListUseCase _useCase;
 
-  @StateAction()
-  Future<void> fetchCharacters() async {
-    emit(const CharacterState.loading());
+  @Event()
+  Future<CharacterState> fetchCharacters() async {
     final result = await _useCase.call("Rick");
-    result.fold(
-      (error) => emit(CharacterState.error(message: error.toString())),
-      (response) => emit(CharacterState.loaded(character: response.results.first)),
+    return result.fold(
+      (error) => CharacterState.error(message: error.toString()),
+      (response) => CharacterState.loaded(character: response.results.first),
     );
   }
 }
 ```
 
-Both `package:dragonfly/dragonfly.dart` and `package:flutter/material.dart` imports are
-required — the generated part contains widgets.
+Rules:
 
-Registered as a **factory**. `@Inject('name')` on a constructor parameter resolves a named
-instance.
+- Every `@Event` returns the state type (or `Future` of it); the returned value is
+  emitted. Plain public methods (no `@Event`) are callable from the view but emit
+  nothing.
+- The model must declare a zero-arg `initial` factory — the starting state.
+- If the model declares zero-arg `loading`, it is emitted automatically before every
+  event body runs. If it declares `error({required String message})`, a thrown
+  exception is emitted through it.
+- Constructor parameters are injected; `@Inject('name')` resolves a named instance.
 
-Available from `StateManager`: `emit`, `sideEffect`, `state`, `stream`, `subscribe(key,
-stream, onData:)`, `cancelSubscription`, `useCase<T>()`, `get<T>()`, `onInit`, `onDispose`,
-and the manual log helpers `logActionStart` / `logStep` / `logActionEnd`.
-
-### What `@StateAction` does and does not do
-
-`debounce:` and `throttle:` **work**. The generator emits an `actions` façade:
-
-```dart
-@StateAction(debounce: Duration(milliseconds: 300))
-Future<void> searchByName(String name) async { ... }
-```
+### Easy mode — the state is generated for you
 
 ```dart
-// debounced — use this from a TextField's onChanged
-feature.actions.searchByName(query);
+part 'character_search_state_manager.state_manager.dart';
 
-// immediate — the method itself is unchanged
-feature.searchByName(query);
+@StateManager()
+class CharacterSearchStateManager {
+  CharacterSearchStateManager(@Inject('GetUserList') this._useCase);
+  final GetUserListUseCase _useCase;
+
+  @Event(debounce: Duration(milliseconds: 300))
+  Future<List<Character>> search(String name) async { ... }
+
+  @Event()
+  Future<void> clear() async {}
+}
 ```
 
-Pending calls are cancelled when the manager is disposed. `actions.<name>(...)` returns
-`false` when a throttle gate dropped the call.
+The method name becomes a variant of the generated
+`CharacterSearchStateManagerState`, and the return value becomes its `value` payload
+(`Future<void>` → zero-payload variant). Built-in `initial`, `loading`, and `error`
+variants always exist. A thrown exception becomes `error`; a returned
+`Either<L, R>` is folded — `Right` is the payload, `Left` becomes `error`.
 
-A bare `@StateAction()` with no policy generates nothing — the method is called directly.
-`@Computed()` also generates nothing; write the getter by hand (it works, it is just not
-generated). `@SideEffect()` and `@StateSlot()` are never read at all.
+### Rate limiting
 
-Side effects work through the runtime call, not the annotation:
-
-```dart
-sideEffect(const ShowSnackbar('Saved'));
-sideEffect(const NavigateTo('/home'));
-```
-
-Wrap the screen in `StateScope<CharacterFeature>` and they are handled for you.
+`@Event(debounce: …)` / `@Event(throttle: …)` are applied by the generated controller —
+the view just calls `search(query)` on every keystroke. Pending calls are cancelled
+when the controller is disposed.
 
 ---
 
 ## Screens
 
-Wrap a screen in `StateScope<SM>` — one widget that resolves the manager from DI, provides
-it, applies side effects, and disposes it:
+Bind a screen to a manager with `@StateView` and mix in the generated `$Manager`
+mixin — the whole API is flattened onto the widget. **No provider wrapping, no
+`context.stateManager<T>()`** — the controller resolves from DI.
 
 ```dart
-StateScope<CharacterFeature>(
-  child: const CharacterScreen(),
-)
-```
+part 'character_screen.view.dart';
 
-Then extend `StateView<SM, S>` to receive the state and the manager directly:
-
-```dart
-class CharacterScreen extends StateView<CharacterFeature, CharacterState> {
+@Screen(path: '/', initial: true, name: 'characters', access: AccessLevel.guest)
+@StateView(CharacterStateManager)
+class CharacterScreen extends StatelessWidget with $CharacterStateManager {
   const CharacterScreen({super.key});
 
   @override
-  Widget buildState(BuildContext context, CharacterState state,
-      CharacterFeature manager) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: manager.fetchCharacters,
-        ),
+        IconButton(icon: const Icon(Icons.refresh), onPressed: fetchCharacters),
       ]),
-      body: state.when(
-        initial: () => const SizedBox.shrink(),
+      body: when(
         loading: () => const CircularProgressIndicator(),
         loaded: (character) => Text(character.name),
-        characterList: (characters) => Text('${characters.length}'),
         error: (message) => Text(message),
+        orElse: () => const SizedBox.shrink(),
       ),
     );
   }
 }
 ```
 
-Override `buildWhen(previous, current)` to skip rebuilds, and use `StateSelector` for a
-subtree that depends on one slice:
+What the mixin gives you:
 
-```dart
-StateSelector<CartFeature, CartState, int>(
-  selector: (state) => state.items.length,
-  builder: (context, count) => Badge(count: count),
-)
+- **Dispatchers** — call events directly: `fetchCharacters()`, `search(query)`.
+- **`currentState`** — the synchronous current state, useful for reading state
+  outside a builder (e.g., in `initState` of a `StatefulWidget`'s `State` class
+  that mixes in `$Manager`).
+- **`when({..., required orElse})`** — rebuilds on every state change; every variant
+  callback is optional, `orElse` covers the rest.
+- **Typed `build<Variant>(builder, {orElse})`** — one per variant
+  (`buildLoaded((character) => ...)`); builds only while that variant is active.
+  Prefer these over a single big `when` for overlay-style layouts.
+- **`buildFor('variant', (value) => ...)`** — the string-keyed escape hatch; payload is
+  `dynamic` (single-field variants pass the field, zero-field pass `null`, multi-field
+  pass the state object).
+
+The file must `part 'name.view.dart';` and import Flutter widgets,
+`package:dragonfly/dragonfly.dart`, the state manager file, and (StateModel mode) the
+state model file. Several screens can bind the same manager — each file gets one
+`$Manager` mixin.
+
+---
+
+## Component barrel
+
+A barrel file is generated automatically next to the injector, re-exporting every
+model, state, state manager, repository and form in the component:
+
+```
+lib/components/characters/config/injector.dragonfly.dart
 ```
 
-### Per-variant builder widgets
-
-Also generated for you, one per state variant:
+A single import brings in the entire component's public API:
 
 ```dart
-class CharacterScreen extends StatelessWidget {
-  const CharacterScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final feature = context.stateManager<CharacterFeature>();
-
-    return Scaffold(
-      appBar: AppBar(actions: [
-        IconButton(icon: const Icon(Icons.refresh), onPressed: feature.fetchCharacters),
-      ]),
-      body: Column(children: [
-        CharacterLoading(builder: () => const CircularProgressIndicator()),
-        CharacterLoaded(builder: (character) => Text(character.name)),
-        CharacterError(builder: (message) => Text(message)),
-      ]),
-    );
-  }
-}
+import 'injector.dragonfly.dart';
 ```
 
-`CharacterLoading` / `CharacterLoaded` / `CharacterError` are generated from the state
-variants — **prefer these over a manual `state.when(...)`**. Each accepts `buildWhen` and
-`orElse`.
-
-Also generated: `CharacterFeatureProvider` (resolves from DI) and
-`context.characterFeature`.
-
-For lower-level control: `StateManagerBuilder`, `StateManagerListener`,
-`StateManagerConsumer`, `StateManagerSelector`, `StateManagerSideEffectListener`.
+The barrel skips screens (their generated view mixins may conflict when several
+screens bind the same `@StateManager`). Consumers who prefer importing individual
+generated files simply override the `component_generator` builder in their
+`build.yaml` with `generate_for: []`.
 
 ---
 
 ## Routing
 
 ```dart
-@DragonflyScreen(
+@Screen(
   path: '/character',
   name: 'characters',
   initial: true,
   access: AccessLevel.authenticated,
-  provider: CharacterFeature,
 )
 class CharacterScreen extends StatelessWidget { … }
 ```
 
 ```dart
-@DragonflyRouterConfig()
+@RouterConfig()
 class AppRouterConfig with $AppRouterConfig {}
 ```
 
@@ -412,12 +405,27 @@ MaterialApp(
 );
 ```
 
-`provider:` wraps the route in that state manager's generated provider. `access:` is
-enforced through `DragonflySessionManager.checkAccess`. `AccessLevel` values: `guest`,
-`authenticated`, `rolesRequired`, `permissionsRequired`.
+There is no `provider:` parameter in v2 — the view mixin resolves the controller from
+DI, so routes never wrap. `access:` is enforced through
+`DragonflySessionManager.checkAccess`. `AccessLevel` values: `guest`, `authenticated`,
+`rolesRequired`, `permissionsRequired`.
 
-`@PathParam` / `@QueryParam` exist but are **not implemented** — read route arguments from
-`RouteSettings` instead.
+`@PathParam` / `@QueryParam` are applied to **constructor parameters** of the screen:
+
+```dart
+@Screen(path: '/character/:id', name: 'character-detail', access: AccessLevel.guest)
+@StateView(CharacterStateManager)
+class CharacterDetailScreen extends StatefulWidget {
+  const CharacterDetailScreen({super.key, @PathParam('id') required this.id});
+  final int id;
+  ...
+}
+```
+
+The generated router extracts the matched path segment and passes it to the
+constructor. Types `int`, `double` and `bool` are parsed automatically; `String`
+is passed as-is. Query params are read from the query string via the same
+mechanism.
 
 ---
 
@@ -427,7 +435,7 @@ enforced through `DragonflySessionManager.checkAccess`. `AccessLevel` values: `g
 // components/<c>/config/injector.dart
 part 'injector.config.dart';
 
-@DragonflyInjectableInit()
+@InjectableInit()
 Future<void> initDragonflyContainer() async {
   DragonflyContainer.I.configureDependencies();
 }
@@ -459,9 +467,10 @@ void main() async {
 }
 ```
 
-Only `@InjectableUseCase`, `@Repository`, `@DragonflyStateManager`, and `@DragonflyBloc`
-are scanned for DI. **`@Singleton`, `@LazySingleton`, and `@Injectable` are never
-registered** — register those manually on `DragonflyContainer.I`.
+Only `@UseCase`, `@Repository`, and `@StateManager` are scanned for DI — a state
+manager registers **two** entries (the delegate factory and the controller lazy
+singleton). **`@Singleton`, `@LazySingleton`, and `@Injectable` are never registered** —
+register those manually on `DragonflyContainer.I`.
 
 Debug DI with `DragonflyContainer.I.debugPrintRegisteredInstances()`. Note that
 registering the same type+name twice is a **silent no-op**, not an error.
@@ -487,15 +496,84 @@ await dragonflySession.logout();
 
 ---
 
-## Forms — currently unusable
+## Forms
 
-`@FormSchema` and its validators generate code that **does not compile**: the generated
-state class is named `<Class>FormState` (so `LoginForm` yields `LoginFormFormState`), the
-generated part references framework types the source file must import manually, and
-`FormFieldState` collides with Flutter's `FormFieldState`.
+```dart
+@FormSchema()
+class LoginForm {
+  @Required(message: 'Email is required')
+  @Email(message: 'Please enter a valid email')
+  final String email;
 
-Do not build features on `@FormSchema` yet. Use plain `TextEditingController`s and manual
-validation, and flag the gap.
+  @Required(message: 'Password is required')
+  @MinLength(8)
+  final String password;
+
+  const LoginForm({this.email = '', this.password = ''});
+}
+```
+
+Generates `LoginFormState` with per-field validation. The form state is
+self-contained:
+
+```dart
+LoginFormState form = LoginFormState.initial();
+
+// Update a field value (validates when validateOnChange is on):
+form = form.updateFieldValue('email', newEmail);
+
+// Mark a field as touched (validates when validateOnBlur is on):
+form = form.touchField('email');
+
+// Validate everything at once:
+form = form.validateAllFields();
+if (form.isValid) { ... }
+```
+
+### Form state inside a state manager
+
+When the `@StateModel`'s `initial` variant carries parameters (e.g., the form),
+the manager must expose an `initialState` getter because the generated controller
+cannot const-construct it:
+
+```dart
+@StateManager(state: LoginState)
+class LoginStateManager {
+  LoginStateManager();
+
+  LoginFormState _form = LoginFormState.initial();
+
+  /// The controller calls this instead of `const LoginState.initial()`.
+  LoginState get initialState => LoginState.initial(form: _form);
+
+  @Event()
+  LoginState emailChanged(String value) {
+    _form = _form.updateFieldValue('email', value);
+    return LoginState.editing(form: _form);
+  }
+}
+```
+
+Screen widgets reference the form through a selector function:
+
+```dart
+LoginFormState _formOf(LoginState state) => state.when(
+  initial: (form) => form,
+  editing: (form) => form,
+  loading: (form) => form,
+  success: (form) => form,
+  error: (form, _) => form,
+);
+
+// In the widget:
+ValidatedTextField<LoginState>(
+  stateController: _loginStateManagerController,
+  fieldName: 'email',
+  formSelector: _formOf,
+  onChanged: emailChanged,
+  ...
+)
+```
 
 ---
 
@@ -505,7 +583,7 @@ validation, and flag the gap.
 | ------- | ----- |
 | Generated file missing | Missing `part '…';` directive, or annotation not imported |
 | Generated file empty | Generator threw; grep the build log for `====>>` |
-| Undefined name in a generated part | Source file is missing `import 'package:dragonfly/dragonfly.dart';` (and `material.dart` for state managers) |
+| Undefined name in a generated part | Source file is missing `import 'package:dragonfly/dragonfly.dart';` (and the state model / manager file for `@StateView` parts) |
 | Dependency missing from `injector.config.dart` | Another file in `lib/` fails to compile — the DI scanner skips unresolvable libraries silently. Fix that first |
 | Route missing from generated router | Same cause as above |
 | `Object of type X with name null not found` | Not registered, or registered under a different `instanceName` |

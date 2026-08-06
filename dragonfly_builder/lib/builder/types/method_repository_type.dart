@@ -14,6 +14,10 @@ class MethodRepositoryType {
   final List<HeadersType> headers;
   final bool isFuture;
 
+  /// Whether the method is annotated `@Authenticated()` and must resolve the
+  /// session-aware adapter.
+  final bool authenticated;
+
   /// Realtime channel for @Subscribe methods; empty for HTTP methods.
   final String channel;
 
@@ -27,5 +31,6 @@ class MethodRepositoryType {
       this.channel = '',
       this.connection = "default",
       this.cached = false,
-      this.headers = const []});
+      this.headers = const [],
+      this.authenticated = false});
 }

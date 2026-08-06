@@ -169,7 +169,7 @@ threw and something swallowed it.
 ## If the generated part references runtime types
 
 A part file cannot import anything. If you emit `DragonflyContainer`, `FormFieldState`,
-`StateManagerProvider`, or any other `package:dragonfly` type, the **user's source file**
+`DragonflyController`, or any other `package:dragonfly` type, the **user's source file**
 must import `package:dragonfly/dragonfly.dart` — and Flutter's `material.dart` too if you
 emit widgets.
 

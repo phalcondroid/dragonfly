@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dragonfly/framework/exceptions/dragonfly_exception.dart';
+
 typedef FactoryFunc<T> = T Function();
 typedef FactoryFuncParam<T, P1, P2> = T Function(P1 param1, P2 param2);
 typedef FactoryFuncAsync<T> = Future<T> Function();
@@ -192,11 +194,15 @@ class DragonflyContainer {
   void _register<E extends _ServiceEntry>(E entry, {String? instanceName}) {
     final key = _ServiceKey(entry.type, instanceName);
     if (!allowReassignment && _currentScope.containsKey(key)) {
-      // Allow overriding? GetIt allows it if allowReassignment is true.
-      // Here defaults to false.
-      // However, to keep it simple, we log or throw?
-      // user asked to remove GetIt and implement functionality.
-      return;
+      // get_it semantics: a duplicate registration is a programming error and
+      // must surface loudly — a silent no-op hands the caller the *first*
+      // instance while it believes it registered the second.
+      throw DragonflyException(
+        message: 'Duplicate registration: ${entry.type}'
+            '${instanceName != null ? ' named "$instanceName"' : ''} is already '
+            'registered in the current scope. Set `allowReassignment = true` '
+            'to override.',
+      );
     }
     _currentScope[key] = entry;
   }
@@ -221,21 +227,73 @@ class DragonflyContainer {
     }
   }
 
-  // Method needed for helper
-  Future<void> allReady(
-      {Duration? timeout, bool ignorePendingAsyncCreation = false}) async {
-    // Simplified: we don't track async creation status finely yet
-    return Future.value();
+  /// Disposes every registration in every scope and returns the container to
+  /// a single empty scope. Primarily for tests: with duplicate registration
+  /// throwing, a fresh container per test is the reliable pattern.
+  Future<void> reset() async {
+    while (_scopes.length > 1) {
+      await popScope();
+    }
+    for (final entry in _currentScope.values) {
+      await entry.dispose();
+    }
+    _currentScope.clear();
   }
 
-  bool allReadySync([bool ignorePendingAsyncCreation = false]) => true;
+  /// Awaits every started async singleton across all scopes.
+  ///
+  /// Lazy async singletons that have not been requested yet are not forced to
+  /// resolve; pass `ignorePendingAsyncCreation: true` to also skip async
+  /// singletons whose creation is in flight.
+  Future<void> allReady(
+      {Duration? timeout, bool ignorePendingAsyncCreation = false}) {
+    final pending = <Future<dynamic>>[];
+    for (final scope in _scopes) {
+      for (final entry in scope.values) {
+        if (!entry.isAsync || !entry.isSingleton) continue;
+        final future = entry.pendingCreation;
+        if (future == null) continue; // lazy and not started
+        if (ignorePendingAsyncCreation && !entry.isCompleted) continue;
+        pending.add(future);
+      }
+    }
 
+    final waiting = Future.wait(pending, eagerError: true);
+    return timeout == null ? waiting : waiting.timeout(timeout);
+  }
+
+  /// Whether every started async singleton has completed.
+  bool allReadySync([bool ignorePendingAsyncCreation = false]) {
+    for (final scope in _scopes) {
+      for (final entry in scope.values) {
+        if (!entry.isAsync || !entry.isSingleton) continue;
+        if (ignorePendingAsyncCreation) continue;
+        if (entry.pendingCreation != null && !entry.isCompleted) return false;
+      }
+    }
+    return true;
+  }
+
+  /// Completes when the registration for `T` (optionally [instanceName]) is
+  /// ready — immediately for sync registrations, after creation for async
+  /// singletons. Throws [DragonflyException] when nothing is registered.
   Future<void> isReady<T extends Object>(
       {Object? instance,
       String? instanceName,
       Duration? timeout,
-      Object? callee}) async {
-    return Future.value();
+      Object? callee}) {
+    final key = _ServiceKey(T, instanceName);
+    for (var scope in _scopes.reversed) {
+      final entry = scope[key];
+      if (entry == null) continue;
+      final future = entry.pendingCreation;
+      if (future == null) return Future.value();
+      return timeout == null ? future : future.timeout(timeout);
+    }
+    throw DragonflyException(
+      message: 'isReady<$T>${instanceName != null ? ' ("$instanceName")' : ''}: '
+          'no matching registration.',
+    );
   }
 }
 
@@ -333,6 +391,13 @@ class _ServiceEntry<T> {
         isLazy = false,
         isAsync = true,
         _factory = factory;
+
+  /// The in-flight creation future for async singletons, or null for sync
+  /// registrations and lazy async singletons that have not been requested.
+  Future<dynamic>? get pendingCreation => _futureInstance;
+
+  /// Whether an async singleton has finished creating its instance.
+  bool get isCompleted => !isAsync || _instance != null;
 
   dynamic get(dynamic p1, dynamic p2) {
     if (isSingleton) {

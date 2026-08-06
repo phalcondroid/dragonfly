@@ -22,15 +22,15 @@ void main() {
       expect(repo.instanceName, isNull);
     });
 
-    test('DragonflyStateManager is injectable by default', () {
-      const sm = DragonflyStateManager();
+    test('StateManager is injectable by default', () {
+      const sm = StateManager();
+      expect(sm.state, isNull);
       expect(sm.injectable, isTrue);
       expect(sm.logging, isFalse);
-      expect(sm.order, 100);
     });
 
-    test('DragonflyScreen defaults to guest access', () {
-      const screen = DragonflyScreen(path: '/home');
+    test('Screen defaults to guest access', () {
+      const screen = Screen(path: '/home');
       expect(screen.access, AccessLevel.guest);
       expect(screen.initial, isFalse);
       expect(screen.transition, ScreenTransition.fade);
@@ -38,9 +38,9 @@ void main() {
       expect(screen.permissions, isEmpty);
     });
 
-    test('Path and Query take a named value argument', () {
-      const path = Path(value: 'id');
-      const query = Query(value: 'name');
+    test('Path and Query accept an optional positional value', () {
+      const path = Path('id');
+      const query = Query('name');
       expect(path.value, 'id');
       expect(query.value, 'name');
       expect(const Path().value, isEmpty);

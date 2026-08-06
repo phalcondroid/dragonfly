@@ -4,10 +4,12 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:code_builder/code_builder.dart';
 import 'package:dart_style/dart_style.dart';
-import 'package:dragonfly_annotations/annotations/component/repositoriy/repository.dart';
+import 'package:dragonfly_annotations/annotations/component/repository/repository.dart';
 import 'package:dragonfly_builder/builder/helper/factory_model_registry.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_metadata.dart';
 import 'package:dragonfly_builder/builder/types/enums/http_annotations.dart';
+import 'package:dragonfly_builder/builder/types/enums/params_annotations.dart';
+import 'package:dragonfly_builder/builder/types/params_type.dart';
 import 'package:dragonfly_builder/builder/types/method_repository_type.dart';
 import 'package:dragonfly_builder/builder/visitor/repository_visitor.dart';
 import 'package:source_gen/source_gen.dart';
@@ -48,7 +50,8 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
           return buildSubscriptionMethod(
               realtimeConnection, className, method, modelMeta);
         }
-        return buildHttpMethod(url, connection, className, method, modelMeta);
+        return buildHttpMethod(url, connection, className, method, modelMeta,
+            modelRegistry: modelRegistry);
       }).toList();
 
       final repository = Class((b) => b
@@ -77,9 +80,10 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
   }
 
   Method buildHttpMethod(String repoUrl, String repoConn, String className,
-      MethodRepositoryType method, FactoryModelMetadata? modelMeta) {
+      MethodRepositoryType method, FactoryModelMetadata? modelMeta,
+      {required Map<String, FactoryModelMetadata> modelRegistry}) {
     final methodKind =
-        method.returnType.isList ? "callForList" : "callForObject";
+        method.returnType.isList ? "requestList" : "requestObject";
     final bool isList = method.returnType.isList;
     final String httpMethod = _getHttpMethod(method.type);
     final String returnType = method.returnType.isList
@@ -94,6 +98,58 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
     final paramNames = method.params.map((p) => "'${p.name}': ${p.name}").join(', ');
     final paramsLog = method.params.isEmpty ? 'null' : '{$paramNames}';
 
+    // ── Parameter binding (gap #2) ─────────────────────────────────────────
+    // @Path: substitute '{placeholder}' segments in the URL template.
+    var pathTemplate = '$repoUrl${method.path}';
+    for (final p
+        in method.params.where((p) => p.type == ParamsAnnotations.path)) {
+      pathTemplate =
+          pathTemplate.replaceAll('{${p.value}}', '\${${p.name}}');
+    }
+
+    // @Query (+ unannotated, bound as query by default) → query map.
+    final queryEntries = method.params
+        .where((p) =>
+            p.type == ParamsAnnotations.query ||
+            p.type == ParamsAnnotations.none)
+        .map((p) => "'${p.value}': ${p.name}")
+        .toList();
+
+    // @Body: a single model/Map param is the body; several merge by name.
+    final bodyParams = method.params
+        .where((p) => p.type == ParamsAnnotations.body)
+        .toList();
+    String? bodyExpression;
+    if (bodyParams.length == 1) {
+      bodyExpression = _bodyExpression(bodyParams.first, modelRegistry);
+    } else if (bodyParams.length > 1) {
+      bodyExpression =
+          '{${bodyParams.map((p) => "'${p.name}': ${_bodyExpression(p, modelRegistry)}").join(', ')}}';
+    }
+
+    // Headers: method-level `@Get(headers:)` plus `@Header(item:)` params.
+    final headerEntries = <String>[
+      for (final h in method.headers) "'${h.name}': '${h.value}'",
+      for (final p in method.params
+          .where((p) => p.type == ParamsAnnotations.header))
+        for (final e in (p.headerItems ?? const {}).entries)
+          "'${e.key}': '${e.value}'",
+    ];
+
+    final callArgs = StringBuffer("'$pathTemplate'");
+    if (queryEntries.isNotEmpty) {
+      callArgs.write(', query: {${queryEntries.join(', ')}}');
+    }
+    if (bodyExpression != null) {
+      callArgs.write(', body: $bodyExpression');
+    }
+    if (headerEntries.isNotEmpty) {
+      callArgs.write(', headers: {${headerEntries.join(', ')}}');
+    }
+
+    final connectionName =
+        method.authenticated ? '$repoConn:authenticated' : repoConn;
+
     final Method methodBuilder = Method((b) => b
       ..name = method.name
       ..requiredParameters
@@ -104,38 +160,38 @@ class RepositoryGenerator extends GeneratorForAnnotation<Repository> {
       ..annotations.add(refer('override'))
       ..returns = refer(method.returnType.raw)
       ..body = Code("""
-final _log = DragonflyLogManager.instance;
-final _stopwatch = Stopwatch()..start();
+final log = DragonflyLogManager.instance;
+final stopwatch = Stopwatch()..start();
 
 try {
-  _log.repositoryStart(
+  log.repositoryStart(
     repository: '$className',
     method: '${method.name}',
     params: $paramsLog,
   );
 
-  final DragonflyNetworkHttpAdapter network = DragonflyContainer.I.get<DragonflyNetworkHttpAdapter>(instanceName: '$repoConn');
-  final $returnType response = await network.$methodKind($httpMethod, '$repoUrl${method.path}', null, null);
+  final DragonflyBaseNetworkAdapter network = DragonflyContainer.I.get<DragonflyBaseNetworkAdapter>(instanceName: '$connectionName');
+  final $returnType response = await network.$methodKind($httpMethod, $callArgs);
 
-  _stopwatch.stop();
-  _log.repositorySuccess(
+  stopwatch.stop();
+  log.repositorySuccess(
     repository: '$className',
     method: '${method.name}',
     message: 'Operation completed successfully',
-    durationMs: _stopwatch.elapsedMilliseconds,
+    durationMs: stopwatch.elapsedMilliseconds,
     params: $paramsLog,
   );
 
   $response;
 } catch (e, stackTrace) {
-  _stopwatch.stop();
-  _log.repositoryError(
+  stopwatch.stop();
+  log.repositoryError(
     repository: '$className',
     method: '${method.name}',
     message: 'Operation failed',
     error: e,
     stackTrace: stackTrace,
-    durationMs: _stopwatch.elapsedMilliseconds,
+    durationMs: stopwatch.elapsedMilliseconds,
     params: $paramsLog,
   );
   rethrow;
@@ -143,6 +199,17 @@ try {
 """));
 
     return methodBuilder;
+  }
+
+  /// How a `@Body` parameter is serialized: `@FactoryModel` types through
+  /// their generated `toJson`, everything else passed as-is (Maps, Lists and
+  /// primitives are JSON-encodable).
+  String _bodyExpression(
+      ParamsType param, Map<String, FactoryModelMetadata> modelRegistry) {
+    if (modelRegistry[param.paramDataType] != null) {
+      return '${param.name}.toJson()';
+    }
+    return param.name;
   }
 
   /// Builds a `Stream`-returning method for a `@Subscribe` annotation.
@@ -163,8 +230,7 @@ try {
         : buildStreamObjectMapping(method);
 
     final paramNames = method.params.map((p) => "'${p.name}': ${p.name}").join(', ');
-    final paramsArg =
-        method.params.isEmpty ? 'null' : 'const <String, dynamic>{}';
+    final paramsArg = method.params.isEmpty ? 'null' : '{$paramNames}';
     final paramsLog = method.params.isEmpty ? 'null' : '{$paramNames}';
 
     return Method((b) => b
@@ -176,9 +242,9 @@ try {
       ..annotations.add(refer('override'))
       ..returns = refer(method.returnType.raw)
       ..body = Code("""
-final _log = DragonflyLogManager.instance;
+final log = DragonflyLogManager.instance;
 
-_log.info(
+log.info(
   'Subscribing to ${method.channel}',
   source: '$className.${method.name}',
   data: $paramsLog,
@@ -192,7 +258,7 @@ return realtime.$subscribeKind('${method.channel}', params: $paramsArg)
   try {
     $mapping
   } catch (e, stackTrace) {
-    _log.error(
+    log.error(
       'Failed to deserialize a ${method.channel} event',
       error: e,
       stackTrace: stackTrace,

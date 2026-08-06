@@ -42,8 +42,14 @@ When writing Dragonfly code, follow `.claude/skills/dragonfly-app/SKILL.md`.
 
 ## Keeping it honest
 
-The skill documents **verified** behaviour, which in a few places differs from the
-framework's `README.md`. Notably, repository parameter binding (`@Path`, `@Query`,
-`@Body`, `@Header`) is not implemented, and the form-validation subsystem does not yet
-compile. The skill says so, so that agents do not generate code that silently does
-nothing. When those land, update the skill in the same change.
+The skill documents **verified** behaviour. Notable framework features that work
+today:
+
+- Repository parameter binding (`@Path`, `@Query`, `@Body`, `@Header`) is wired.
+- `@Authenticated()` routes through the session-aware adapter.
+- The form-validation subsystem compiles and integrates with v2 state managers.
+- `@PathParam` / `@QueryParam` extract route parameters in generated route builders.
+- Component-level barrel (`injector.dragonfly.dart`) provides a single-import
+  shortcut.
+
+If you add or fix a capability, update the skill in the same change.

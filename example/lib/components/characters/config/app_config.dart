@@ -1,6 +1,5 @@
 import 'package:dragonfly/dragonfly.dart';
 import 'package:example/components/characters/config/injector.dart';
-import 'package:example/config/router_config.dart';
 
 class AppConfig extends DragonflyConfig {
   @override
@@ -31,13 +30,8 @@ class AppConfig extends DragonflyConfig {
   DragonflyInjector? get injector => DragonflyInjector(
     inject: (DragonflyContainer injector) async {
       await initDragonflyContainer();
-
-      // Initialize Router
-      final routerConfig = AppRouterConfig();
-      DragonflyRouter.instance.configure(
-        routerConfig.routes,
-        initialRoute: routerConfig.initialRoute,
-      );
+      // Routing is driven entirely by the generated AppRouterConfig mixin
+      // (see main.dart) — there is no runtime router singleton to configure.
     },
   );
 }

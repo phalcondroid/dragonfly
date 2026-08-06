@@ -15,9 +15,14 @@ import 'package:meta/meta_meta.dart';
 /// class AppRouterConfig with $AppRouterConfig {}
 /// ```
 @immutable
-class DragonflyRouterConfig {
-  const DragonflyRouterConfig();
+class RouterConfig {
+  /// Creates a RouterConfig annotation.
+  const RouterConfig();
 }
+
+/// Backwards compatibility alias.
+@Deprecated('Use @RouterConfig instead')
+typedef DragonflyRouterConfig = RouterConfig;
 
 /// Annotation for defining a route in the Dragonfly Router.
 ///

@@ -4,7 +4,7 @@ import '../types/enums/http_annotations.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:source_gen/source_gen.dart';
 
-class MedatadaExtractor {
+class MetadataExtractor {
   static TypeChecker typeChecker(Type type) => TypeChecker.typeNamed(type, inPackage: 'dragonfly_annotations');
 
   static Iterable<ConstantReader> getMethodAnnotations(
@@ -25,7 +25,7 @@ class MedatadaExtractor {
     if (object.type!.isDartCoreDouble) {
       return object.toDoubleValue();
     }
-    if (object.type!.isDartCoreDouble) {
+    if (object.type!.isDartCoreBool) {
       return object.toBoolValue();
     }
     if (object.type!.isDartCoreMap) {
@@ -51,24 +51,23 @@ class MedatadaExtractor {
       return HttpAnnotations.subscribe;
     }
 
-    for (final ElementAnnotation item in element.metadata.annotations) {
-      if (item.toString().contains("@Get")) {
-        return HttpAnnotations.get;
-      }
-      if (item.toString().contains("@Post")) {
-        return HttpAnnotations.post;
-      }
-      if (item.toString().contains("@Delete")) {
-        return HttpAnnotations.delete;
-      }
-      if (item.toString().contains("@Patch")) {
-        return HttpAnnotations.patch;
-      }
-      if (item.toString().contains("@Put")) {
-        return HttpAnnotations.put;
-      }
+    // Exact type checks: a `@GetSomething` annotation must not false-match.
+    if (typeChecker(Get).hasAnnotationOfExact(element)) {
+      return HttpAnnotations.get;
     }
-    return HttpAnnotations.unknow;
+    if (typeChecker(Post).hasAnnotationOfExact(element)) {
+      return HttpAnnotations.post;
+    }
+    if (typeChecker(Delete).hasAnnotationOfExact(element)) {
+      return HttpAnnotations.delete;
+    }
+    if (typeChecker(Patch).hasAnnotationOfExact(element)) {
+      return HttpAnnotations.patch;
+    }
+    if (typeChecker(Put).hasAnnotationOfExact(element)) {
+      return HttpAnnotations.put;
+    }
+    return HttpAnnotations.unknown;
   }
 
   static String getGenericClassName(String name) {
@@ -97,7 +96,7 @@ class MedatadaExtractor {
     };
 
     if (method is Type) {
-      return MedatadaExtractor.getFromElement(element, method, field);
+      return MetadataExtractor.getFromElement(element, method, field);
     }
     return "";
   }

@@ -86,22 +86,31 @@ When you touch a generator, verify with `build_runner build` **followed by**
 
 ## Naming: what is canonical
 
-| Canonical (emit this)                 | Deprecated alias (never emit)                          |
-| ------------------------------------- | ------------------------------------------------------ |
-| `StateManager<S>`                     | `Feature<S>`                                           |
-| `@DragonflyStateManager()`            | `@DragonflyFeature()`, `@DragonflyView()`              |
-| `@StateAction()`                      | `@ViewAction()`, `@FeatureAction()`                    |
-| `StateManagerProvider` / `…Builder`   | `FeatureProvider` / `FeatureBuilder`                   |
-| `context.stateManager<T>()`           | `context.feature<T>()`                                 |
-| `StateManagerSideEffect`              | `FeatureSideEffect`                                    |
+State management is the **v2 API** (the old `StateManager<S>`/`Feature` stack was
+deleted in a clean break — do not try to "restore" it):
 
-The deprecated names are live `typedef`s in
-`dragonfly/lib/framework/feature/state_manager.dart` and are marked `@Deprecated`.
-Keep them working — the `example/` app and `README.md` still use `Feature` in places —
-but do not introduce new uses, and do not emit them from generators.
+| Canonical (emit this)                          | Removed predecessor (gone, not deprecated)      |
+| ---------------------------------------------- | ----------------------------------------------- |
+| `@StateManager()` on a plain class             | `@DragonflyStateManager()` + `StateManager<S>`  |
+| `@StateManager(state: XState)` (StateModel mode) | `@DragonflyFeature()`, `@DragonflyView()`     |
+| `@Event()` method → state variant              | `@StateAction()` + hand-written `emit(...)`     |
+| `@StateView(Manager)` on a widget              | `@DragonflyBlocView`, provider wrapping         |
+| `$XController extends DragonflyController<S>`  | `StateManagerProvider` / `StateManagerBuilder`  |
+| view mixin `$X` (`when`/`build<Event>`/`buildFor`) | `context.stateManager<T>()`, `StateScope`   |
 
-Note the directory is still called `feature/` while the classes are called
-`StateManager`. That rename has not happened; don't do it as a drive-by.
+A `@StateManager` class has **no base class and no mixin**: the generator emits the
+controller (auto `loading`/`error` dispatching, DI lazy singleton) and, in easy mode,
+the sealed state class itself. `@Event` methods return values, never call `emit`.
+
+Renamed annotations with **live** deprecated aliases (keep working, never emit):
+`@UseCase` (was `@InjectableUseCase`), `@InjectableInit` (was `@DragonflyInjectableInit`),
+`@Screen` (was `@DragonflyScreen`), `@SessionConfig` (was `@DragonflySessionConfig`),
+`@RouterConfig` (was `@DragonflyRouterConfig`).
+
+Also deleted in the clean break: the whole `framework/bloc/` directory,
+`StateScope`/`StateView`/`StateSelector`, `@EventModel`, `@InitialState`, `@SideEffect`,
+`@Computed`, `@StateSlot`, `@DragonflyStateBuilder`, and the `UseCase` contract
+interfaces (the name now belongs to the annotation).
 
 ---
 
@@ -128,9 +137,9 @@ Read these on demand rather than all at once:
 These are build outputs. Edit the **generator**, then rebuild:
 
 ```
-*.model.dart      *.state.dart     *.event.dart
+*.model.dart      *.state.dart     *.view.dart
 *.repository.dart *.form.dart      *.state_manager.dart
-*.blocview.dart   *.bloc.dart      *.config.dart     *.router.dart
+*.config.dart     *.router.dart    *.dragonfly.dart
 ```
 
 They all carry `// GENERATED CODE - DO NOT MODIFY BY HAND`. If you need different
@@ -153,10 +162,10 @@ before drawing conclusions from one.
 
 ### Don't "fix" the known typos casually
 
-`MedatadaExtractor` (sic), the `repositoriy/` directory, `inyectar.dart`, and
-`HttpAnnotations.unknow` are misspelled throughout. They are load-bearing identifiers.
-Renaming them is a legitimate task but a *dedicated* one — never a side effect of
-another change.
+The four historically-misspelled identifiers (`repositoriy/`, `MedatadaExtractor`,
+`inyectar.dart`, `HttpAnnotations.unknow`) have all been corrected as a deliberate
+rename in August 2026. If you encounter legacy references, update them. Do not
+reintroduce the old spellings.
 
 ---
 
@@ -173,6 +182,11 @@ another change.
   and `build >=4.0.8` both require `analyzer >=13.1.0`. Raising any of them resolves fine
   in `dragonfly_builder` alone but makes `example/` — and every consuming Flutter app —
   fail version solving. Revisit when the Flutter SDK ships `meta >=1.18.3`.
-- `example/` currently **does not analyze clean**: 270 errors, all in the `auth` /
-  form-validation component. The `characters` component builds and analyzes clean. Treat
-  `characters` as the working reference implementation and `auth` as broken-by-default.
+- `example/`: the `characters` component builds and analyzes clean (**0 errors**);
+  the `auth` / form-validation component is **broken-by-default** (224 errors, all
+  confined to `components/auth`). Characters demonstrates both state-manager modes:
+  `CharacterStateManager` (StateModel mode) and `CharacterSearchStateManager`
+  (easy mode). Treat `characters` as the reference implementation.
+- Naming trap: `@StateView` was almost `@View` — Flutter exports a `View` widget via
+  `material`, so the annotation had to be renamed. Any file importing
+  `flutter/material.dart` can only use `StateView`.

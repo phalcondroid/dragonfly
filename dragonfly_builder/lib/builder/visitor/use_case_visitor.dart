@@ -24,6 +24,6 @@ class UseCaseVisitor extends SimpleElementVisitor2<void> {
   @override
   void visitMethodElement(MethodElement element) {
     String name = element.displayName;
-    String path = MedatadaExtractor.getAnnotationMethodField(element, 'path');
+    String path = MetadataExtractor.getAnnotationMethodField(element, 'path');
   }
 }

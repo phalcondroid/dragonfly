@@ -3,7 +3,7 @@ import 'package:meta/meta_meta.dart' show Target, TargetKind;
 /// // Marks a top-level function as an initializer function
 /// for configuring Get_it
 @Target({TargetKind.function})
-class DragonflyInjectableInit {
+class InjectableInit {
   /// Only files exist in provided directories will be processed
   final List<String> generateForDir;
 
@@ -79,7 +79,7 @@ class DragonflyInjectableInit {
   final bool usesConstructorCallback;
 
   /// default constructor
-  const DragonflyInjectableInit({
+  const InjectableInit({
     this.generateForDir = const ['lib'],
     this.rootDir,
     this.preferRelativeImports = false,
@@ -96,7 +96,7 @@ class DragonflyInjectableInit {
   }) : _isMicroPackage = false;
 
   /// default constructor
-  const DragonflyInjectableInit.microPackage({
+  const InjectableInit.microPackage({
     this.generateForDir = const ['lib'],
     this.preferRelativeImports = false,
     this.ignoreUnregisteredTypes = const [],
@@ -115,11 +115,11 @@ class DragonflyInjectableInit {
 
 /// const instance of [InjectableInit]
 /// with default arguments
-const injectableInit = DragonflyInjectableInit();
+const injectableInit = InjectableInit();
 
 /// const instance of [InjectableInit.microPackage]
 /// with default arguments
-const microPackageInit = DragonflyInjectableInit.microPackage();
+const microPackageInit = InjectableInit.microPackage();
 
 /// Marks a class as an injectable
 /// dependency and generates
@@ -161,7 +161,7 @@ class Injectable {
 }
 
 @Target({TargetKind.classType, TargetKind.method, TargetKind.getter})
-class InjectableUseCase extends Injectable {
+class UseCase extends Injectable {
    /// passed to singlesReady property
   /// in registerSingleton function
   final bool? signalsReady;
@@ -176,7 +176,7 @@ class InjectableUseCase extends Injectable {
   final Function? dispose;
 
   /// default constructor
-  const InjectableUseCase({
+  const UseCase({
     this.signalsReady,
     this.dependsOn,
     this.dispose,
@@ -188,7 +188,15 @@ class InjectableUseCase extends Injectable {
   });
 }
 
-const useCaseComponent = InjectableUseCase();
+const useCaseComponent = UseCase();
+
+/// Backwards compatibility alias.
+@Deprecated('Use @UseCase instead')
+typedef InjectableUseCase = UseCase;
+
+/// Backwards compatibility alias.
+@Deprecated('Use @InjectableInit instead')
+typedef DragonflyInjectableInit = InjectableInit;
 
 /// const instance of [Injectable]
 /// with default arguments

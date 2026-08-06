@@ -10,24 +10,37 @@ import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart'
     show AccessLevel;
 import 'package:example/components/auth/presentation/screens/login_screen.dart';
-import 'package:example/components/auth/presentation/features/login_state_manager.dart';
+import 'package:example/components/characters/presentation/screens/character_detail_screen.dart';
 import 'package:example/components/characters/presentation/screens/character_screen.dart';
-import 'package:example/components/characters/presentation/features/character_feature.dart';
+import 'package:example/components/characters/presentation/screens/character_search_screen.dart';
 
 /// Generated router configuration with session/ACL support.
 mixin $AppRouterConfig {
   /// Map of route paths to widget builders.
   Map<String, WidgetBuilder> get routes => {
-    '/login': (context) =>
-        LoginStateManagerProvider(child: const LoginScreen()),
-    '/': (context) => CharacterFeatureProvider(child: const CharacterScreen()),
-    '/character-alt': (context) =>
-        CharacterFeatureProvider(child: const CharacterScreenAlternative()),
+    '/login': (context) => const LoginScreen(),
+    '/character/:id': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      final pathParams = args is Map<String, String>
+          ? args
+          : const <String, String>{};
+      return CharacterDetailScreen(
+        id: int.tryParse(pathParams['id'] ?? '') ?? 0,
+      );
+    },
+    '/': (context) => const CharacterScreen(),
+    '/character-alt': (context) => const CharacterScreenAlternative(),
+    '/search': (context) => const CharacterSearchScreen(),
   };
 
   /// Route access configurations.
   Map<String, _RouteAccessConfig> get routeConfigs => {
     '/login': _RouteAccessConfig(
+      accessLevel: AccessLevel.guest,
+      roles: const [],
+      permissions: const [],
+    ),
+    '/character/:id': _RouteAccessConfig(
       accessLevel: AccessLevel.guest,
       roles: const [],
       permissions: const [],
@@ -42,13 +55,20 @@ mixin $AppRouterConfig {
       roles: const [],
       permissions: const [],
     ),
+    '/search': _RouteAccessConfig(
+      accessLevel: AccessLevel.guest,
+      roles: const [],
+      permissions: const [],
+    ),
   };
 
   /// Map of route names to paths.
   Map<String, String> get namedRoutes => {
     'login': '/login',
+    'character-detail': '/character/:id',
     'characters': '/',
     'characters-alt': '/character-alt',
+    'search': '/search',
   };
 
   /// The initial route for the application.
@@ -59,8 +79,11 @@ mixin $AppRouterConfig {
 
   /// Generates a route for the given settings with ACL checks.
   Route<dynamic>? onGenerateRoute(RouteSettings settings) {
-    final routeName = settings.name;
-    if (routeName == null) return null;
+    final rawName = settings.name;
+    if (rawName == null) return null;
+    // '/search?q=rick' matches the '/search' route; query params are
+    // read from settings.name inside the route builder.
+    final routeName = Uri.parse(rawName).path;
 
     // Get route config
     final config = routeConfigs[routeName];
@@ -103,6 +126,9 @@ mixin $AppRouterConfig {
               accessLevel: dynamicConfig.accessLevel,
               requiredRoles: dynamicConfig.roles,
               requiredPermissions: dynamicConfig.permissions,
+              customRedirectOnDenied: dynamicConfig.redirectOnDenied,
+              customRedirectOnUnauthenticated:
+                  dynamicConfig.redirectOnUnauthenticated,
             );
             if (redirectPath != null) {
               return _buildRoute(
@@ -129,9 +155,13 @@ mixin $AppRouterConfig {
     switch (path) {
       case '/login':
         return 'fade';
+      case '/character/:id':
+        return 'fade';
       case '/':
         return 'fade';
       case '/character-alt':
+        return 'fade';
+      case '/search':
         return 'fade';
       default:
         return 'fade';

@@ -55,6 +55,7 @@ class _$Info implements FactoryModelWatcher, Info {
     return {'count': count, 'pages': pages, 'next': next, 'prev': prev};
   }
 
+  @override
   Map<String, Object?> toMap() {
     return <String, Object?>{
       'count': count,

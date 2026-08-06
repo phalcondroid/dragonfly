@@ -1,14 +1,13 @@
 import 'package:build/build.dart';
-import 'package:dragonfly_builder/builder/generators/dragonfly_bloc_generator.dart';
-import 'package:dragonfly_builder/builder/generators/dragonfly_feature_generator.dart';
-import 'package:dragonfly_builder/builder/generators/dragonfly_view_generator.dart';
-import 'package:dragonfly_builder/builder/generators/event_model_generator.dart';
 import 'package:dragonfly_builder/builder/generators/factory_model_generator.dart';
 import 'package:dragonfly_builder/builder/generators/form_schema_generator.dart';
 import 'package:dragonfly_builder/builder/generators/injectable_config_generator.dart';
+import 'package:dragonfly_builder/builder/generators/component_generator.dart';
 import 'package:dragonfly_builder/builder/generators/repository_generator.dart';
+import 'package:dragonfly_builder/builder/generators/state_manager_generator.dart';
 import 'package:dragonfly_builder/builder/generators/state_model_generator.dart';
 import 'package:dragonfly_builder/builder/generators/router_generator.dart';
+import 'package:dragonfly_builder/builder/generators/view_generator.dart';
 import 'package:source_gen/source_gen.dart';
 
 /// Builder for @Repository annotated classes.
@@ -35,20 +34,6 @@ Builder factoryModelGenerator(BuilderOptions options) => PartBuilder(
       options: options,
     );
 
-/// Builder for @EventModel annotated classes.
-///
-/// Generates sealed event classes for BLoC-style state management with:
-/// - Pattern matching methods (when, maybeWhen, map, maybeMap)
-/// - Sealed subclasses for each variant
-/// - Optional equals, hashCode, toString, copyWith methods
-///
-/// Output extension: `.event.dart`
-Builder eventModelGenerator(BuilderOptions options) => PartBuilder(
-      [EventModelGenerator()],
-      '.event.dart',
-      options: options,
-    );
-
 /// Builder for @StateModel annotated classes.
 ///
 /// Generates sealed state classes for BLoC-style state management with:
@@ -63,50 +48,33 @@ Builder stateModelGenerator(BuilderOptions options) => PartBuilder(
       options: options,
     );
 
-/// Builder for @DragonflyBlocAnnotation annotated classes.
+/// Builder for @StateManager annotated classes.
 ///
-/// Generates BLoC mixins with:
-/// - Event handler registration helpers
-/// - State management utilities
-/// - Dispatch helpers
-///
-/// Output extension: `.bloc.dart`
-Builder dragonflyBlocGenerator(BuilderOptions options) => PartBuilder(
-      [DragonflyBlocGenerator()],
-      '.bloc.dart',
-      options: options,
-    );
-
-/// Builder for @DragonflyBlocView annotated classes.
-///
-/// Generates BLoC view mixins with:
-/// - State-aware widget builder methods
-/// - Event dispatch helpers
-/// - BLoC access utilities
-/// - Standalone state builder widgets
-///
-/// Output extension: `.blocview.dart`
-Builder dragonflyBlocViewGenerator(BuilderOptions options) => PartBuilder(
-      [DragonflyBlocViewGenerator()],
-      '.blocview.dart',
-      options: options,
-    );
-
-/// Builder for @DragonflyStateManager annotated classes.
-///
-/// Generates state manager classes with:
-/// - State management utilities
-/// - Provider widget for auto-injection
-/// - BuildContext extensions for easy access
+/// Generates a part file containing:
+/// - (easy mode) the sealed state class with one variant per `@Event`
+/// - the `$XController extends DragonflyController` that owns the state and
+///   wraps the annotated class with auto loading/error dispatching
 ///
 /// Output extension: `.state_manager.dart`
-Builder dragonflyStateManagerGenerator(BuilderOptions options) => PartBuilder(
-      [DragonflyStateManagerGenerator()],
+Builder stateManagerGenerator(BuilderOptions options) => PartBuilder(
+      [StateManagerGenerator()],
       '.state_manager.dart',
       options: options,
     );
 
-/// Builder for @DragonflyInjectableInit annotated classes.
+/// Builder for @StateView annotated widgets.
+///
+/// Generates a part file containing the `$X` view mixin that flattens event
+/// dispatch and state builders onto the bound widget.
+///
+/// Output extension: `.view.dart`
+Builder viewGenerator(BuilderOptions options) => PartBuilder(
+      [ViewGenerator()],
+      '.view.dart',
+      options: options,
+    );
+
+/// Builder for @InjectableInit annotated classes.
 ///
 /// Generates dependency injection configuration file.
 /// Output extension: `.config.dart`
@@ -117,7 +85,7 @@ Builder injectableConfigBuilder(BuilderOptions options) {
   );
 }
 
-/// Builder for @DragonflyRouterConfig.
+/// Builder for @RouterConfig.
 ///
 /// Generates router configuration file.
 /// Output extension: `.router.dart`
@@ -132,7 +100,7 @@ Builder routerBuilder(BuilderOptions options) {
 ///
 /// Generates form state and controller classes with:
 /// - FormState class to track field values, errors, and touched state
-/// - FormController mixin for StateManager integration
+/// - FormController mixin for DragonflyController integration
 /// - Field enum for type-safe field references
 /// - Validation logic based on field annotations
 ///
@@ -142,3 +110,16 @@ Builder formSchemaGenerator(BuilderOptions options) => PartBuilder(
       '.form.dart',
       options: options,
     );
+
+
+/// Builder for per-component barrel files.
+///
+/// Generates one `<component>.dragonfly.dart` per `lib/components/<name>/`
+/// directory, re-exporting all generated files in the component. A single
+/// import of the barrel brings in everything.
+///
+/// Scoped to `config/injector.dart` anchor files via `generate_for` in
+/// `build.yaml`. To opt out of the barrel and import generated files
+/// individually, override the builder in the consuming project's
+/// `build.yaml` with `generate_for: []`.
+Builder componentBuilder(BuilderOptions options) => ComponentGenerator();

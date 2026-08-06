@@ -5,7 +5,7 @@
 /// - Validation errors
 /// - Touched state (has been focused and blurred)
 /// - Dirty state (value has changed from initial)
-class FormFieldState<T> {
+class DragonflyFormFieldState<T> {
   /// The current value of the field.
   final T value;
 
@@ -30,7 +30,7 @@ class FormFieldState<T> {
   /// Whether to show the error (touched and has error).
   bool get showError => touched && isInvalid;
 
-  const FormFieldState({
+  const DragonflyFormFieldState({
     required this.value,
     required this.initialValue,
     this.error,
@@ -38,14 +38,14 @@ class FormFieldState<T> {
   });
 
   /// Creates a copy with updated values.
-  FormFieldState<T> copyWith({
+  DragonflyFormFieldState<T> copyWith({
     T? value,
     T? initialValue,
     String? error,
     bool? touched,
     bool clearError = false,
   }) {
-    return FormFieldState<T>(
+    return DragonflyFormFieldState<T>(
       value: value ?? this.value,
       initialValue: initialValue ?? this.initialValue,
       error: clearError ? null : (error ?? this.error),
@@ -54,8 +54,8 @@ class FormFieldState<T> {
   }
 
   /// Resets the field to initial state.
-  FormFieldState<T> reset() {
-    return FormFieldState<T>(
+  DragonflyFormFieldState<T> reset() {
+    return DragonflyFormFieldState<T>(
       value: initialValue,
       initialValue: initialValue,
       error: null,
@@ -66,7 +66,7 @@ class FormFieldState<T> {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is FormFieldState<T> &&
+    return other is DragonflyFormFieldState<T> &&
         other.value == value &&
         other.initialValue == initialValue &&
         other.error == error &&
@@ -78,6 +78,6 @@ class FormFieldState<T> {
 
   @override
   String toString() {
-    return 'FormFieldState(value: $value, error: $error, touched: $touched, dirty: $dirty)';
+    return 'DragonflyFormFieldState(value: $value, error: $error, touched: $touched, dirty: $dirty)';
   }
 }

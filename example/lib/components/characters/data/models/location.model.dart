@@ -37,6 +37,7 @@ class _$Location implements FactoryModelWatcher, Location {
     return {'name': name, 'url': url};
   }
 
+  @override
   Map<String, Object?> toMap() {
     return <String, Object?>{'name': name, 'url': url};
   }

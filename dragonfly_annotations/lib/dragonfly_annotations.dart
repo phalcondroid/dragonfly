@@ -4,63 +4,51 @@ library;
 export 'annotations/injectable/injectable_annotations.dart'
     show
         Injectable,
-        InjectableUseCase,
+        UseCase,
+        InjectableUseCase, // Deprecated alias
         Singleton,
         LazySingleton,
         Named,
         Inject,
-        DragonflyInjectableInit,
+        InjectableInit,
+        DragonflyInjectableInit, // Deprecated alias
         useCaseComponent,
         injectable,
         singleton,
         lazySingleton;
-export 'annotations/injectable/inyectar.dart';
+export 'annotations/injectable/inject.dart';
 
 // Component annotations
 export 'annotations/component/injector/injector_config.dart';
 
 // Model annotations
 export 'annotations/component/models/factory_model.dart' show FactoryModel;
-export 'annotations/component/models/event_model.dart' show EventModel;
 export 'annotations/component/models/state_model.dart' show StateModel;
 export 'annotations/component/models/field.dart'
     show Field, JsonIgnore, JsonKey;
 
 // Repository annotations
-export 'annotations/component/repositoriy/repository.dart' show Repository;
+export 'annotations/component/repository/repository.dart' show Repository;
 
-// Presentation annotations (BLoC)
-export 'annotations/component/presentation/dragonfly_bloc.dart'
-    show DragonflyBloc;
-export 'annotations/component/presentation/dragonfly_view.dart'
-    show DragonflyBlocView, DragonflyStateBuilder;
-
-// State Manager annotations (Feature architecture)
-export 'annotations/component/presentation/feature/dragonfly_feature.dart'
-    show
-        DragonflyStateManager,
-        DragonflyView, // Deprecated alias
-        DragonflyFeature, // Deprecated alias
-        InitialState,
-        StateAction,
-        ViewAction, // Deprecated alias
-        FeatureAction, // Deprecated alias
-        SideEffect,
-        Computed,
-        StateSlot;
+// State management annotations
+export 'annotations/component/presentation/state_manager.dart'
+    show StateManager, Event, StateView;
 
 // Router and Screen annotations (with Session/ACL support)
-export 'annotations/navigation/router_config.dart' show DragonflyRouterConfig;
+export 'annotations/navigation/router_config.dart'
+    show RouterConfig, DragonflyRouterConfig; // DragonflyRouterConfig: deprecated alias
 export 'annotations/session/session_annotations.dart'
     show
-        DragonflyScreen,
+        Screen,
+        DragonflyScreen, // Deprecated alias
         ScreenTransition,
         AccessLevel,
-        DragonflySessionConfig,
+        SessionConfig,
+        DragonflySessionConfig, // Deprecated alias
         Authenticated,
         PathParam,
         QueryParam;
-export 'annotations/where.dart';
+// @Where removed — dead annotation
 
 // Form validation annotations
 export 'annotations/form/form_annotations.dart'

@@ -2,7 +2,9 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:dragonfly_builder/builder/code_builder/sealed_model/sealed_model_builder.dart';
+import 'package:dragonfly_builder/builder/helper/syntactic_param_reader.dart';
 import 'package:dragonfly_builder/builder/models/factory_model_config.dart';
+import 'package:dragonfly_builder/builder/models/factory_model_field.dart';
 import 'package:dragonfly_builder/builder/visitor/sealed_class_visitor.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -88,13 +90,20 @@ import 'package:source_gen/source_gen.dart';
 /// ```
 class StateModelGenerator extends GeneratorForAnnotation<StateModel> {
   @override
-  String generateForAnnotatedElement(
+  Future<String> generateForAnnotatedElement(
     Element element,
     ConstantReader annotation,
     BuildStep buildStep,
-  ) {
+  ) async {
     final visitor = SealedClassVisitor();
     element.visitChildren(visitor);
+
+    // Types declared in other generated files resolve to InvalidType at build
+    // time; substitute the source-text names so variants may reference e.g.
+    // generated form states.
+    if (element is ClassElement) {
+      await _patchInvalidTypes(element, visitor, buildStep);
+    }
 
     // Read configuration from annotation
     final config = StateModelConfig.fromAnnotation(
@@ -118,5 +127,70 @@ class StateModelGenerator extends GeneratorForAnnotation<StateModel> {
       visitor.reset();
       return '// Error generating state model: $e';
     }
+  }
+
+  Future<void> _patchInvalidTypes(ClassElement element,
+      SealedClassVisitor visitor, BuildStep buildStep) async {
+    final needsPatch = visitor.variants
+        .any((v) => v.parameters.any((p) => p.type == 'InvalidType'));
+    if (!needsPatch) return;
+
+    final syntactic = await SyntacticParamReader.readFactoryParams(
+      buildStep,
+      element.library.uri,
+      element.name ?? '',
+    );
+    if (syntactic.isEmpty) return;
+
+    for (var i = 0; i < visitor.variants.length; i++) {
+      final variant = visitor.variants[i];
+      final syntacticParams = syntactic[variant.name];
+      if (syntacticParams == null) continue;
+
+      visitor.variants[i] = SealedVariant(
+        name: variant.name,
+        className: variant.className,
+        isDefault: variant.isDefault,
+        parameters: [
+          for (var j = 0; j < variant.parameters.length; j++)
+            _patchedField(variant.parameters[j],
+                j < syntacticParams.length ? syntacticParams[j] : null),
+        ],
+      );
+    }
+  }
+
+  FactoryModelField _patchedField(FactoryModelField field, SyntacticParam? syn) {
+    if (syn == null || field.type != 'InvalidType') return field;
+
+    final type = syn.type;
+    final isList = type.startsWith('List<');
+    final listType = isList
+        ? type.substring(5, type.length - 1).replaceAll('?', '')
+        : '';
+    final bare = type.replaceAll('?', '');
+    const primitives = {'bool', 'double', 'int', 'num', 'String', 'dynamic', 'Object'};
+
+    return FactoryModelField(
+      name: field.name,
+      fieldName: field.fieldName,
+      isFieldName: field.isFieldName,
+      value: field.value,
+      type: type,
+      isDartList: isList,
+      isDartMap: type.startsWith('Map<'),
+      isDartSet: type.startsWith('Set<'),
+      isFinal: field.isFinal,
+      isNullable: type.endsWith('?'),
+      isClass: !primitives.contains(bare) &&
+          !isList &&
+          !type.startsWith('Map<') &&
+          !type.startsWith('Set<'),
+      isRequired: field.isRequired,
+      rawType: field.rawType,
+      listType: listType,
+      listTypeIsClass:
+          listType.isNotEmpty && !primitives.contains(listType),
+    );
   }
 }

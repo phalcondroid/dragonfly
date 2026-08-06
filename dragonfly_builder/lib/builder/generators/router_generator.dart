@@ -5,15 +5,15 @@ import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:glob/glob.dart';
 import 'package:source_gen/source_gen.dart';
 
-/// Generator for [DragonflyRouterConfig].
+/// Generator for [RouterConfig].
 ///
-/// This generator scans for [DragonflyScreen] annotations
+/// This generator scans for [Screen] annotations
 /// and creates a router configuration with session/ACL support.
-class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
+class RouterGenerator extends GeneratorForAnnotation<RouterConfig> {
   final _formatter = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion);
-  static final _screenChecker = TypeChecker.typeNamed(DragonflyScreen, inPackage: 'dragonfly_annotations');
-  static final _stateManagerChecker =
-      TypeChecker.typeNamed(DragonflyStateManager, inPackage: 'dragonfly_annotations');
+  static final _screenChecker = TypeChecker.typeNamed(Screen, inPackage: 'dragonfly_annotations');
+  static final _pathParamChecker = TypeChecker.typeNamed(PathParam, inPackage: 'dragonfly_annotations');
+  static final _queryParamChecker = TypeChecker.typeNamed(QueryParam, inPackage: 'dragonfly_annotations');
 
   @override
   Future<String> generateForAnnotatedElement(
@@ -25,32 +25,9 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
     final Set<String> imports = {};
     final Map<String, _RouteInfo> routes = {};
 
-    // Map of Feature class names to their source file imports
-    final Map<String, String> featureImports = {};
-
     final glob = Glob('lib/**.dart');
 
-    // First pass: collect all Feature classes and their source file imports
-    await for (final assetId in buildStep.findAssets(glob)) {
-      try {
-        final library = await buildStep.resolver.libraryFor(assetId);
-        final reader = LibraryReader(library);
-
-        for (final annotatedElement
-            in reader.annotatedWith(_stateManagerChecker)) {
-          if (annotatedElement.element is ClassElement) {
-            final classElement = annotatedElement.element as ClassElement;
-            final featureName = classElement.name ?? '';
-            final featureImport = assetId.uri.toString();
-            featureImports[featureName] = featureImport;
-          }
-        }
-      } catch (_) {
-        continue;
-      }
-    }
-
-    // Second pass: collect routes (DragonflyScreen annotations)
+    // Collect routes (Screen annotations)
     await for (final assetId in buildStep.findAssets(glob)) {
       try {
         final library = await buildStep.resolver.libraryFor(assetId);
@@ -97,38 +74,11 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
             final redirectOnUnauthenticated =
                 annotationObj.peek('redirectOnUnauthenticated')?.stringValue;
 
-            // Parse provider type
-            String? providerName;
-            String? providerImport;
-            final providerReader = annotationObj.peek('provider');
-            if (providerReader != null && !providerReader.isNull) {
-              final providerType = providerReader.typeValue;
-              final providerTypeName =
-                  providerType.getDisplayString();
-              providerName = '${providerTypeName}Provider';
-
-              // Get the import for the feature file
-              providerImport = featureImports[providerTypeName];
-
-              if (providerImport == null) {
-                final providerElement = providerType.element;
-                if (providerElement != null) {
-                  providerImport =
-                      providerElement.library?.uri.toString();
-                }
-              }
-            }
-
             final className = classElement.name ?? '';
             final importUri = assetId.uri.toString();
 
             // Add screen import
             imports.add("import '$importUri';");
-
-            // Add feature import if provider is specified
-            if (providerImport != null) {
-              imports.add("import '$providerImport';");
-            }
 
             routes[pathValue] = _RouteInfo(
               path: pathValue,
@@ -136,7 +86,7 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
               name: nameValue,
               transition: transitionName,
               isInitial: isInitial,
-              providerName: providerName,
+              params: _extractScreenParams(classElement),
               accessLevel: accessName,
               roles: roles,
               permissions: permissions,
@@ -173,10 +123,25 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
     buffer.writeln('  /// Map of route paths to widget builders.');
     buffer.writeln('  Map<String, WidgetBuilder> get routes => {');
     for (final route in routes.values) {
-      final widget = route.providerName != null
-          ? '${route.providerName}(child: const ${route.className}())'
-          : 'const ${route.className}()';
-      buffer.writeln("    '${route.path}': (context) => $widget,");
+      if (route.params.isEmpty) {
+        buffer.writeln(
+            "    '${route.path}': (context) => const ${route.className}(),");
+      } else {
+        buffer.writeln("    '${route.path}': (context) {");
+        if (route.params.any((p) => p.isPath)) {
+          buffer.writeln(
+              '      final args = ModalRoute.of(context)?.settings.arguments;');
+          buffer.writeln(
+              '      final pathParams = args is Map<String, String> ? args : const <String, String>{};');
+        }
+        if (route.params.any((p) => !p.isPath)) {
+          buffer.writeln(
+              "      final queryParams = Uri.parse(ModalRoute.of(context)?.settings.name ?? '').queryParameters;");
+        }
+        buffer.writeln(
+            '      return ${route.className}(${_ctorArgs(route.params)});');
+        buffer.writeln('    },');
+      }
     }
     buffer.writeln('  };');
     buffer.writeln();
@@ -231,8 +196,12 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
     buffer.writeln('  /// Generates a route for the given settings with ACL checks.');
     buffer.writeln(
         '  Route<dynamic>? onGenerateRoute(RouteSettings settings) {');
-    buffer.writeln('    final routeName = settings.name;');
-    buffer.writeln('    if (routeName == null) return null;');
+    buffer.writeln('    final rawName = settings.name;');
+    buffer.writeln('    if (rawName == null) return null;');
+    buffer.writeln(
+        "    // '/search?q=rick' matches the '/search' route; query params are");
+    buffer.writeln('    // read from settings.name inside the route builder.');
+    buffer.writeln('    final routeName = Uri.parse(rawName).path;');
     buffer.writeln();
     buffer.writeln('    // Get route config');
     buffer.writeln('    final config = routeConfigs[routeName];');
@@ -276,6 +245,10 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
     buffer.writeln('              accessLevel: dynamicConfig.accessLevel,');
     buffer.writeln('              requiredRoles: dynamicConfig.roles,');
     buffer.writeln('              requiredPermissions: dynamicConfig.permissions,');
+    buffer.writeln(
+        '              customRedirectOnDenied: dynamicConfig.redirectOnDenied,');
+    buffer.writeln(
+        '              customRedirectOnUnauthenticated: dynamicConfig.redirectOnUnauthenticated,');
     buffer.writeln('            );');
     buffer.writeln('            if (redirectPath != null) {');
     buffer.writeln('              return _buildRoute(');
@@ -332,6 +305,50 @@ class RouterGenerator extends GeneratorForAnnotation<DragonflyRouterConfig> {
     } catch (e) {
       return buffer.toString();
     }
+  }
+
+  /// Constructor parameters of the screen carrying `@PathParam`/`@QueryParam`.
+  List<_ScreenParam> _extractScreenParams(ClassElement screen) {
+    if (screen.constructors.isEmpty) return const [];
+    final params = <_ScreenParam>[];
+
+    for (final p in screen.constructors.first.formalParameters) {
+      final isPath = _pathParamChecker.hasAnnotationOfExact(p);
+      final isQuery = !isPath && _queryParamChecker.hasAnnotationOfExact(p);
+      if (!isPath && !isQuery) continue;
+
+      final checker = isPath ? _pathParamChecker : _queryParamChecker;
+      final annotation = ConstantReader(checker.firstAnnotationOfExact(p));
+      final declared = annotation.peek('name')?.stringValue ?? '';
+      final name = p.name ?? '';
+
+      params.add(_ScreenParam(
+        name: name,
+        type: p.type.getDisplayString(),
+        key: declared.isEmpty ? name : declared,
+        isPath: isPath,
+      ));
+    }
+    return params;
+  }
+
+  /// Builds the constructor argument list extracting each param from the
+  /// path map or the query string.
+  String _ctorArgs(List<_ScreenParam> params) {
+    return params.map((p) {
+      final source = p.isPath ? 'pathParams' : 'queryParams';
+      final read = "$source['${p.key}']";
+      final value = switch (p.type) {
+        'int' => "int.tryParse($read ?? '') ?? 0",
+        'int?' => "int.tryParse($read ?? '')",
+        'double' => "double.tryParse($read ?? '') ?? 0.0",
+        'double?' => "double.tryParse($read ?? '')",
+        'bool' => "$read == 'true'",
+        'bool?' => "$read == null ? null : $read == 'true'",
+        _ => "$read ?? ''",
+      };
+      return '${p.name}: $value';
+    }).join(', ');
   }
 
   String _listToString(List<String> list) {
@@ -524,7 +541,7 @@ class _RouteInfo {
   final String? name;
   final String transition;
   final bool isInitial;
-  final String? providerName;
+  final List<_ScreenParam> params;
   final String accessLevel;
   final List<String> roles;
   final List<String> permissions;
@@ -537,11 +554,26 @@ class _RouteInfo {
     this.name,
     required this.transition,
     required this.isInitial,
-    this.providerName,
+    this.params = const [],
     required this.accessLevel,
     required this.roles,
     required this.permissions,
     this.redirectOnDenied,
     this.redirectOnUnauthenticated,
+  });
+}
+
+/// A screen constructor parameter annotated with `@PathParam`/`@QueryParam`.
+class _ScreenParam {
+  final String name;
+  final String type;
+  final String key;
+  final bool isPath;
+
+  const _ScreenParam({
+    required this.name,
+    required this.type,
+    required this.key,
+    required this.isPath,
   });
 }

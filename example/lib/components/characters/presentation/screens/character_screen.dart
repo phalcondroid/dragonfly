@@ -1,149 +1,117 @@
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:example/components/characters/data/models/character.dart';
-import 'package:example/components/characters/presentation/features/character_feature.dart';
+import 'package:example/components/characters/presentation/features/character_state_manager.dart';
 import 'package:example/components/characters/presentation/states/character_state.dart';
 import 'package:flutter/material.dart';
 
-@DragonflyScreen(
+part 'character_screen.view.dart';
+
+@Screen(
   path: '/',
   initial: true,
   name: 'characters',
-  provider: CharacterFeature,
   access: AccessLevel.guest,
 )
-class CharacterScreen extends StatelessWidget {
+@StateView(CharacterStateManager)
+class CharacterScreen extends StatelessWidget with $CharacterStateManager {
   const CharacterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Access the state manager using the new naming convention
-    final stateManager = context.stateManager<CharacterFeature>();
-
-    return DefaultSideEffectHandler<CharacterFeature>(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Character (StateManager)'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: stateManager.refresh,
-            ),
-            IconButton(
-              icon: const Icon(Icons.list),
-              onPressed: stateManager.fetchAllCharacters,
-            ),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Characters (@View)'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => fetchCharacter(1),
+          ),
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: fetchAllCharacters,
+          ),
+        ],
+      ),
+      // when() rebuilds on every state change; orElse covers unmatched variants.
+      body: when(
+        initial: () => _InitialView(onFetch: () => fetchCharacter(1)),
+        loading: () => const _LoadingView(),
+        loaded: (character) => _CharacterDetailView(
+          character: character,
+          onDelete: () => deleteCharacter(character),
         ),
-        // Using StateManagerBuilder with the traditional .when() approach
-        body: StateManagerBuilder<CharacterFeature, CharacterState>(
-          builder: (context, state) {
-            return state.when(
-              initial: () =>
-                  _InitialView(onFetch: () => stateManager.fetchCharacter(1)),
-              loading: () => const _LoadingView(),
-              loaded: (character) => _CharacterDetailView(
-                character: character,
-                onDelete: () => stateManager.deleteCharacter(character),
-                onRefresh: stateManager.refresh,
-              ),
-              characterList: (characters) => _CharacterListView(
-                characters: characters,
-                onSelect: (character) =>
-                    stateManager.fetchCharacter(character.id),
-              ),
-              error: (message) => _ErrorView(
-                message: message,
-                onRetry: () => stateManager.fetchCharacter(1),
-              ),
-            );
-          },
+        characterList: (characters) => _CharacterListView(
+          characters: characters,
+          onSelect: (character) =>
+              Navigator.of(context).pushNamed('/character/${character.id}'),
         ),
+        error: (message) => _ErrorView(
+          message: message,
+          onRetry: () => fetchCharacter(1),
+        ),
+        orElse: () => const SizedBox.shrink(),
       ),
     );
   }
 }
 
-/// Alternative screen demonstrating individual state builder widgets.
-///
-/// This shows how to use the generated state-specific builders like
-/// [CharacterLoaded], [CharacterLoading], etc.
-@DragonflyScreen(
+/// Alternative screen demonstrating the typed `build<Event>` builders and the
+/// string-keyed `buildFor` escape hatch instead of a single [when].
+@Screen(
   path: '/character-alt',
   name: 'characters-alt',
-  provider: CharacterFeature,
   access: AccessLevel.guest,
 )
-class CharacterScreenAlternative extends StatelessWidget {
+@StateView(CharacterStateManager)
+class CharacterScreenAlternative extends StatelessWidget
+    with $CharacterStateManager {
   const CharacterScreenAlternative({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final stateManager = context.stateManager<CharacterFeature>();
-
-    return DefaultSideEffectHandler<CharacterFeature>(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Character (State Builders)'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: stateManager.refresh,
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Character (typed builders)'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: refreshThrottled,
+          ),
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: fetchAllCharacters,
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // Each typed builder renders only while its variant is active.
+          buildInitial(
+            () => _InitialView(onFetch: () => fetchCharacter(1)),
+          ),
+          buildLoading(() => const _LoadingView()),
+          buildLoaded(
+            (character) => _CharacterDetailView(
+              character: character,
+              onDelete: () => deleteCharacter(character),
             ),
-            IconButton(
-              icon: const Icon(Icons.list),
-              onPressed: stateManager.fetchAllCharacters,
+          ),
+          buildCharacterList(
+            (characters) => _CharacterListView(
+              characters: characters,
+              onSelect: (character) => fetchCharacter(character.id),
             ),
-          ],
-        ),
-        body: Stack(
-          children: [
-            // Each state builder only renders when its state is active
-
-            // Initial state builder - no parameters
-            CharacterInitial(
-              builder: () =>
-                  _InitialView(onFetch: () => stateManager.fetchCharacter(1)),
+          ),
+          // buildFor is the string-keyed form; the payload is dynamic.
+          buildFor(
+            'error',
+            (message) => _ErrorView(
+              message: '$message',
+              onRetry: () => fetchCharacter(1),
             ),
-
-            // Loading state builder - no parameters
-            CharacterLoading(builder: () => const _LoadingView()),
-
-            // Loaded state builder - has Character parameter
-            CharacterLoaded(
-              builder: (character) => _CharacterDetailView(
-                character: character,
-                onDelete: () => stateManager.deleteCharacter(character),
-                onRefresh: stateManager.refresh,
-              ),
-              // Optional: only rebuild when character name changes
-              buildWhen: (prev, curr) {
-                if (prev is CharacterStateLoaded &&
-                    curr is CharacterStateLoaded) {
-                  return prev.character.name != curr.character.name;
-                }
-                return true;
-              },
-            ),
-
-            // Character list state builder - has List<Character> parameter
-            CharacterCharacterList(
-              builder: (characters) => _CharacterListView(
-                characters: characters,
-                onSelect: (character) =>
-                    stateManager.fetchCharacter(character.id),
-              ),
-            ),
-
-            // Error state builder - has String message parameter
-            CharacterError(
-              builder: (message) => _ErrorView(
-                message: message,
-                onRetry: () => stateManager.fetchCharacter(1),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -217,108 +185,103 @@ class _CharacterDetailView extends StatelessWidget {
   const _CharacterDetailView({
     required this.character,
     required this.onDelete,
-    required this.onRefresh,
   });
 
   final Character character;
   final VoidCallback onDelete;
-  final VoidCallback onRefresh;
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async => onRefresh(),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Hero Image
-            AspectRatio(
-              aspectRatio: 1,
-              child: Image.network(
-                character.image,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.broken_image,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Hero Image
+          AspectRatio(
+            aspectRatio: 1,
+            child: Image.network(
+              character.image,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Icon(
+                  Icons.broken_image,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
+          ),
 
-            // Character Info
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and Status
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          character.name,
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                      ),
-                      _StatusBadge(status: character.status),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Species and Gender
-                  Text(
-                    '${character.species} • ${character.gender}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Info Cards
-                  _InfoCard(
-                    icon: Icons.place,
-                    title: 'Origin',
-                    value: character.origin.name,
-                  ),
-                  const SizedBox(height: 12),
-                  _InfoCard(
-                    icon: Icons.location_on,
-                    title: 'Last known location',
-                    value: character.location.name,
-                  ),
-                  const SizedBox(height: 12),
-                  _InfoCard(
-                    icon: Icons.tv,
-                    title: 'First seen in',
-                    value: '${character.episode.length} episodes',
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Delete Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete Character'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+          // Character Info
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name and Status
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        character.name,
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
                     ),
+                    _StatusBadge(status: character.status),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Species and Gender
+                Text(
+                  '${character.species} • ${character.gender}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+
+                // Info Cards
+                _InfoCard(
+                  icon: Icons.place,
+                  title: 'Origin',
+                  value: character.origin.name,
+                ),
+                const SizedBox(height: 12),
+                _InfoCard(
+                  icon: Icons.location_on,
+                  title: 'Last known location',
+                  value: character.location.name,
+                ),
+                const SizedBox(height: 12),
+                _InfoCard(
+                  icon: Icons.tv,
+                  title: 'First seen in',
+                  value: '${character.episode.length} episodes',
+                ),
+                const SizedBox(height: 32),
+
+                // Delete Button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete Character'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dragonfly/framework/feature/state_manager.dart';
-import 'package:dragonfly/framework/feature/state_manager_builder.dart';
+import 'package:dragonfly/framework/state/state_builder.dart';
+import 'package:dragonfly/framework/state/state_controller.dart';
 
 /// A text field that integrates with form validation.
 ///
@@ -9,17 +9,19 @@ import 'package:dragonfly/framework/feature/state_manager_builder.dart';
 ///
 /// Example:
 /// ```dart
-/// ValidatedTextField<LoginStateManager, LoginFormState>(
+/// ValidatedTextField<$LoginStateManagerController, LoginStateManagerState>(
+///   stateController: loginController,
 ///   fieldName: 'email',
 ///   formSelector: (state) => state.form,
-///   onChanged: (value) => stateManager.updateField('email', value),
-///   onBlur: () => stateManager.touchField('email'),
+///   onChanged: (value) => loginController.updateField('email', value),
+///   onBlur: () => loginController.touchField('email'),
 ///   decoration: InputDecoration(labelText: 'Email'),
 /// )
 /// ```
-class ValidatedTextField<SM extends StateManager<S>, S> extends StatelessWidget {
+class ValidatedTextField<S> extends StatelessWidget {
   const ValidatedTextField({
     super.key,
+    required this.stateController,
     required this.fieldName,
     required this.formSelector,
     required this.onChanged,
@@ -44,11 +46,14 @@ class ValidatedTextField<SM extends StateManager<S>, S> extends StatelessWidget 
     this.showErrorOnlyWhenTouched = true,
   });
 
+  /// The controller whose state drives validation display.
+  final DragonflyController<S> stateController;
+
   /// The name of the form field.
   final String fieldName;
 
   /// Selector to get the form state from the StateManager state.
-  final FormStateAccessor formSelector;
+  final FormStateAccessor<S> formSelector;
 
   /// Called when the field value changes.
   final ValueChanged<String> onChanged;
@@ -112,7 +117,8 @@ class ValidatedTextField<SM extends StateManager<S>, S> extends StatelessWidget 
 
   @override
   Widget build(BuildContext context) {
-    return StateManagerBuilder<SM, S>(
+    return DragonflyStateBuilder<S>(
+      controller: stateController,
       builder: (context, state) {
         final formState = formSelector(state);
         final fieldState = formState.fields[fieldName];
@@ -159,9 +165,10 @@ class ValidatedTextField<SM extends StateManager<S>, S> extends StatelessWidget 
 }
 
 /// A dropdown that integrates with form validation.
-class ValidatedDropdown<SM extends StateManager<S>, S, T> extends StatelessWidget {
+class ValidatedDropdown<S, T> extends StatelessWidget {
   const ValidatedDropdown({
     super.key,
+    required this.stateController,
     required this.fieldName,
     required this.formSelector,
     required this.items,
@@ -178,8 +185,11 @@ class ValidatedDropdown<SM extends StateManager<S>, S, T> extends StatelessWidge
     this.showErrorOnlyWhenTouched = true,
   });
 
+  /// The controller whose state drives validation display.
+  final DragonflyController<S> stateController;
+
   final String fieldName;
-  final FormStateAccessor formSelector;
+  final FormStateAccessor<S> formSelector;
   final List<T> items;
   final ValueChanged<T?> onChanged;
   final VoidCallback? onBlur;
@@ -195,7 +205,8 @@ class ValidatedDropdown<SM extends StateManager<S>, S, T> extends StatelessWidge
 
   @override
   Widget build(BuildContext context) {
-    return StateManagerBuilder<SM, S>(
+    return DragonflyStateBuilder<S>(
+      controller: stateController,
       builder: (context, state) {
         final formState = formSelector(state);
         final fieldState = formState.fields[fieldName];
@@ -238,9 +249,10 @@ class ValidatedDropdown<SM extends StateManager<S>, S, T> extends StatelessWidge
 }
 
 /// A checkbox that integrates with form validation.
-class ValidatedCheckbox<SM extends StateManager<S>, S> extends StatelessWidget {
+class ValidatedCheckbox<S> extends StatelessWidget {
   const ValidatedCheckbox({
     super.key,
+    required this.stateController,
     required this.fieldName,
     required this.formSelector,
     required this.onChanged,
@@ -253,8 +265,11 @@ class ValidatedCheckbox<SM extends StateManager<S>, S> extends StatelessWidget {
     this.showErrorOnlyWhenTouched = true,
   });
 
+  /// The controller whose state drives validation display.
+  final DragonflyController<S> stateController;
+
   final String fieldName;
-  final FormStateAccessor formSelector;
+  final FormStateAccessor<S> formSelector;
   final ValueChanged<bool?> onChanged;
   final Widget? title;
   final Widget? subtitle;
@@ -266,7 +281,8 @@ class ValidatedCheckbox<SM extends StateManager<S>, S> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StateManagerBuilder<SM, S>(
+    return DragonflyStateBuilder<S>(
+      controller: stateController,
       builder: (context, state) {
         final formState = formSelector(state);
         final fieldState = formState.fields[fieldName];
@@ -308,9 +324,10 @@ class ValidatedCheckbox<SM extends StateManager<S>, S> extends StatelessWidget {
 }
 
 /// A switch that integrates with form validation.
-class ValidatedSwitch<SM extends StateManager<S>, S> extends StatelessWidget {
+class ValidatedSwitch<S> extends StatelessWidget {
   const ValidatedSwitch({
     super.key,
+    required this.stateController,
     required this.fieldName,
     required this.formSelector,
     required this.onChanged,
@@ -323,8 +340,11 @@ class ValidatedSwitch<SM extends StateManager<S>, S> extends StatelessWidget {
     this.showErrorOnlyWhenTouched = true,
   });
 
+  /// The controller whose state drives validation display.
+  final DragonflyController<S> stateController;
+
   final String fieldName;
-  final FormStateAccessor formSelector;
+  final FormStateAccessor<S> formSelector;
   final ValueChanged<bool> onChanged;
   final Widget? title;
   final Widget? subtitle;
@@ -336,7 +356,8 @@ class ValidatedSwitch<SM extends StateManager<S>, S> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StateManagerBuilder<SM, S>(
+    return DragonflyStateBuilder<S>(
+      controller: stateController,
       builder: (context, state) {
         final formState = formSelector(state);
         final fieldState = formState.fields[fieldName];
@@ -378,9 +399,10 @@ class ValidatedSwitch<SM extends StateManager<S>, S> extends StatelessWidget {
 }
 
 /// A date picker that integrates with form validation.
-class ValidatedDatePicker<SM extends StateManager<S>, S> extends StatelessWidget {
+class ValidatedDatePicker<S> extends StatelessWidget {
   const ValidatedDatePicker({
     super.key,
+    required this.stateController,
     required this.fieldName,
     required this.formSelector,
     required this.onChanged,
@@ -393,8 +415,11 @@ class ValidatedDatePicker<SM extends StateManager<S>, S> extends StatelessWidget
     this.showErrorOnlyWhenTouched = true,
   });
 
+  /// The controller whose state drives validation display.
+  final DragonflyController<S> stateController;
+
   final String fieldName;
-  final FormStateAccessor formSelector;
+  final FormStateAccessor<S> formSelector;
   final ValueChanged<DateTime?> onChanged;
   final VoidCallback? onBlur;
   final InputDecoration? decoration;
@@ -411,7 +436,8 @@ class ValidatedDatePicker<SM extends StateManager<S>, S> extends StatelessWidget
 
   @override
   Widget build(BuildContext context) {
-    return StateManagerBuilder<SM, S>(
+    return DragonflyStateBuilder<S>(
+      controller: stateController,
       builder: (context, state) {
         final formState = formSelector(state);
         final fieldState = formState.fields[fieldName];
@@ -480,9 +506,10 @@ class ValidatedForm extends StatelessWidget {
 }
 
 /// A submit button that integrates with form validation.
-class ValidatedSubmitButton<SM extends StateManager<S>, S> extends StatelessWidget {
+class ValidatedSubmitButton<S> extends StatelessWidget {
   const ValidatedSubmitButton({
     super.key,
+    required this.stateController,
     required this.formSelector,
     required this.onSubmit,
     this.child,
@@ -491,7 +518,10 @@ class ValidatedSubmitButton<SM extends StateManager<S>, S> extends StatelessWidg
     this.loadingSelector,
   });
 
-  final FormStateAccessor formSelector;
+  /// The controller whose state drives validation display.
+  final DragonflyController<S> stateController;
+
+  final FormStateAccessor<S> formSelector;
   final VoidCallback onSubmit;
   final Widget? child;
   final bool disableWhenInvalid;
@@ -500,7 +530,8 @@ class ValidatedSubmitButton<SM extends StateManager<S>, S> extends StatelessWidg
 
   @override
   Widget build(BuildContext context) {
-    return StateManagerBuilder<SM, S>(
+    return DragonflyStateBuilder<S>(
+      controller: stateController,
       builder: (context, state) {
         final formState = formSelector(state);
         final isValid = formState.isValid;

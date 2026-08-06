@@ -40,24 +40,25 @@ class _$ServiceResponseDouble<T, R>
   final T res;
 
   Map<String, dynamic> toJson(
-    dynamic Function(T value) _toJsonT,
-    dynamic Function(R value) _toJsonR,
+    dynamic Function(T value) toJsonT,
+    dynamic Function(R value) toJsonR,
   ) {
     return {
       'info': info,
-      'result': result.map((e) => _toJsonR(e)).toList(),
-      'res': _toJsonT(res),
+      'result': result.map((e) => toJsonR(e)).toList(),
+      'res': toJsonT(res),
     };
   }
 
+  @override
   Map<String, Object?> toMap(
-    dynamic Function(T value) _toJsonT,
-    dynamic Function(R value) _toJsonR,
+    dynamic Function(T value) toJsonT,
+    dynamic Function(R value) toJsonR,
   ) {
     return <String, Object?>{
       'info': info,
-      'result': result.map((e) => _toJsonR(e)).toList(),
-      'res': _toJsonT(res),
+      'result': result.map((e) => toJsonR(e)).toList(),
+      'res': toJsonT(res),
     };
   }
 

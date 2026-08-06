@@ -2,11 +2,11 @@ import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/dart/element/visitor2.dart';
 import 'package:build/build.dart';
-import 'package:dragonfly_annotations/annotations/component/presentation/dragonfly_bloc.dart';
-import 'package:dragonfly_annotations/annotations/component/presentation/feature/dragonfly_feature.dart';
-import 'package:dragonfly_annotations/annotations/component/repositoriy/repository.dart';
+import 'package:dragonfly_annotations/annotations/component/presentation/state_manager.dart';
+import 'package:dragonfly_annotations/annotations/component/repository/repository.dart';
 import 'package:dragonfly_annotations/annotations/injectable/injectable_annotations.dart';
 import 'package:dragonfly_builder/builder/models/dependency_config.dart';
+import 'package:dragonfly_builder/builder/models/dispose_function_config.dart';
 import 'package:dragonfly_builder/builder/models/importable_type.dart';
 import 'package:dragonfly_builder/builder/models/injected_dependency.dart';
 import 'package:dragonfly_builder/builder/models/injectable_type.dart';
@@ -18,12 +18,14 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
   final BuildStep buildStep;
 
   // Type checkers for annotations
-  static final _useCaseChecker = TypeChecker.typeNamed(InjectableUseCase, inPackage: 'dragonfly_annotations');
+  static final _useCaseChecker = TypeChecker.typeNamed(UseCase, inPackage: 'dragonfly_annotations');
   static final _repositoryChecker = TypeChecker.typeNamed(Repository, inPackage: 'dragonfly_annotations');
-  static final _blocChecker = TypeChecker.typeNamed(DragonflyBloc, inPackage: 'dragonfly_annotations');
-  static final _stateManagerChecker = TypeChecker.typeNamed(DragonflyStateManager, inPackage: 'dragonfly_annotations');
+  static final _stateManagerChecker = TypeChecker.typeNamed(StateManager, inPackage: 'dragonfly_annotations');
   static final _injectChecker = TypeChecker.typeNamed(Inject, inPackage: 'dragonfly_annotations');
   static final _namedChecker = TypeChecker.typeNamed(Named, inPackage: 'dragonfly_annotations');
+  static final _singletonChecker = TypeChecker.typeNamed(Singleton, inPackage: 'dragonfly_annotations');
+  static final _lazySingletonChecker = TypeChecker.typeNamed(LazySingleton, inPackage: 'dragonfly_annotations');
+  static final _injectableChecker = TypeChecker.typeNamed(Injectable, inPackage: 'dragonfly_annotations');
 
   InjectableVisitor(this.buildStep);
 
@@ -34,9 +36,9 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
       return;
     }
 
-    // Check for InjectableUseCase annotation
+    // Check for UseCase annotation
     if (_useCaseChecker.hasAnnotationOfExact(element)) {
-      _processInjectableUseCase(element);
+      _processUseCase(element);
       return;
     }
 
@@ -46,15 +48,27 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
       return;
     }
 
-    // Check for DragonflyBloc annotation
-    if (_blocChecker.hasAnnotationOfExact(element)) {
-      _processDragonflyBloc(element);
+    // Check for StateManager annotation
+    if (_stateManagerChecker.hasAnnotationOfExact(element)) {
+      _processStateManager(element);
       return;
     }
 
-    // Check for DragonflyStateManager annotation (for Features/state managers)
-    if (_stateManagerChecker.hasAnnotationOfExact(element)) {
-      _processDragonflyStateManager(element);
+    // Check for @Singleton annotation
+    if (_singletonChecker.hasAnnotationOfExact(element)) {
+      _processInjectableLike(element, _singletonChecker, InjectableType.singleton);
+      return;
+    }
+
+    // Check for @LazySingleton annotation
+    if (_lazySingletonChecker.hasAnnotationOfExact(element)) {
+      _processInjectableLike(element, _lazySingletonChecker, InjectableType.lazySingleton);
+      return;
+    }
+
+    // Check for @Injectable annotation
+    if (_injectableChecker.hasAnnotationOfExact(element)) {
+      _processInjectableLike(element, _injectableChecker, InjectableType.factory);
       return;
     }
   }
@@ -70,8 +84,8 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
     return false;
   }
 
-  /// Process @InjectableUseCase annotated classes
-  void _processInjectableUseCase(ClassElement element) {
+  /// Process @UseCase annotated classes
+  void _processUseCase(ClassElement element) {
     final annotation =
         ConstantReader(_useCaseChecker.firstAnnotationOfExact(element));
     int injectableType = InjectableType.factory;
@@ -232,17 +246,22 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
     }
   }
 
-  /// Process @DragonflyBloc annotated classes
-  void _processDragonflyBloc(ClassElement element) {
-    // BLoCs are registered as factories (new instance each time)
-    int injectableType = InjectableType.factory;
+  /// Process @Singleton, @LazySingleton, and @Injectable annotated classes.
+  /// All three extend the `Injectable` base class with the same parameters
+  /// (`as`, `env`, `scope`, `order`, `instanceName`).
+  void _processInjectableLike(
+    ClassElement element,
+    TypeChecker checker,
+    int injectableType,
+  ) {
+    final annotation =
+        ConstantReader(checker.firstAnnotationOfExact(element));
 
     if (element.constructors.isEmpty) return;
 
     try {
       final constructor = element.constructors.first;
 
-      // Extract constructor dependencies with @Inject support
       final deps = constructor.formalParameters.map((param) {
         final paramInstanceName = _getParameterInstanceName(param);
 
@@ -262,34 +281,45 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
         import: element.library.uri.toString(),
       );
 
+      final asType = annotation.peek('as')?.typeValue;
+      final type = asType != null ? _extractImportableType(asType) : typeImpl;
+      final envList = annotation.peek('env')?.listValue;
+      final environments = envList
+              ?.map((e) => e.toStringValue() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toList() ??
+          [];
+      final scope = annotation.peek('scope')?.stringValue;
+      final order = annotation.peek('order')?.intValue ?? 0;
+      final instanceName = annotation.peek('instanceName')?.stringValue;
+
       final config = DependencyConfig(
-        type: typeImpl,
+        type: type,
         typeImpl: typeImpl,
         injectableType: injectableType,
         dependencies: deps,
-        environments: [],
-        orderPosition: 100, // BLoCs are registered after repositories and use cases
+        environments: environments,
+        scope: scope,
+        orderPosition: order,
+        instanceName: instanceName,
       );
 
       dependencies.add(config);
     } catch (e, s) {
-      print("==========>>>>>>>> error processing bloc: $e, $s");
+      print("==========>>>>>>>> error processing injectable-like: $e, $s");
     }
   }
 
-  /// Process @DragonflyStateManager annotated classes (StateManagers/Features)
-  void _processDragonflyStateManager(ClassElement element) {
-    // Only process if it extends StateManager or Feature (backwards compatibility)
-    bool extendsStateManager = false;
-    for (final supertype in element.allSupertypes) {
-      final name = supertype.element.name;
-      if (name == 'StateManager' || name == 'Feature') {
-        extendsStateManager = true;
-        break;
-      }
-    }
-    if (!extendsStateManager) return;
-
+  /// Process @StateManager annotated classes.
+  ///
+  /// Registers two entries:
+  ///
+  /// - the annotated class itself (the delegate), as a factory;
+  /// - the generated `$XController`, as a lazy singleton depending on the
+  ///   delegate, with `dispose` wired so container scopes tear it down.
+  ///   The controller lives in the generated `.state_manager.dart` file, so
+  ///   its import points there instead of the source library.
+  void _processStateManager(ClassElement element) {
     final annotation =
         ConstantReader(_stateManagerChecker.firstAnnotationOfExact(element));
 
@@ -297,16 +327,14 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
     final injectable = annotation.peek('injectable')?.boolValue ?? true;
     if (!injectable) return;
 
-    final order = annotation.peek('order')?.intValue ?? 100;
     final scope = annotation.peek('scope')?.stringValue;
-
-    // Features are registered as factories (new instance each time)
-    int injectableType = InjectableType.factory;
 
     if (element.constructors.isEmpty) return;
 
     try {
       final constructor = element.constructors.first;
+      final sourceUri = element.library.uri.toString();
+      final className = element.name ?? '';
 
       // Extract constructor dependencies with @Inject support
       final deps = constructor.formalParameters.map((param) {
@@ -324,21 +352,49 @@ class InjectableVisitor extends SimpleElementVisitor2<void> {
       }).toList();
 
       final typeImpl = ImportableType(
-        name: element.name ?? '',
-        import: element.library.uri.toString(),
+        name: className,
+        import: sourceUri,
       );
 
-      final config = DependencyConfig(
+      // The delegate.
+      dependencies.add(DependencyConfig(
         type: typeImpl,
         typeImpl: typeImpl,
-        injectableType: injectableType,
+        injectableType: InjectableType.factory,
         dependencies: deps,
         environments: [],
         scope: scope,
-        orderPosition: order,
+        orderPosition: 100,
+      ));
+
+      // The generated controller. It is what views resolve from DI, so it
+      // must be a singleton: one state holder per container scope. It lives
+      // in a `part` of the manager's library, so the import is the source
+      // library itself.
+      final controllerType = ImportableType(
+        name: '\$${className}Controller',
+        import: sourceUri,
       );
 
-      dependencies.add(config);
+      dependencies.add(DependencyConfig(
+        type: controllerType,
+        typeImpl: controllerType,
+        injectableType: InjectableType.lazySingleton,
+        dependencies: [
+          InjectedDependency(
+            type: ImportableType(name: className, import: sourceUri),
+            paramName: '_delegate',
+            isPositional: true,
+          ),
+        ],
+        environments: [],
+        scope: scope,
+        orderPosition: 101,
+        disposeFunction: const DisposeFunctionConfig(
+          isInstance: true,
+          name: 'dispose',
+        ),
+      ));
     } catch (e, s) {
       print("==========>>>>>>>> error processing state manager: $e, $s");
     }

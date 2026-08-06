@@ -1,1 +1,1 @@
-enum HttpAnnotations { post, get, put, delete, patch, subscribe, unknow }
+enum HttpAnnotations { post, get, put, delete, patch, subscribe, unknown }

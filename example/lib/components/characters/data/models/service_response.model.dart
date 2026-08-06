@@ -33,17 +33,18 @@ class _$ServiceResponse<T> implements FactoryModelWatcher, ServiceResponse<T> {
   @override
   final List<T> results;
 
-  Map<String, dynamic> toJson(dynamic Function(T value) _toJsonT) {
+  Map<String, dynamic> toJson(dynamic Function(T value) toJsonT) {
     return {
       'info': info.toJson(),
-      'results': results.map((e) => _toJsonT(e)).toList(),
+      'results': results.map((e) => toJsonT(e)).toList(),
     };
   }
 
-  Map<String, Object?> toMap(dynamic Function(T value) _toJsonT) {
+  @override
+  Map<String, Object?> toMap(dynamic Function(T value) toJsonT) {
     return <String, Object?>{
       'info': info.toJson(),
-      'results': results.map((e) => _toJsonT(e)).toList(),
+      'results': results.map((e) => toJsonT(e)).toList(),
     };
   }
 

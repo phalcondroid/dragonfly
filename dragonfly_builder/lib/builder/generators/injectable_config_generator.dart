@@ -14,7 +14,7 @@ import 'package:glob/glob.dart';
 
 /// Generator that creates a .config.dart file with all dependency registrations
 class InjectableConfigGenerator
-    extends GeneratorForAnnotation<DragonflyInjectableInit> {
+    extends GeneratorForAnnotation<InjectableInit> {
   @override
   FutureOr<String> generateForAnnotatedElement(
     Element element,
@@ -179,7 +179,10 @@ class InjectableConfigGenerator
       case InjectableType.singleton:
         return 'gh.registerSingleton$registerType($constructor$instanceNameParam);';
       case InjectableType.lazySingleton:
-        return 'gh.registerLazySingleton$registerType(() => $constructor$instanceNameParam);';
+        final disposeParam = dep.disposeFunction != null
+            ? ', dispose: (instance) => instance.${dep.disposeFunction!.name}()'
+            : '';
+        return 'gh.registerLazySingleton$registerType(() => $constructor$instanceNameParam$disposeParam);';
       case InjectableType.factory:
       default:
         return 'gh.registerFactory$registerType(() => $constructor$instanceNameParam);';

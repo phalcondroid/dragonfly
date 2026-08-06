@@ -43,8 +43,9 @@ Known emitters and what they mean:
 | ------- | ------ | ------- |
 | `error on repository generator` | `repository_generator.dart:56` | Whole repository impl is empty |
 | `error on methods visitor` | `repository_visitor.dart:60` | **One method** silently missing from the impl |
-| `error processing use case/repository/bloc/state manager` | `injectable_visitor.dart` | That dependency missing from `.config.dart` |
-| `Error generating state manager code` | `dragonfly_feature_generator.dart` | Emitted as a comment into the part file |
+| `error processing use case/repository/state manager` | `injectable_visitor.dart` | That dependency missing from `.config.dart` |
+| `Error generating state manager code` | `state_manager_generator.dart` | Emitted as a comment into the part file |
+| `Error generating view code` | `view_generator.dart` | Emitted as a comment into the part file |
 | `Failed to format generated code` | `injectable_config_generator.dart` | Output is syntactically invalid Dart |
 
 ### 3. Group the analyzer errors by file
@@ -99,19 +100,20 @@ library it cannot resolve. So:
 
 1. **Fix unrelated compile errors first.** A file that does not compile is skipped
    silently, taking its `@InjectableUseCase` with it.
-2. Check the annotation is one of the four `InjectableVisitor` actually looks for:
-   `@InjectableUseCase`, `@Repository`, `@DragonflyBloc`, `@DragonflyStateManager`.
+2. Check the annotation is one of the three `InjectableVisitor` actually looks for:
+   `@UseCase`, `@Repository`, `@StateManager`.
    `@Singleton` / `@LazySingleton` / `@Injectable` are **never scanned**.
 3. Widgets are deliberately excluded — anything extending `Widget` is skipped.
-4. For `@DragonflyStateManager`, the class must genuinely extend `StateManager` or
-   `Feature`; `_processDragonflyStateManager` returns early otherwise.
+4. A `@StateManager` produces **two** registrations: the delegate factory and the
+   generated `$XController` lazy singleton. If the controller is missing, the visitor
+   failed on the delegate first.
 5. `injectable: false` on the annotation opts out.
 
 ### A route is missing from the generated router
 
 `RouterGenerator` uses the same glob-and-skip pattern. Same rule: fix other files' compile
-errors first. Also confirm `@DragonflyScreen` is on a class, and that the referenced
-`provider:` type is an annotated state manager (the first pass indexes those separately).
+errors first. Also confirm `@Screen` is on a class. (The old `provider:` param was removed
+in v2 — controllers resolve from DI inside the view mixin, so routes never wrap.)
 
 ### Generated code compiles in isolation but not in the app
 

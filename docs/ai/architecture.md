@@ -15,17 +15,17 @@ Dragonfly prescribes a component-per-feature layout. `example/` follows it:
 
 ```
 lib/components/<component>/
-├── config/           injector.dart  (@DragonflyInjectableInit)  + generated .config.dart
+├── config/           injector.dart  (@InjectableInit)  + generated .config.dart
 ├── data/
 │   ├── models/       @FactoryModel  → .model.dart
 │   └── repositories/ @Repository    → .repository.dart
 ├── domain/
-│   ├── use_cases/    @InjectableUseCase, returns Either<Error, T>
+│   ├── use_cases/    @UseCase, returns Either<Error, T>
 │   └── forms/        @FormSchema    → .form.dart
 └── presentation/
-    ├── states/       @StateModel    → .state.dart
-    ├── features/     @DragonflyStateManager → .state_manager.dart
-    └── screens/      @DragonflyScreen, plain widgets
+    ├── states/       @StateModel    → .state.dart (StateModel mode only)
+    ├── features/     @StateManager  → .state_manager.dart
+    └── screens/      @Screen + @StateView → .view.dart
 ```
 
 Data flows one direction: **screen → state manager → use case → repository → network**.
@@ -85,9 +85,9 @@ Registration kind is fixed per annotation, not configurable:
 | Annotation | Kind |
 | ---------- | ---- |
 | `@Repository` | lazy singleton |
-| `@InjectableUseCase` | factory |
-| `@DragonflyStateManager` | factory |
-| `@DragonflyBloc` | factory |
+| `@UseCase` | factory |
+| `@StateManager` delegate | factory |
+| `$XController` (generated) | lazy singleton, with `dispose` wired |
 
 `InjectableVisitor` skips anything whose `allSupertypes` include `StatelessWidget`,
 `StatefulWidget`, or `Widget`, so screens are never registered.
@@ -179,66 +179,71 @@ and selected with `@Repository(realtimeConnection: 'x')`.
 
 ---
 
-## State management runtime
+## State management runtime (v2)
 
-`framework/feature/` (directory name is historical; the classes are `StateManager*`).
+`framework/state/`. The old `framework/feature/` and `framework/bloc/` directories were
+deleted in the v2 clean break.
 
-### `StateManager<S>`
+### `DragonflyController<S>` — `state_controller.dart`
 
-- Holds `S _state` plus two broadcast controllers: `stream` (states) and `sideEffects`.
-- `emit(S)` is `@protected` — only the manager mutates its own state.
-- `sideEffect(StateManagerSideEffect)` pushes onto the side-effect stream. Built-in
-  effects: `NavigateTo`, `ShowSnackbar`, `ShowDialog`, `Pop`.
-- Subscription management: `subscribe(key, stream, onData:…)`, `cancelSubscription(key)`,
-  `cancelAllSubscriptions()`, `pauseSubscription`, `resumeSubscription`, plus
-  `hasSubscription` / `activeSubscriptions`. Keyed by string; re-subscribing with the same
-  key cancels the previous one first. This is the hook for consuming a repository's
-  realtime `Stream`.
-- Action rate limiting: `scheduleAction(key, body, {debounce, throttle})`,
-  `cancelScheduledAction`, `flushScheduledAction`, `isActionPending`. Backed by
-  `ActionScheduler`; every pending call is cancelled in `dispose()`.
-- DI access: `useCase<T>()` and `get<T>({instanceName})` delegate to the container.
-- Lifecycle: `onInit()` and `onDispose()` overrides; `dispose()` is `@mustCallSuper` and
-  cancels all subscriptions before closing both controllers.
-- Logging: `loggingEnabled` is a getter overridden by the generated mixin. Manual helpers
-  `logActionStart` / `logActionEnd` / `logStep` must be called by hand — the generator does
-  not inject them.
+The runtime base for generated controllers. App code never subclasses it by hand — the
+state manager generator emits one concrete `$XController` per `@StateManager` class.
 
-### Widgets
+- Holds `S _state` plus one broadcast `StreamController`; `state` is readable
+  synchronously, `stream` drives widgets.
+- `emit(S)` is `@protected` — only the controller (generated code) mutates state.
+  Logging (`viewStateChange`) fires when the generated override of `loggingEnabled`
+  returns true (`@StateManager(logging: true)`).
+- Rate limiting: `schedule(key, body, {debounce, throttle})`, `cancelScheduled`,
+  `flushScheduled`, `isScheduledPending`, backed by `ActionScheduler`. This is what makes
+  `@Event(debounce:/throttle:)` work; pending calls are cancelled in `dispose()`.
+- `dispose()` is idempotent and closes the stream. The generated DI registration wires it
+  via `registerLazySingleton(..., dispose: (c) => c.dispose())`.
 
-| Widget | Purpose |
-| ------ | ------- |
-| `StateManagerProvider<SM>` | `InheritedWidget` + `StatefulWidget`; owns the instance and disposes it. `lazy` defaults to `true`. `updateShouldNotify` returns **`false`** — rebuilds come from the stream, not from inherited-widget propagation |
-| `StateManagerBuilder<SM, S>` | Rebuilds on each state, gated by `buildWhen` |
-| `StateManagerListener<SM, S>` | Side-effect-free callback on state change, gated by `listenWhen` |
-| `StateManagerSideEffectListener<SM>` | Subscribes to the side-effect stream |
-| `StateManagerConsumer<SM, S>` | Builder + listener |
-| `StateManagerSelector<SM, S, T>` | Rebuilds only when the selected slice changes |
-| `StateScope<SM>` | **Preferred entry point.** Resolves from DI, provides, handles side effects, and disposes — replaces the Provider + `DefaultSideEffectHandler` stack |
-| `StateView<SM, S>` | **Preferred screen base.** `buildState(context, state, manager)` plus an overridable `buildWhen` |
-| `StateSelector<SM, S, T>` | Rebuilds only when the selected slice changes |
-| `DragonflyScreenBase<SM, S>` | Older base class exposing `buildScreen(context, sm, state)` |
-| `ScreenProvider<SM>` | Wraps a screen, resolving `SM` from DI |
-| `DefaultSideEffectHandler<SM>` | Maps the four built-in effects to `Navigator` / `ScaffoldMessenger` / `showDialog`, with per-effect overrides |
+### `DragonflyStateBuilder<S>` — `state_builder.dart`
 
-Access from a widget: `context.stateManager<SM>()`.
+The one widget every generated builder returns. Reads the current state synchronously on
+creation (first frame is real state, not a blank), then rebuilds from the stream, gated
+by an optional `buildWhen(previous, current)`.
 
-### What the generator adds on top
+### What the generator emits
 
-For `@DragonflyStateManager class CharacterFeature extends StateManager<CharacterState>`:
+For `@StateManager class UserStateManager` (easy mode, no `state:` argument):
 
-- `mixin _$CharacterFeatureMixin on StateManager<CharacterState>` — only overrides
-  `loggingEnabled`.
-- `class CharacterFeatureProvider extends StatelessWidget` — resolves from DI by default.
-- One builder widget **per sealed state variant**: `CharacterInitial`, `CharacterLoading`,
-  `CharacterLoaded`, `CharacterCharacterList`, `CharacterError`. Each takes a typed
-  `builder` receiving the variant's fields, plus `buildWhen`, `orElse`, and an
-  `initial<Field>` seed.
-- `extension CharacterFeatureBuildContextExtension on BuildContext` with a
-  `characterFeature` getter and an exhaustive `characterFeatureBuilder({onInitial, …})`.
+- `sealed class UserStateManagerState` — variants: built-in `initial`, `loading`,
+  `error({required String message})`, plus one per `@Event` method, named after it, with
+  the method's return type as a `value` payload (`Future<void>` events get a zero-payload
+  variant; `Future<Either<L, R>>` is folded — `Right` is the payload, `Left` becomes
+  `error`). Includes `when`/`maybeWhen` over a Dart 3 exhaustive `switch`.
+- `class $UserStateManagerController extends DragonflyController<...>` — holds the
+  delegate; each `@Event` becomes a dispatcher emitting `loading` → invoking → emitting
+  the variant, catching exceptions into `error`. Plain public methods are forwarded
+  untouched. Debounced/throttled events route through `schedule`.
 
-The per-variant builder widgets are the framework's main boilerplate win. They come from
-the **state type's variants**, discovered by `_findStateVariants`, not from `@StateAction`.
+For `@StateManager(state: CharacterState)` (StateModel mode): no state class is
+generated. `@Event` methods must return `CharacterState` (or `Future<CharacterState>`)
+and the returned value is emitted as-is. `loading` is auto-emitted only if the model
+declares a zero-arg `loading` factory; exceptions are emitted only if it declares
+`error({required String message})`. The model must declare a zero-arg `initial` factory
+(starting state) or generation fails with an explicit error.
+
+For `@StateView(UserStateManager) class UserScreen ... with $UserStateManager`:
+
+- `mixin $UserStateManager` (in `.view.dart`) flattening the API onto the widget:
+  event dispatchers (`initialize(session)`), plain-method forwarders, `when({...,
+  required orElse})` (rebuilds on change; all callbacks optional), one typed
+  `build<Event>(builder, {orElse})` per variant, and `buildFor('event', builder)` — the
+  string-keyed escape hatch with a `dynamic` payload (renamed from the sketch's `build`
+  because `StatelessWidget.build(BuildContext)` already exists).
+
+### DI shape
+
+`InjectableVisitor` registers two entries per `@StateManager`: the delegate as a
+factory, and the generated controller as a **lazy singleton** with `dispose`. Singleton
+controllers are what make the flattened view API possible — the mixin resolves
+`DragonflyContainer.I.get<$XController>()` with no `BuildContext`, so no provider
+wrapping exists anywhere (the router no longer emits one; `@Screen(provider:)` was
+removed). One controller per container scope; push/pop a container scope to reset state.
 
 ---
 
@@ -333,9 +338,13 @@ a `JsonConverter` contract.
   Flutter's `FormFieldState`**; see `known-gaps.md` #3.3.
 - `Validators` — the static library the generated code calls into; `Validator` and
   `CrossFieldValidator` are the function typedefs.
-- `FormController` / `FormControllerMixin` — what generated form state extends.
+- `FormController` / `FormControllerMixin` — what generated form state extends. The mixin
+  is constrained `on DragonflyController<S>` since v2 (it targeted the deleted
+  `StateManager<S>` before).
 - `validated_widgets.dart` — `ValidatedTextField`, `ValidatedDropdown`, `ValidatedCheckbox`,
-  `ValidatedSwitch`, `ValidatedDatePicker`, `ValidatedForm`, `ValidatedSubmitButton`.
+  `ValidatedSwitch`, `ValidatedDatePicker`, `ValidatedForm`, `ValidatedSubmitButton`. Each
+  takes a required `stateController: DragonflyController<S>` and rebuilds through
+  `DragonflyStateBuilder` (the old provider-resolved `StateManagerBuilder` is gone).
 
 The generated half does not currently compile. Treat this subsystem as unfinished.
 

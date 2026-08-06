@@ -9,36 +9,32 @@ part of 'character_repository.dart';
 
 class _CharacterRepository implements CharacterRepository {
   @override
-  Future<ServiceResponse<Character>> getAll(
-    String name,
-    List<String> julian,
-  ) async {
-    final _log = DragonflyLogManager.instance;
-    final _stopwatch = Stopwatch()..start();
+  Future<ServiceResponse<Character>> getAll(String name) async {
+    final log = DragonflyLogManager.instance;
+    final stopwatch = Stopwatch()..start();
 
     try {
-      _log.repositoryStart(
+      log.repositoryStart(
         repository: 'CharacterRepository',
         method: 'getAll',
-        params: {'name': name, 'julian': julian},
+        params: {'name': name},
       );
 
-      final DragonflyNetworkHttpAdapter network = DragonflyContainer.I
-          .get<DragonflyNetworkHttpAdapter>(instanceName: 'defaultHttpNetwork');
-      final Map<String, Object?> response = await network.callForObject(
+      final DragonflyBaseNetworkAdapter network = DragonflyContainer.I
+          .get<DragonflyBaseNetworkAdapter>(instanceName: 'defaultHttpNetwork');
+      final Map<String, Object?> response = await network.requestObject(
         HttpMethods.get,
         'character',
-        null,
-        null,
+        query: {'name': name},
       );
 
-      _stopwatch.stop();
-      _log.repositorySuccess(
+      stopwatch.stop();
+      log.repositorySuccess(
         repository: 'CharacterRepository',
         method: 'getAll',
         message: 'Operation completed successfully',
-        durationMs: _stopwatch.elapsedMilliseconds,
-        params: {'name': name, 'julian': julian},
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'name': name},
       );
 
       return ServiceResponse<Character>.fromJson(
@@ -46,15 +42,59 @@ class _CharacterRepository implements CharacterRepository {
         (json) => Character.fromJson(json as Map<String, Object?>),
       );
     } catch (e, stackTrace) {
-      _stopwatch.stop();
-      _log.repositoryError(
+      stopwatch.stop();
+      log.repositoryError(
         repository: 'CharacterRepository',
         method: 'getAll',
         message: 'Operation failed',
         error: e,
         stackTrace: stackTrace,
-        durationMs: _stopwatch.elapsedMilliseconds,
-        params: {'name': name, 'julian': julian},
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'name': name},
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Character> getById(int id) async {
+    final log = DragonflyLogManager.instance;
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      log.repositoryStart(
+        repository: 'CharacterRepository',
+        method: 'getById',
+        params: {'id': id},
+      );
+
+      final DragonflyBaseNetworkAdapter network = DragonflyContainer.I
+          .get<DragonflyBaseNetworkAdapter>(instanceName: 'defaultHttpNetwork');
+      final Map<String, Object?> response = await network.requestObject(
+        HttpMethods.get,
+        'character/${id}',
+      );
+
+      stopwatch.stop();
+      log.repositorySuccess(
+        repository: 'CharacterRepository',
+        method: 'getById',
+        message: 'Operation completed successfully',
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'id': id},
+      );
+
+      return Character.fromJson(response as Map<String, Object?>);
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      log.repositoryError(
+        repository: 'CharacterRepository',
+        method: 'getById',
+        message: 'Operation failed',
+        error: e,
+        stackTrace: stackTrace,
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'id': id},
       );
       rethrow;
     }
@@ -63,34 +103,33 @@ class _CharacterRepository implements CharacterRepository {
   @override
   Future<ServiceResponseDouble<Character, Info>> getAllDouble(
     String name,
-    List<String> julian,
+    List<String> params,
   ) async {
-    final _log = DragonflyLogManager.instance;
-    final _stopwatch = Stopwatch()..start();
+    final log = DragonflyLogManager.instance;
+    final stopwatch = Stopwatch()..start();
 
     try {
-      _log.repositoryStart(
+      log.repositoryStart(
         repository: 'CharacterRepository',
         method: 'getAllDouble',
-        params: {'name': name, 'julian': julian},
+        params: {'name': name, 'params': params},
       );
 
-      final DragonflyNetworkHttpAdapter network = DragonflyContainer.I
-          .get<DragonflyNetworkHttpAdapter>(instanceName: 'defaultHttpNetwork');
-      final Map<String, Object?> response = await network.callForObject(
+      final DragonflyBaseNetworkAdapter network = DragonflyContainer.I
+          .get<DragonflyBaseNetworkAdapter>(instanceName: 'defaultHttpNetwork');
+      final Map<String, Object?> response = await network.requestObject(
         HttpMethods.get,
         'character',
-        null,
-        null,
+        query: {'name': name, 'ids': params},
       );
 
-      _stopwatch.stop();
-      _log.repositorySuccess(
+      stopwatch.stop();
+      log.repositorySuccess(
         repository: 'CharacterRepository',
         method: 'getAllDouble',
         message: 'Operation completed successfully',
-        durationMs: _stopwatch.elapsedMilliseconds,
-        params: {'name': name, 'julian': julian},
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'name': name, 'params': params},
       );
 
       return ServiceResponseDouble<Character, Info>.fromJson(
@@ -99,15 +138,62 @@ class _CharacterRepository implements CharacterRepository {
         (json) => Info.fromJson(json as Map<String, Object?>),
       );
     } catch (e, stackTrace) {
-      _stopwatch.stop();
-      _log.repositoryError(
+      stopwatch.stop();
+      log.repositoryError(
         repository: 'CharacterRepository',
         method: 'getAllDouble',
         message: 'Operation failed',
         error: e,
         stackTrace: stackTrace,
-        durationMs: _stopwatch.elapsedMilliseconds,
-        params: {'name': name, 'julian': julian},
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'name': name, 'params': params},
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Character> createCharacter(Character character) async {
+    final log = DragonflyLogManager.instance;
+    final stopwatch = Stopwatch()..start();
+
+    try {
+      log.repositoryStart(
+        repository: 'CharacterRepository',
+        method: 'createCharacter',
+        params: {'character': character},
+      );
+
+      final DragonflyBaseNetworkAdapter network = DragonflyContainer.I
+          .get<DragonflyBaseNetworkAdapter>(
+            instanceName: 'defaultHttpNetwork:authenticated',
+          );
+      final Map<String, Object?> response = await network.requestObject(
+        HttpMethods.post,
+        'character',
+        body: character.toJson(),
+      );
+
+      stopwatch.stop();
+      log.repositorySuccess(
+        repository: 'CharacterRepository',
+        method: 'createCharacter',
+        message: 'Operation completed successfully',
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'character': character},
+      );
+
+      return Character.fromJson(response as Map<String, Object?>);
+    } catch (e, stackTrace) {
+      stopwatch.stop();
+      log.repositoryError(
+        repository: 'CharacterRepository',
+        method: 'createCharacter',
+        message: 'Operation failed',
+        error: e,
+        stackTrace: stackTrace,
+        durationMs: stopwatch.elapsedMilliseconds,
+        params: {'character': character},
       );
       rethrow;
     }
@@ -115,9 +201,9 @@ class _CharacterRepository implements CharacterRepository {
 
   @override
   Stream<Character> onCharacterCreated() {
-    final _log = DragonflyLogManager.instance;
+    final log = DragonflyLogManager.instance;
 
-    _log.info(
+    log.info(
       'Subscribing to character.created',
       source: 'CharacterRepository.onCharacterCreated',
       data: null,
@@ -132,7 +218,7 @@ class _CharacterRepository implements CharacterRepository {
       try {
         return Character.fromJson(event);
       } catch (e, stackTrace) {
-        _log.error(
+        log.error(
           'Failed to deserialize a character.created event',
           error: e,
           stackTrace: stackTrace,
@@ -145,9 +231,9 @@ class _CharacterRepository implements CharacterRepository {
 
   @override
   Stream<List<Character>> onCharacterBatch() {
-    final _log = DragonflyLogManager.instance;
+    final log = DragonflyLogManager.instance;
 
-    _log.info(
+    log.info(
       'Subscribing to onCharacterBatch',
       source: 'CharacterRepository.onCharacterBatch',
       data: null,
@@ -162,7 +248,7 @@ class _CharacterRepository implements CharacterRepository {
       try {
         return event.map((e) => Character.fromJson(e)).toList();
       } catch (e, stackTrace) {
-        _log.error(
+        log.error(
           'Failed to deserialize a onCharacterBatch event',
           error: e,
           stackTrace: stackTrace,

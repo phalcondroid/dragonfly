@@ -2,11 +2,13 @@ import 'package:dragonfly/framework/config/dragonfly_interceptor.dart';
 import 'package:dragonfly/framework/config/dragonfly_network_config.dart';
 import 'package:dragonfly/framework/di/dragonfly_container.dart';
 import 'package:dragonfly/framework/exceptions/dragonfly_exception.dart';
+import 'package:dragonfly/framework/network/adapter/dragonfly_base_network_adapter.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_network_http_adapter.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_realtime_adapter.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_web_socket_adapter.dart';
 import 'package:dragonfly/framework/network/config/dragonfly_realtime_config.dart';
 import 'package:dragonfly/framework/network/enums/dragonfly_network_names_constants.dart';
+import 'package:dragonfly/framework/session/authenticated_network_adapter.dart';
 
 class DragonflyHttpBaseOptions {
   final String baseUrl;
@@ -35,14 +37,32 @@ class DragonflyInstanceConfig {
     try {
       final DragonflyNetworkConfig config = DragonflyNetworkConfig(
         baseUrl: options.baseUrl,
-        connectionTimeout: options.connectTimeout!.inSeconds.toDouble(),
+        connectionTimeout:
+            (options.connectTimeout ?? const Duration(seconds: 5))
+                .inSeconds
+                .toDouble(),
       );
-      if (!DragonflyContainer.I.isRegistered<DragonflyNetworkHttpAdapter>(
+      if (DragonflyContainer.I.isRegistered<DragonflyBaseNetworkAdapter>(
           instanceName: connectionName)) {
-        DragonflyContainer.I.registerSingleton(
-            DragonflyNetworkHttpAdapter(config: config),
-            instanceName: connectionName);
+        return;
       }
+
+      final adapter = DragonflyNetworkHttpAdapter(config: config);
+
+      // Registered under both the interface and the concrete type: generated
+      // code asks for the interface, hand-written code may want the impl.
+      DragonflyContainer.I.registerSingleton<DragonflyBaseNetworkAdapter>(
+          adapter,
+          instanceName: connectionName);
+      DragonflyContainer.I.registerSingleton<DragonflyNetworkHttpAdapter>(
+          adapter,
+          instanceName: connectionName);
+
+      // `@Authenticated()` methods resolve the session-aware adapter under
+      // the '<name>:authenticated' key.
+      DragonflyContainer.I.registerSingleton<DragonflyBaseNetworkAdapter>(
+          AuthenticatedNetworkAdapter(config: config),
+          instanceName: '$connectionName:authenticated');
     } catch (e) {
       throw DragonflyException(message: "$e");
     }

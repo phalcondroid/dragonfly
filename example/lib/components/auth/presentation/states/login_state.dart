@@ -4,40 +4,32 @@ import 'package:example/components/auth/domain/forms/login_form.dart';
 part 'login_state.state.dart';
 
 /// Login screen state with form validation.
+///
+/// Every variant carries the current [LoginFormState] so the view can always
+/// read field values and errors. `initial` takes the form as a parameter, so
+/// the controller reads its starting state from the manager's `initialState`
+/// getter instead of a const constructor.
 @StateModel()
-class LoginState {
-  /// The login form state.
-  @Field()
-  final LoginFormState form;
+sealed class LoginState with _$LoginState {
+  const LoginState._();
 
-  /// Whether a login request is in progress.
-  @Field()
-  final bool isLoading;
+  /// Initial state with a pristine form.
+  const factory LoginState.initial({required LoginFormState form}) =
+      LoginStateInitial;
 
-  /// Error message from login attempt.
-  @Field()
-  final String? errorMessage;
+  /// The user is editing the form.
+  const factory LoginState.editing({required LoginFormState form}) =
+      LoginStateEditing;
 
-  const LoginState._({
-    required this.form,
-    this.isLoading = false,
-    this.errorMessage,
-  });
+  /// A login request is in progress.
+  const factory LoginState.loading({required LoginFormState form}) =
+      LoginStateLoading;
 
-  /// Initial state with empty form.
-  const factory LoginState.initial() = LoginStateInitial;
+  /// Login succeeded.
+  const factory LoginState.success({required LoginFormState form}) =
+      LoginStateSuccess;
 
-  /// Loading state while logging in.
-  const factory LoginState.loading({
-    required LoginFormState form,
-  }) = LoginStateLoading;
-
-  /// Success state after successful login.
-  const factory LoginState.success({
-    required LoginFormState form,
-  }) = LoginStateSuccess;
-
-  /// Error state with message.
+  /// Login failed with a message.
   const factory LoginState.error({
     required LoginFormState form,
     required String message,

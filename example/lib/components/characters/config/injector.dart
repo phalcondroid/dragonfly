@@ -3,7 +3,7 @@ import 'package:dragonfly_annotations/annotations/injectable/injectable_annotati
 
 import 'injector.config.dart';
 
-@DragonflyInjectableInit()
+@InjectableInit()
 Future<void> initDragonflyContainer() async {
   DragonflyContainer.I.configureDependencies();
 }

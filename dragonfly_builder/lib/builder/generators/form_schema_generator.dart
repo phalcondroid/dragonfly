@@ -9,7 +9,7 @@ import 'package:source_gen/source_gen.dart';
 ///
 /// This generator creates:
 /// - A form state class with field states
-/// - A form controller mixin for StateManager integration
+/// - A form controller mixin for DragonflyController integration
 /// - Field enum for type-safe field references
 /// - Validation logic based on field annotations
 class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
@@ -76,15 +76,19 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
       return '// No fields found in $className';
     }
 
-    final stateName = customStateName ?? '${className}FormState';
-    final controllerName = '${className}FormController';
+    // Smart naming: a class that already ends in 'Form' just gets 'State'
+    // appended (LoginForm -> LoginFormState), avoiding the doubled
+    // 'FormFormState'.
+    final stateName = customStateName ??
+        (className.endsWith('Form')
+            ? '${className}State'
+            : '${className}FormState');
     final fieldEnumName = '${className}Field';
 
     try {
       final code = _generateCode(
         className: className,
         stateName: stateName,
-        controllerName: controllerName,
         fieldEnumName: fieldEnumName,
         fields: fields,
         generateCopyWith: generateCopyWith,
@@ -468,7 +472,6 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
   String _generateCode({
     required String className,
     required String stateName,
-    required String controllerName,
     required String fieldEnumName,
     required List<_FieldInfo> fields,
     required bool generateCopyWith,
@@ -484,9 +487,6 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
     // Generate form state class
     _generateFormStateClass(buffer, stateName, fieldEnumName, fields, generateCopyWith, validateOnChange, validateOnBlur);
     buffer.writeln();
-
-    // Generate form controller mixin
-    _generateControllerMixin(buffer, className, stateName, controllerName, fieldEnumName, fields);
 
     return buffer.toString();
   }
@@ -515,13 +515,13 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
     // Constructor
     buffer.writeln('  $stateName({');
     for (final field in fields) {
-      buffer.writeln('    FormFieldState<${field.type}>? ${field.name},');
+      buffer.writeln('    DragonflyFormFieldState<${field.type}>? ${field.name},');
     }
     buffer.writeln('  }) :');
     for (int i = 0; i < fields.length; i++) {
       final field = fields[i];
       final defaultVal = field.defaultValue ?? 'null';
-      buffer.write('    _${field.name} = ${field.name} ?? FormFieldState<${field.type}>(value: $defaultVal, initialValue: $defaultVal)');
+      buffer.write('    _${field.name} = ${field.name} ?? DragonflyFormFieldState<${field.type}>(value: $defaultVal, initialValue: $defaultVal)');
       buffer.writeln(i < fields.length - 1 ? ',' : ';');
     }
     buffer.writeln();
@@ -533,20 +533,20 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
 
     // Private field states
     for (final field in fields) {
-      buffer.writeln('  final FormFieldState<${field.type}> _${field.name};');
+      buffer.writeln('  final DragonflyFormFieldState<${field.type}> _${field.name};');
     }
     buffer.writeln();
 
     // Public getters for field states
     for (final field in fields) {
       buffer.writeln('  /// State for the ${field.name} field.');
-      buffer.writeln('  FormFieldState<${field.type}> get ${field.name} => _${field.name};');
+      buffer.writeln('  DragonflyFormFieldState<${field.type}> get ${field.name} => _${field.name};');
     }
     buffer.writeln();
 
     // Fields map override
     buffer.writeln('  @override');
-    buffer.writeln('  Map<String, FormFieldState<dynamic>> get fields => {');
+    buffer.writeln('  Map<String, DragonflyFormFieldState<dynamic>> get fields => {');
     for (final field in fields) {
       buffer.writeln("    '${field.name}': _${field.name},");
     }
@@ -574,7 +574,7 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
       buffer.writeln('  /// Creates a copy with updated field states.');
       buffer.writeln('  $stateName copyWith({');
       for (final field in fields) {
-        buffer.writeln('    FormFieldState<${field.type}>? ${field.name},');
+        buffer.writeln('    DragonflyFormFieldState<${field.type}>? ${field.name},');
       }
       buffer.writeln('  }) {');
       buffer.writeln('    return $stateName(');
@@ -587,17 +587,69 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
 
       // Helper method to update a single field
       buffer.writeln('  /// Creates a copy with an updated field.');
-      buffer.writeln('  $stateName updateField(String fieldName, FormFieldState<dynamic> newState) {');
+      buffer.writeln('  $stateName updateField(String fieldName, DragonflyFormFieldState<dynamic> newState) {');
       buffer.writeln('    switch (fieldName) {');
       for (final field in fields) {
         buffer.writeln("      case '${field.name}':");
-        buffer.writeln('        return copyWith(${field.name}: newState as FormFieldState<${field.type}>);');
+        buffer.writeln('        return copyWith(${field.name}: newState as DragonflyFormFieldState<${field.type}>);');
       }
       buffer.writeln('      default:');
       buffer.writeln('        return this;');
       buffer.writeln('    }');
       buffer.writeln('  }');
+      buffer.writeln();
     }
+
+    // Value-level helpers (validate as they update)
+    buffer.writeln('  /// Sets a field value, validating it when [validateOnChange] is on.');
+    buffer.writeln('  $stateName updateFieldValue(String fieldName, dynamic value) {');
+    buffer.writeln('    final current = fields[fieldName];');
+    buffer.writeln('    if (current == null) return this;');
+    buffer.writeln('    String? error;');
+    buffer.writeln('    if (validateOnChange) {');
+    buffer.writeln('      error = _validateValue(fieldName, value);');
+    buffer.writeln('    }');
+    buffer.writeln(
+        '    return updateField(fieldName, current.copyWith(value: value, error: error, clearError: error == null));');
+    buffer.writeln('  }');
+    buffer.writeln();
+    buffer.writeln('  /// Marks a field as touched, validating it when [validateOnBlur] is on.');
+    buffer.writeln('  $stateName touchField(String fieldName) {');
+    buffer.writeln('    final current = fields[fieldName];');
+    buffer.writeln('    if (current == null) return this;');
+    buffer.writeln('    String? error = current.error;');
+    buffer.writeln('    if (validateOnBlur) {');
+    buffer.writeln('      error = _validateValue(fieldName, current.value);');
+    buffer.writeln('    }');
+    buffer.writeln(
+        '    return updateField(fieldName, current.copyWith(touched: true, error: error, clearError: error == null));');
+    buffer.writeln('  }');
+    buffer.writeln();
+    buffer.writeln('  /// Validates every field, marking all as touched, and returns the');
+    buffer.writeln('  /// state with the resulting errors applied. Read [isValid] afterwards.');
+    buffer.writeln('  $stateName validateAllFields() {');
+    buffer.writeln('    $stateName next = this;');
+    buffer.writeln('    for (final entry in fields.entries) {');
+    buffer.writeln('      final error = _validateValue(entry.key, entry.value.value);');
+    buffer.writeln(
+        '      next = next.updateField(entry.key, entry.value.copyWith(error: error, clearError: error == null, touched: true));');
+    buffer.writeln('    }');
+    buffer.writeln('    return next;');
+    buffer.writeln('  }');
+    buffer.writeln();
+    buffer.writeln('  String? _validateValue(String fieldName, dynamic value) {');
+    buffer.writeln('    for (final validator in validators[fieldName] ?? <Validator<dynamic>>[]) {');
+    buffer.writeln('      final error = validator(value);');
+    buffer.writeln('      if (error != null) return error;');
+    buffer.writeln('    }');
+    buffer.writeln('    final allValues = {...values, fieldName: value};');
+    buffer.writeln(
+        '    for (final validator in crossFieldValidators[fieldName] ?? <CrossFieldValidator<dynamic>>[]) {');
+    buffer.writeln('      final error = validator(value, allValues);');
+    buffer.writeln('      if (error != null) return error;');
+    buffer.writeln('    }');
+    buffer.writeln('    return null;');
+    buffer.writeln('  }');
 
     buffer.writeln('}');
   }
@@ -609,7 +661,10 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
       if (field.validators.isEmpty) continue;
       buffer.writeln("    '${field.name}': [");
       for (final validator in field.validators) {
-        buffer.writeln('      ${_generateValidatorCall(validator, field.type)},');
+        // Validators are typed (Validator<String> etc.) but the map is
+        // Validator<dynamic>; adapt with an explicit cast closure.
+        buffer.writeln(
+            '      (value) => ${_generateValidatorCall(validator, field.type)}(value as ${field.type}),');
       }
       buffer.writeln('    ],');
     }
@@ -719,107 +774,6 @@ class FormSchemaGenerator extends GeneratorForAnnotation<FormSchema> {
       default:
         return '// Unknown cross-field validator: ${validator.name}';
     }
-  }
-
-  void _generateControllerMixin(
-    StringBuffer buffer,
-    String className,
-    String stateName,
-    String controllerName,
-    String fieldEnumName,
-    List<_FieldInfo> fields,
-  ) {
-    buffer.writeln('/// Mixin that provides form controller functionality for StateManagers.');
-    buffer.writeln('///');
-    buffer.writeln('/// Use this mixin with your StateManager to get form handling:');
-    buffer.writeln('/// ```dart');
-    buffer.writeln('/// @DragonflyStateManager()');
-    buffer.writeln('/// class MyStateManager extends StateManager<MyState> with $controllerName {');
-    buffer.writeln('///   // ...');
-    buffer.writeln('/// }');
-    buffer.writeln('/// ```');
-    buffer.writeln('mixin $controllerName<S> on StateManager<S> {');
-    buffer.writeln('  /// Gets the form state from the current state.');
-    buffer.writeln('  /// Override this in your StateManager to return the actual form state.');
-    buffer.writeln('  $stateName get formState;');
-    buffer.writeln();
-    buffer.writeln('  /// Updates the state with a new form state.');
-    buffer.writeln('  /// Override this in your StateManager to update the actual state.');
-    buffer.writeln('  void updateFormState($stateName newFormState);');
-    buffer.writeln();
-
-    // Generate typed update methods for each field
-    for (final field in fields) {
-      buffer.writeln('  /// Updates the ${field.name} field value.');
-      buffer.writeln('  void update${_capitalize(field.name)}(${field.type} value) {');
-      buffer.writeln("    final currentField = formState.${field.name};");
-      buffer.writeln('    var newField = currentField.copyWith(value: value);');
-      buffer.writeln();
-      buffer.writeln('    // Validate if validateOnChange is true');
-      buffer.writeln('    if (formState.validateOnChange) {');
-      buffer.writeln("      final error = formState.validateField('${field.name}');");
-      buffer.writeln('      newField = newField.copyWith(error: error, clearError: error == null);');
-      buffer.writeln('    }');
-      buffer.writeln();
-      buffer.writeln("    updateFormState(formState.updateField('${field.name}', newField));");
-      buffer.writeln('  }');
-      buffer.writeln();
-    }
-
-    // Generate typed touch methods for each field
-    for (final field in fields) {
-      buffer.writeln('  /// Marks the ${field.name} field as touched.');
-      buffer.writeln('  void touch${_capitalize(field.name)}() {');
-      buffer.writeln("    final currentField = formState.${field.name};");
-      buffer.writeln('    var newField = currentField.copyWith(touched: true);');
-      buffer.writeln();
-      buffer.writeln('    // Validate if validateOnBlur is true');
-      buffer.writeln('    if (formState.validateOnBlur) {');
-      buffer.writeln("      final error = formState.validateField('${field.name}');");
-      buffer.writeln('      newField = newField.copyWith(error: error, clearError: error == null);');
-      buffer.writeln('    }');
-      buffer.writeln();
-      buffer.writeln("    updateFormState(formState.updateField('${field.name}', newField));");
-      buffer.writeln('  }');
-      buffer.writeln();
-    }
-
-    // Generate validateAll method
-    buffer.writeln('  /// Validates all fields and returns true if the form is valid.');
-    buffer.writeln('  bool validateAllFields() {');
-    buffer.writeln('    var newFormState = formState;');
-    buffer.writeln('    bool allValid = true;');
-    buffer.writeln();
-    for (final field in fields) {
-      buffer.writeln("    final ${field.name}Error = formState.validateField('${field.name}');");
-      buffer.writeln('    newFormState = newFormState.updateField(');
-      buffer.writeln("      '${field.name}',");
-      buffer.writeln('      formState.${field.name}.copyWith(');
-      buffer.writeln('        error: ${field.name}Error,');
-      buffer.writeln('        clearError: ${field.name}Error == null,');
-      buffer.writeln('        touched: true,');
-      buffer.writeln('      ),');
-      buffer.writeln('    );');
-      buffer.writeln('    if (${field.name}Error != null) allValid = false;');
-      buffer.writeln();
-    }
-    buffer.writeln('    updateFormState(newFormState);');
-    buffer.writeln('    return allValid;');
-    buffer.writeln('  }');
-    buffer.writeln();
-
-    // Generate resetForm method
-    buffer.writeln('  /// Resets all fields to their initial values.');
-    buffer.writeln('  void resetAllFields() {');
-    buffer.writeln('    updateFormState($stateName.initial());');
-    buffer.writeln('  }');
-
-    buffer.writeln('}');
-  }
-
-  String _capitalize(String s) {
-    if (s.isEmpty) return s;
-    return s[0].toUpperCase() + s.substring(1);
   }
 
   String _escapeString(String s) {

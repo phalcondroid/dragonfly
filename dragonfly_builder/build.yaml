@@ -17,29 +17,11 @@ builders:
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
-  # Event model generator - generates BLoC event classes
-  event_model_generator:
-    import: "package:dragonfly_builder/builder.dart"
-    builder_factories: ["eventModelGenerator"]
-    build_extensions: { ".dart": [".event.part"] }
-    auto_apply: dependents
-    build_to: source
-    applies_builders: ["source_gen|combining_builder"]
-
   # State model generator - generates BLoC state classes
   state_model_generator:
     import: "package:dragonfly_builder/builder.dart"
     builder_factories: ["stateModelGenerator"]
     build_extensions: { ".dart": [".state.part"] }
-    auto_apply: dependents
-    build_to: source
-    applies_builders: ["source_gen|combining_builder"]
-
-  # Dragonfly bloc generator - generates BLoC mixins
-  dragonfly_bloc_generator:
-    import: "package:dragonfly_builder/builder.dart"
-    builder_factories: ["dragonflyBlocGenerator"]
-    build_extensions: { ".dart": [".bloc.part"] }
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
@@ -51,20 +33,20 @@ builders:
     auto_apply: dependents
     build_to: source
 
-  # Dragonfly BLoC view generator - generates BLoC view mixins and state builders
-  dragonfly_bloc_view_generator:
+  # State manager generator - sealed state class + $XController per @StateManager
+  state_manager_generator:
     import: "package:dragonfly_builder/builder.dart"
-    builder_factories: ["dragonflyBlocViewGenerator"]
-    build_extensions: { ".dart": [".blocview.part"] }
+    builder_factories: ["stateManagerGenerator"]
+    build_extensions: { ".dart": [".state_manager.part"] }
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
-  # Dragonfly state manager generator - generates state manager mixins and providers
-  dragonfly_state_manager_generator:
+  # View generator - $X view mixin per @View widget
+  view_generator:
     import: "package:dragonfly_builder/builder.dart"
-    builder_factories: ["dragonflyStateManagerGenerator"]
-    build_extensions: { ".dart": [".state_manager.part"] }
+    builder_factories: ["viewGenerator"]
+    build_extensions: { ".dart": [".view.part"] }
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
@@ -86,3 +68,14 @@ builders:
     auto_apply: dependents
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
+
+  # Component barrel generator — one dragonfly.dart per component re-exporting
+  # all generated files. Scoped to the injector anchor so it runs once per
+  # component.
+  component_generator:
+    import: "package:dragonfly_builder/builder.dart"
+    builder_factories: ["componentBuilder"]
+    build_extensions: { ".dart": [".dragonfly.dart"] }
+    auto_apply: dependents
+    build_to: source
+

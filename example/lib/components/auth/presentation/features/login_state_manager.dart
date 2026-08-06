@@ -5,93 +5,77 @@ import 'package:example/components/auth/presentation/states/login_state.dart';
 
 part 'login_state_manager.state_manager.dart';
 
-/// State manager for the login screen.
+/// State manager for the login screen (v2).
 ///
-/// Demonstrates form validation integration with StateManager.
-@DragonflyStateManager(logging: true)
-class LoginStateManager extends StateManager<LoginState>
-    with _$LoginStateManagerMixin, LoginFormFormController<LoginState> {
-  LoginStateManager() : super(const LoginState.initial());
+/// Holds the current [LoginFormState] and models every user interaction as an
+/// `@Event` returning the next [LoginState]. The form validates itself:
+/// `updateFieldValue` applies `validateOnChange`, `touchField` applies
+/// `validateOnBlur`, and `validateAllFields` runs the whole schema on submit.
+@StateManager(state: LoginState)
+class LoginStateManager {
+  LoginStateManager();
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Form Integration
-  // ═══════════════════════════════════════════════════════════════════════════
+  LoginFormState _form = LoginFormState.initial();
 
-  @override
-  LoginFormState get formState => state.when(
-        initial: () => LoginFormState.initial(),
-        loading: (form) => form,
-        success: (form) => form,
-        error: (form, _) => form,
-      );
+  /// The controller's starting state (the `initial` variant takes the form as
+  /// a parameter, so it cannot be const-constructed by the controller).
+  LoginState get initialState => LoginState.initial(form: _form);
 
-  @override
-  void updateFormState(LoginFormState newFormState) {
-    state.when(
-      initial: () => emit(LoginState.initial()..copyWith(form: newFormState)),
-      loading: (form) => emit(LoginState.loading(form: newFormState)),
-      success: (form) => emit(LoginState.success(form: newFormState)),
-      error: (form, message) =>
-          emit(LoginState.error(form: newFormState, message: message)),
+  @Event()
+  LoginState emailChanged(String value) {
+    _form = _form.updateFieldValue('email', value);
+    return LoginState.editing(form: _form);
+  }
+
+  @Event()
+  LoginState passwordChanged(String value) {
+    _form = _form.updateFieldValue('password', value);
+    return LoginState.editing(form: _form);
+  }
+
+  @Event()
+  LoginState acceptTermsChanged(bool value) {
+    _form = _form.updateFieldValue('acceptTerms', value);
+    return LoginState.editing(form: _form);
+  }
+
+  @Event()
+  LoginState emailTouched() {
+    _form = _form.touchField('email');
+    return LoginState.editing(form: _form);
+  }
+
+  @Event()
+  LoginState passwordTouched() {
+    _form = _form.touchField('password');
+    return LoginState.editing(form: _form);
+  }
+
+  /// Validates the whole form and simulates a login request.
+  @Event()
+  Future<LoginState> login() async {
+    _form = _form.validateAllFields();
+    if (!_form.isValid) {
+      return LoginState.editing(form: _form);
+    }
+
+    // No backend in the example app — simulate a round trip.
+    await Future<void>.delayed(const Duration(seconds: 1));
+
+    final email = _form.values['email'] as String;
+    if (email == 'demo@dragonfly.dev') {
+      return LoginState.success(form: _form);
+    }
+    return LoginState.error(
+      form: _form,
+      message: 'Invalid credentials. Try demo@dragonfly.dev.',
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Actions
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /// Attempts to log in with the current form values.
-  @StateAction()
-  Future<void> login() async {
-    // Validate all fields first
-    if (!validateAllFields()) {
-      return;
-    }
-
-    // Start loading
-    emit(LoginState.loading(form: formState));
-
-    try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Simulate success/failure based on email
-      final email = formState.email.value;
-      if (email == 'error@test.com') {
-        throw Exception('Invalid credentials');
-      }
-
-      // Success
-      emit(LoginState.success(form: formState));
-
-      // Navigate to home
-      sideEffect(const NavigateTo('/home', replace: true));
-      sideEffect(ShowSnackbar('Welcome back!'));
-    } catch (e) {
-      emit(LoginState.error(
-        form: formState,
-        message: e.toString(),
-      ));
-      sideEffect(ShowSnackbar('Login failed: $e', isError: true));
-    }
-  }
-
-  /// Resets the form to initial state.
-  @StateAction()
-  void resetForm() {
-    resetAllFields();
-    emit(const LoginState.initial());
-  }
-
-  /// Navigates to registration screen.
-  @StateAction()
-  void goToRegistration() {
-    sideEffect(const NavigateTo('/register'));
-  }
-
-  /// Navigates to forgot password screen.
-  @StateAction()
-  void goToForgotPassword() {
-    sideEffect(const NavigateTo('/forgot-password'));
+  /// Back to a pristine form after a successful login.
+  @Event()
+  LoginState logout() {
+    _form = LoginFormState.initial();
+    return LoginState.initial(form: _form);
   }
 }

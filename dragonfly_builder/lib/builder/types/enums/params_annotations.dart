@@ -1,1 +1,1 @@
-enum ParamsAnnotations { path, query, where }
+enum ParamsAnnotations { path, query, body, header, where, none }

@@ -141,6 +141,7 @@ class CharacterStateLoaded extends CharacterState {
     return 'CharacterStateLoaded(character: $character)';
   }
 
+  @override
   CharacterStateLoaded copyWith({Character? character}) {
     return CharacterStateLoaded(character: character ?? this.character);
   }
@@ -195,6 +196,7 @@ class CharacterStateCharacterList extends CharacterState {
     return 'CharacterStateCharacterList(characters: $characters)';
   }
 
+  @override
   CharacterStateCharacterList copyWith({List<Character>? characters}) {
     return CharacterStateCharacterList(
       characters: characters ?? this.characters,
@@ -223,6 +225,7 @@ class CharacterStateError extends CharacterState {
     return 'CharacterStateError(message: $message)';
   }
 
+  @override
   CharacterStateError copyWith({String? message}) {
     return CharacterStateError(message: message ?? this.message);
   }

@@ -35,16 +35,20 @@ run it after generating, and read the generated file to confirm it has real cont
 
 ## Rules
 
-1. **Never hand-edit generated files.** `*.model.dart`, `*.state.dart`, `*.event.dart`,
-   `*.repository.dart`, `*.form.dart`, `*.state_manager.dart`, `*.blocview.dart`,
-   `*.bloc.dart`, `*.config.dart`, `*.router.dart`. Fix the generator instead.
+1. **Never hand-edit generated files.** `*.model.dart`, `*.state.dart`,
+   `*.repository.dart`, `*.form.dart`, `*.state_manager.dart`, `*.view.dart`,
+   `*.config.dart`, `*.router.dart`, `*.dragonfly.dart`. Fix the generator instead.
 2. **A new generator must be registered twice** — in `dragonfly_builder/lib/builder.dart`
    *and* in `dragonfly_builder/build.yaml`. Miss either and it silently never runs.
 3. **Export new runtime types** from `dragonfly/lib/dragonfly.dart`. That barrel uses
    explicit `show` clauses, so an unexported type is invisible to consumers.
-4. **`StateManager` is canonical; `Feature` is deprecated.** Never emit `Feature`,
-   `@DragonflyFeature`, `@DragonflyView`, `@ViewAction`, `context.feature<T>()`, or
-   `FeatureBuilder` in new code. The aliases must keep working, but are not for new use.
+4. **State management is v2 only.** `@StateManager` on a plain class (no base class),
+   `@Event` methods returning values (never `emit`), `@StateView(Manager)` widgets with
+   the `$Manager` mixin. The old `StateManager<S>`/`Feature` stack, `framework/bloc/`,
+   `@StateAction`, `@EventModel` and friends were deleted in a clean break — do not
+   reintroduce them. Renamed annotations (`@UseCase`, `@InjectableInit`, `@Screen`,
+   `@SessionConfig`, `@RouterConfig`) keep live deprecated aliases; never emit the old
+   names in new code.
 5. **Do not rename the known typos** as a side effect of other work:
    `MedatadaExtractor`, the `repositoriy/` directory, `inyectar.dart`,
    `HttpAnnotations.unknow`. They are load-bearing identifiers.
@@ -53,10 +57,12 @@ run it after generating, and read the generated file to confirm it has real cont
 
 ## Current state
 
-- `example/`'s `characters` component builds and analyzes clean — use it as the
-  reference implementation.
-- `example/`'s `auth` component (form validation) does **not** compile. Known broken.
-- `analyzer` is pinned to `^6.0.0` (language version 3.4) against a 3.12 SDK, so every
-  build logs a version-skew warning.
+- `example/`'s `characters` component builds and analyzes clean (**0 errors**) — the
+  reference implementation, demonstrating both state-manager modes
+  (`CharacterStateManager` StateModel mode, `CharacterSearchStateManager` easy mode).
+- `example/`'s `auth` component (form validation) does **not** compile (224 errors,
+  confined to `components/auth`). Known broken.
+- `analyzer` is capped at 8.x because the Flutter SDK pins `meta 1.18.0` (see
+  `CLAUDE.md` "Environment").
 
-Details for all three: `docs/ai/known-gaps.md`.
+Details: `docs/ai/known-gaps.md`.

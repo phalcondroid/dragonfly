@@ -120,7 +120,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
 
       if (isGeneric && genericTypes.contains(p.type.replaceAll('?', ''))) {
         // For generic types, we need a toJson function parameter
-        valueExpr = '_toJson${p.type.replaceAll('?', '')}(${p.name})';
+        valueExpr = 'toJson${p.type.replaceAll('?', '')}(${p.name})';
       } else if (p.isClass && !p.isDartList && !p.isDartMap && !p.isDartSet) {
         // Nested object with toJson
         if (p.type.endsWith('?')) {
@@ -132,7 +132,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
         // List of objects
         if (isGeneric && genericTypes.contains(p.listType.replaceAll('?', ''))) {
           valueExpr =
-              '${p.name}.map((e) => _toJson${p.listType.replaceAll('?', '')}(e)).toList()';
+              '${p.name}.map((e) => toJson${p.listType.replaceAll('?', '')}(e)).toList()';
         } else {
           valueExpr = '${p.name}.map((e) => e.toJson()).toList()';
         }
@@ -157,7 +157,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
       if (isGeneric) {
         for (final genType in genericTypes) {
           m.requiredParameters.add(cb.Parameter((p) => p
-            ..name = '_toJson$genType'
+            ..name = 'toJson$genType'
             ..type = cb.Reference('dynamic Function($genType value)')));
         }
       }
@@ -183,7 +183,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
 
       if (isGeneric && genericTypes.contains(p.type.replaceAll('?', ''))) {
         // For generic types, use the provided toJson function
-        valueExpr = '_toJson${p.type.replaceAll('?', '')}(${p.name})';
+        valueExpr = 'toJson${p.type.replaceAll('?', '')}(${p.name})';
       } else if (p.isClass && !p.isDartList && !p.isDartMap && !p.isDartSet) {
         // Nested object - use toJson() as it's the standard method
         if (p.type.endsWith('?')) {
@@ -195,7 +195,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
         // List of objects - use toJson()
         if (isGeneric && genericTypes.contains(p.listType.replaceAll('?', ''))) {
           valueExpr =
-              '${p.name}.map((e) => _toJson${p.listType.replaceAll('?', '')}(e)).toList()';
+              '${p.name}.map((e) => toJson${p.listType.replaceAll('?', '')}(e)).toList()';
         } else {
           valueExpr = '${p.name}.map((e) => e.toJson()).toList()';
         }
@@ -210,6 +210,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
 
     final method = cb.Method((m) {
       m
+        ..annotations.add(const cb.Reference('override'))
         ..name = 'toMap'
         ..returns = const cb.Reference('Map<String, Object?>')
         ..body = cb.Code(body);
@@ -218,7 +219,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
       if (isGeneric) {
         for (final genType in genericTypes) {
           m.requiredParameters.add(cb.Parameter((p) => p
-            ..name = '_toJson$genType'
+            ..name = 'toJson$genType'
             ..type = cb.Reference('dynamic Function($genType value)')));
         }
       }
@@ -271,6 +272,7 @@ return other is $className${conditions.isEmpty ? '' : ' && $conditions'};
     final body = 'return $generatedClassName$genericSuffix($constructorArgs);';
 
     return cb.Method((m) => m
+      ..annotations.add(const cb.Reference('override'))
       ..name = 'copyWith'
       ..returns = cb.Reference('$className$genericSuffix')
       ..optionalParameters.addAll(params)

@@ -12,17 +12,26 @@ part "character_repository.repository.dart";
 abstract class CharacterRepository {
   factory CharacterRepository() = _CharacterRepository;
 
+  /// `GET character?name=...` — @Query binds the parameter to the query string.
   @Get()
-  Future<ServiceResponse<Character>> getAll(
-    @Path() String name,
-    @Query() List<String> julian,
-  );
+  Future<ServiceResponse<Character>> getAll(@Query('name') String name);
+
+  /// `GET character/{id}` — @Path substitutes the `{id}` placeholder.
+  @Get(path: '/{id}')
+  Future<Character> getById(@Path('id') int id);
 
   @Get()
   Future<ServiceResponseDouble<Character, Info>> getAllDouble(
-    @Path() String name,
-    @Query() List<String> julian,
+    @Query('name') String name,
+    @Query('ids') List<String> params,
   );
+
+  /// @Body serializes a @FactoryModel through its generated `toJson`, and
+  /// @Authenticated routes the call through the session-aware adapter.
+  /// (The demo API is read-only; this exists to exercise the generator.)
+  @Post()
+  @Authenticated()
+  Future<Character> createCharacter(@Body() Character character);
 
   /// Realtime: one character per frame on the `character.created` channel.
   @Subscribe(channel: "character.created")
