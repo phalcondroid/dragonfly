@@ -1,3 +1,26 @@
+# Network Adapters
+
+Dragonfly's network layer follows an ORM-dialect pattern — a common interface with
+pluggable implementations. The abstract contract is `DragonflyBaseNetworkAdapter`,
+which defines `requestObject`, `requestList`, `callForList`, `callForObject`, plus
+hooks (`beforeRequest`, `afterResponse`, `buildHeaders`) and lifecycle methods
+(`connect`, `disconnect`).
+
+**Built-in adapters:**
+- `DragonflyNetworkHttpAdapter` — HTTP transport
+- `DragonflyWebSocketAdapter` — WebSocket transport (implements `DragonflyRealtimeAdapter`)
+
+**Community / custom adapters** can be registered by subclassing `DragonflyAdapterConfig`
+and adding instances to the `adapters` list on your `DragonflyConfig` subclass. The
+framework supports any protocol — WebRTC, gRPC, GraphQL, MQTT, etc.
+
+**Authentication** is transport-agnostic. `DragonflyAuthenticatedAdapter` wraps any
+`DragonflyBaseNetworkAdapter` to inject session tokens. An authenticated variant is
+registered automatically for every connection under `'<name>:authenticated'`.
+`@Authenticated()` on a repository method resolves it.
+
+---
+
 # Custom adapter example — gRPC
 
 This is a complete, production-pattern example of adding a custom transport
@@ -598,3 +621,5 @@ The key insight: **the repository generator emits the same code regardless of
 transport**. It calls `requestObject`/`requestList` on whatever adapter is
 registered under the connection name. The adapter is responsible for
 translating the HTTP-method + path convention into its own protocol.
+
+[← Back to README.md](../../README.md)
