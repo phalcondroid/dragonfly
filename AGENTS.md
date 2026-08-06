@@ -141,4 +141,6 @@ List<DragonflyAdapterConfig> get adapters => [
 
 See `example/lib/components/characters/config/app_config.dart` for the new pattern.
 
+A complete gRPC adapter example is in `docs/ai/custom-adapter-example.md`.
+
 Details: `docs/ai/known-gaps.md`.

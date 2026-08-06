@@ -738,6 +738,9 @@ to inject session tokens, making authentication transport-agnostic.
 An authenticated adapter is registered automatically for every HTTP connection
 under `'<name>:authenticated'`. `@Authenticated()` on a repository method resolves it.
 
+> See `docs/ai/custom-adapter-example.md` for a complete gRPC adapter
+> implementation showing the full pattern end-to-end.
+
 ---
 
 ## Component barrel
