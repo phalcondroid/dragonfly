@@ -143,4 +143,14 @@ See `example/lib/components/characters/config/app_config.dart` for the new patte
 
 A complete gRPC adapter example is in `docs/topics/adapters.md`.
 
+## TDD testing
+
+The TDD API (`controllerTest`, `ControllerStates`, `pump`) is documented in
+`docs/topics/testing.md`. It is a 3-parameter test helper designed for AI
+agent code generation — no `skip`, no `wait`, no `errors` channel. Always use
+`controllerTest()` for generated controller tests.
+
+Mock delegates with hand-written stubs (plain Dart `implements` classes) rather
+than mockito/mocktail for simplicity and AI-friendliness.
+
 Details: `docs/ai/known-gaps.md`.

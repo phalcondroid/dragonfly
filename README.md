@@ -101,5 +101,7 @@ dart analyze     # the real pass/fail signal — never trust build_runner alone
 | Structured logging | [docs/topics/logging.md](docs/topics/logging.md) |
 | Runtime primitives (`DragonflyController`, `Either`, aggregates) | [docs/topics/runtime.md](docs/topics/runtime.md) |
 | Annotations reference, generated files | [docs/topics/reference.md](docs/topics/reference.md) |
+| TDD testing (`controllerTest`, `ControllerStates`, `pump`) | [docs/topics/testing.md](docs/topics/testing.md) |
 
-> See also: [CONTRIBUTING.md](CONTRIBUTING.md), [PUBLISHING.md](PUBLISHING.md), [ADRs](docs/adr/)
+> See also: [CONTRIBUTING.md](CONTRIBUTING.md), [PUBLISHING.md](PUBLISHING.md),
+> [ROADMAP.md](ROADMAP.md), [ADRs](docs/adr/)

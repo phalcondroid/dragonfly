@@ -1,5 +1,7 @@
 # Contributing to Dragonfly
 
+See [ROADMAP.md](ROADMAP.md) for the project plan and version targets.
+
 ## GitFlow branching model
 
 ```

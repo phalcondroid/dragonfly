@@ -138,3 +138,7 @@ export 'package:dragonfly/framework/logging/dragonfly_log_formatter.dart'
     show DragonflyLogFormatter;
 export 'package:dragonfly/framework/logging/dragonfly_log_manager.dart'
     show DragonflyLogManager, DragonflyLogListener, dragonflyLog;
+
+// Test helpers
+export 'package:dragonfly/framework/testing/controller_test.dart'
+    show controllerTest, ControllerResult, ControllerStates, pump;
