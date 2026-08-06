@@ -3,6 +3,14 @@
 Instructions for AI coding agents working on the **Dragonfly framework** (this repo).
 Tool-agnostic mirror of `CLAUDE.md`; that file and `docs/ai/` hold the full detail.
 
+## Philosophy — the framework's reason to exist
+
+0. **Reduce, don't add.** Every feature, annotation, and generated line must decrease
+   the user's code, complexity, and boilerplate. If a feature adds more ceremony than
+   it removes, it does not belong. The framework exists to make building Flutter apps
+   **easier for both developers and AI agents** — strong architecture, nice performance,
+   zero unnecessary ceremony.
+
 ## What this repo is
 
 A Flutter framework that replaces the usual stack (freezed, injectable, get_it, retrofit,

@@ -56,16 +56,19 @@ class FactoryModelConfig {
     String? aggregateRoot,
     bool? valueObject,
   }) {
+    // @ValueObject forces equality, toString and copyWith — a value object
+    // compared by reference is meaningless.
+    final isValueObject = valueObject ?? false;
     return FactoryModelConfig(
       isGeneric: generic ?? false,
       isList: isList ?? false,
-      copyWith: copyWith ?? false,
+      copyWith: isValueObject ? true : (copyWith ?? false),
       toJson: toJson ?? true,
       toMap: toMap ?? true,
-      equals: equals ?? true,
-      toStringMethod: toStringMethod ?? true,
+      equals: isValueObject ? true : (equals ?? true),
+      toStringMethod: isValueObject ? true : (toStringMethod ?? true),
       aggregateRoot: aggregateRoot,
-      valueObject: valueObject ?? false,
+      valueObject: isValueObject,
     );
   }
 }

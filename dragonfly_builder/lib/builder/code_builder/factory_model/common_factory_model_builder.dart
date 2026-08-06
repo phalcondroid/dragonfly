@@ -251,6 +251,15 @@ class CommonFactoryModelBuilder {
         isGeneric: config.isGeneric,
         genericTypes: genericTypes,
       ));
+      // @ValueObject: withValue alias — DDD terminology for value-object copies
+      if (config.valueObject) {
+        cls.methods.add(_buildWithValue(
+            className,
+            generatedClassName,
+            properties,
+            isGeneric: config.isGeneric,
+            genericTypes: genericTypes));
+      }
     }
 
     // Add equality helper methods if needed
@@ -324,5 +333,39 @@ class CommonFactoryModelBuilder {
       ..returns = cb.refer(idType)
       ..lambda = true
       ..body = cb.Code(idField));
+  }
+
+  /// `withValue` — DDD terminology alias for `copyWith` on `@ValueObject` models.
+  cb.Method _buildWithValue(
+    String className,
+    String generatedClassName,
+    List<FactoryModelField> properties, {
+    bool isGeneric = false,
+    List<String> genericTypes = const [],
+  }) {
+    final params = properties.map((p) {
+      String type = p.type;
+      if (!type.endsWith('?')) type = '$type?';
+      return cb.Parameter((param) => param
+        ..name = p.name
+        ..named = true
+        ..type = cb.Reference(type));
+    }).toList();
+
+    final genericSuffix = isGeneric && genericTypes.isNotEmpty
+        ? '<${genericTypes.join(', ')}>'
+        : '';
+
+    final body = StringBuffer();
+    body.write('return copyWith(');
+    body.write(properties.map((p) => '${p.name}: ${p.name}').join(', '));
+    body.write(');');
+
+    return cb.Method((m) => m
+      ..name = 'withValue'
+      ..returns = cb.Reference('$className$genericSuffix')
+      ..optionalParameters.addAll(params)
+      ..lambda = false
+      ..body = cb.Code(body.toString()));
   }
 }

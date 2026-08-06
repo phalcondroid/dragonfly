@@ -57,6 +57,15 @@ class _$Origin implements FactoryModelWatcher, Origin {
   String toString() {
     return 'Origin(name: $name, url: $url)';
   }
+
+  @override
+  Origin copyWith({String? name, String? url}) {
+    return _$Origin(name: name ?? this.name, url: url ?? this.url);
+  }
+
+  Origin withValue({String? name, String? url}) {
+    return copyWith(name: name, url: url);
+  }
 }
 
 abstract class _$OriginContract {
@@ -66,4 +75,5 @@ abstract class _$OriginContract {
 
   Map<String, dynamic> toJson();
   Map<String, Object?> toMap();
+  Origin copyWith({String? name, String? url});
 }

@@ -9,6 +9,16 @@ generation — it is the set of types that generated code references by name.
 
 Read `docs/ai/architecture.md` and the `dragonfly-runtime` skill before changing anything.
 
+## Philosophy
+
+**Reduce, don't add.** Every feature must decrease the user's code, complexity, and
+boilerplate. The framework exists to make building Flutter apps easier for both
+developers and AI agents.
+
+**Docs are not optional.** After any change, update AI docs (CLAUDE.md, AGENTS.md,
+docs/ai/, .claude/) AND user docs (README.md, dragonfly/ai/skills/,
+example/README.md). The change isn't done until the docs match.
+
 ## Non-negotiables
 
 **Generated code references runtime symbols as strings.** `dragonfly_builder` does not

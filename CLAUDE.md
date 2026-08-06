@@ -4,6 +4,24 @@ This file is for an agent working **on the Dragonfly framework itself**: the run
 the annotations, and the code generators. It is not a tutorial for building apps with
 Dragonfly — for that, see `dragonfly/ai/` (the bundle shipped to consumer projects).
 
+## Philosophy — the framework's reason to exist
+
+**Reduce, don't add.** Every feature, annotation, and generated line must decrease the
+user's code, complexity, and boilerplate. If a feature adds more ceremony than it
+removes, it does not belong. The framework exists to make building Flutter apps
+**easier for both developers and AI agents** — strong architecture, nice performance,
+zero unnecessary ceremony.
+
+## Never-skip rules
+
+- After ANY change to the framework, update both **AI docs** (`CLAUDE.md`, `AGENTS.md`,
+  `docs/ai/`, `.claude/`) and **user docs** (`README.md`, `dragonfly/ai/skills/`,
+  `example/README.md`). An outdated doc is a bug — the change isn't done until the
+  docs match.
+- To edit these rules themselves, run the checklist in
+  `.claude/skills/dragonfly-docs-sync/SKILL.md` — the framework rules and philosophy
+  are in `AGENTS.md` §0, `CLAUDE.md` §0, and `dragonfly/ai/skills/dragonfly-app/SKILL.md`.
+
 Everything here was verified against the source. Where the source and `README.md`
 disagree, **the source wins** and the disagreement is recorded in
 `docs/ai/known-gaps.md`. Read that file before you trust `README.md`.

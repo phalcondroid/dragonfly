@@ -57,6 +57,15 @@ class _$Location implements FactoryModelWatcher, Location {
   String toString() {
     return 'Location(name: $name, url: $url)';
   }
+
+  @override
+  Location copyWith({String? name, String? url}) {
+    return _$Location(name: name ?? this.name, url: url ?? this.url);
+  }
+
+  Location withValue({String? name, String? url}) {
+    return copyWith(name: name, url: url);
+  }
 }
 
 abstract class _$LocationContract {
@@ -66,4 +75,5 @@ abstract class _$LocationContract {
 
   Map<String, dynamic> toJson();
   Map<String, Object?> toMap();
+  Location copyWith({String? name, String? url});
 }

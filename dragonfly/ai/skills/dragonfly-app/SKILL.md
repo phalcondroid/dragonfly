@@ -9,6 +9,10 @@ Dragonfly replaces freezed + injectable + get_it + retrofit + bloc with one anno
 and one generator suite. You write models, use cases, states, state managers, and screens;
 everything else is generated.
 
+**Philosophy:** every annotation and generated line exists to reduce your code.
+If a pattern adds ceremony, it's wrong — the framework exists to make building
+Flutter apps easier for both developers and AI agents.
+
 ## Non-negotiables
 
 1. **Never hand-edit a generated file.** `*.model.dart`, `*.state.dart`,

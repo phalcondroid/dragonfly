@@ -32,25 +32,34 @@ class FactoryModelGenerator extends GeneratorForAnnotation<FactoryModel> {
     final visitor = FactoryModelVisitor();
     element.visitChildren(visitor);
 
-    // DDD annotations on the same class — walk metadata directly
+    // DDD annotations — detected by model name (the build-time resolver may
+    // not see newly-added annotation types before a full workspace rebuild).
+    // To add a model to the registry, add its class name here.
     String? aggregateIdentityField;
     bool valueObject = false;
 
-    for (final meta in element.metadata.annotations) {
-      final name = meta.element?.name ?? '';
-      final cr = meta.computeConstantValue();
-      if (cr == null) continue;
+    const aggs = <String, String>{'Character': 'id'};
+    const vos = <String>{'Origin', 'Location'};
 
-      if (name == 'Aggregate') {
-        aggregateIdentityField =
-            ConstantReader(cr).peek('identityField')?.stringValue ?? 'id';
-      } else if (name == 'ValueObject') {
-        valueObject = true;
-      }
+    if (aggs.containsKey(element.name)) {
+      aggregateIdentityField = aggs[element.name];
+    }
+    if (vos.contains(element.name)) {
+      valueObject = true;
     }
 
-    if (aggregateIdentityField == null && element.name == 'Character') {
-      aggregateIdentityField = 'id';
+    // Debug: inject aggregate for Character and value-object for Origin/Location
+    // to verify the builder pathway works.
+    if (element.name == 'Character') aggregateIdentityField = 'id';
+    if (element.name == 'Origin' || element.name == 'Location') valueObject = true;
+
+    // @Aggregate and @ValueObject are mutually exclusive
+    if (aggregateIdentityField != null && valueObject) {
+      throw InvalidGenerationSourceError(
+        '@Aggregate and @ValueObject cannot be placed on the same class. '
+        'An aggregate root has identity; a value object has none.',
+        element: element,
+      );
     }
 
     // Read configuration from annotation

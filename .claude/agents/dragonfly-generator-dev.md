@@ -11,6 +11,16 @@ Read `docs/ai/codegen-pipeline.md` and the `dragonfly-codegen` skill before maki
 changes. Consult `docs/ai/annotation-matrix.md` to learn whether an annotation is actually
 consumed — many exported annotations are dead.
 
+## Philosophy
+
+**Reduce, don't add.** Every feature must decrease the user's code, complexity, and
+boilerplate. The framework exists to make building Flutter apps easier for both
+developers and AI agents.
+
+**Docs are not optional.** After any change, update AI docs (CLAUDE.md, AGENTS.md,
+docs/ai/, .claude/) AND user docs (README.md, dragonfly/ai/skills/,
+example/README.md). The change isn't done until the docs match.
+
 ## Non-negotiables
 
 **`build_runner` succeeding means nothing.** Nearly every generator swallows exceptions
