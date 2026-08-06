@@ -4,7 +4,7 @@ import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:dragonfly_builder/builder/helper/state_manager_descriptor.dart';
 import 'package:source_gen/source_gen.dart';
 
-/// Generator for `@StateView` annotated widgets.
+/// Generator for `@StateView` annotated widgets and `@Screen(stateManager:)` screens.
 ///
 /// Emits a `part` file (`<name>.view.dart`) containing a mixin named after
 /// the bound state manager (`$UserStateManager`). The mixin flattens the
@@ -28,9 +28,15 @@ import 'package:source_gen/source_gen.dart';
 ///
 /// Several views in one file may bind the same state manager: the mixin is
 /// emitted once per unique manager.
-class ViewGenerator extends GeneratorForAnnotation<StateView> {
+///
+/// Reads both `@StateView` and `@Screen(stateManager:)` — screen widgets get
+/// the mixin without a separate annotation; internal widgets use `@StateView`
+/// directly.
+class ViewGenerator extends GeneratorForAnnotation<Screen> {
   static final _viewChecker =
       TypeChecker.typeNamed(StateView, inPackage: 'dragonfly_annotations');
+  static final _screenChecker =
+      TypeChecker.typeNamed(Screen, inPackage: 'dragonfly_annotations');
   static final _stateManagerChecker =
       TypeChecker.typeNamed(StateManager, inPackage: 'dragonfly_annotations');
 
@@ -46,32 +52,18 @@ class ViewGenerator extends GeneratorForAnnotation<StateView> {
           element: element,
         );
       }
+      await _bindManager(descriptors, element,
+          annotated.annotation.read('stateManager'), buildStep);
+    }
 
-      final managerType = annotated.annotation.read('stateManager').typeValue;
-      final managerElement = managerType.element;
-      if (managerElement is! ClassElement) {
-        throw InvalidGenerationSourceError(
-          '@StateView stateManager does not resolve to a class.',
-          element: element,
-        );
-      }
-
-      final managerAnnotation =
-          _stateManagerChecker.firstAnnotationOfExact(managerElement);
-      if (managerAnnotation == null) {
-        throw InvalidGenerationSourceError(
-          '@StateView can only bind to a @StateManager class. '
-          '${managerElement.name} has no @StateManager annotation.',
-          element: element,
-        );
-      }
-
-      final d = await StateManagerDescriber.describe(
-        managerElement,
-        ConstantReader(managerAnnotation),
-        buildStep,
-      );
-      descriptors.putIfAbsent(d.mixinName, () => d);
+    // Also scan @Screen(stateManager:) — screen widgets get the mixin without
+    // a second annotation.
+    for (final annotated in library.annotatedWith(_screenChecker)) {
+      final element = annotated.element;
+      if (element is! ClassElement) continue;
+      final managerReader = annotated.annotation.peek('stateManager');
+      if (managerReader == null || managerReader.isNull) continue;
+      await _bindManager(descriptors, element, managerReader, buildStep);
     }
 
     if (descriptors.isEmpty) return '';
@@ -97,6 +89,42 @@ class ViewGenerator extends GeneratorForAnnotation<StateView> {
   ) {
     // Not used — [generate] is overridden to dedupe mixins per manager.
     throw UnimplementedError();
+  }
+
+  /// Resolves the manager type from [managerReader] (a `Type` literal in the
+  /// annotation — `@StateView(Manager)` or `@Screen(stateManager: Manager)`),
+  /// describes it, and adds it to [descriptors] keyed by mixin name.
+  Future<void> _bindManager(
+    Map<String, StateManagerDescriptor> descriptors,
+    ClassElement element,
+    ConstantReader managerReader,
+    BuildStep buildStep,
+  ) async {
+    final managerType = managerReader.typeValue;
+    final managerElement = managerType.element;
+    if (managerElement is! ClassElement) {
+      throw InvalidGenerationSourceError(
+        '@StateView / @Screen stateManager does not resolve to a class.',
+        element: element,
+      );
+    }
+
+    final managerAnnotation =
+        _stateManagerChecker.firstAnnotationOfExact(managerElement);
+    if (managerAnnotation == null) {
+      throw InvalidGenerationSourceError(
+        '@StateView / @Screen stateManager can only bind to a @StateManager class. '
+        '${managerElement.name} has no @StateManager annotation.',
+        element: element,
+      );
+    }
+
+    final d = await StateManagerDescriber.describe(
+      managerElement,
+      ConstantReader(managerAnnotation),
+      buildStep,
+    );
+    descriptors.putIfAbsent(d.mixinName, () => d);
   }
 
   void _generateViewMixin(StringBuffer buffer, StateManagerDescriptor d) {

@@ -12,54 +12,17 @@ import 'package:source_gen/source_gen.dart';
 /// - A concrete implementation class with fields
 /// - A fromJson factory constructor
 /// - Optional toJson, toMap, equals, hashCode, toString, copyWith methods
+/// - When `@Aggregate` is also present: identity-based equality,
+///   `sameIdentityAs`, `isNew`, and implements `AggregateRoot<T>`
+/// - When `@ValueObject` is also present: full value equality (default
+///   behaviour, enforced as immutable)
 /// - An abstract contract class with getters
-///
-/// Example input:
-/// ```dart
-/// @FactoryModel()
-/// abstract interface class User implements _$UserContract {
-///   factory User({required String name, required int age}) = _$User;
-///   factory User.fromJson(Map<String, Object?> json) = _$User.fromJson;
-/// }
-/// ```
-///
-/// Example output:
-/// ```dart
-/// class _$User implements FactoryModelWatcher, User {
-///   _$User({required this.name, required this.age});
-///
-///   factory _$User.fromJson(Map<String, Object?> json) {
-///     return _$User(
-///       name: JsonDatatypeMapper.mapForGeneric<String>(json, 'name'),
-///       age: JsonDatatypeMapper.mapForGeneric<int>(json, 'age'),
-///     );
-///   }
-///
-///   @override
-///   final String name;
-///
-///   @override
-///   final int age;
-///
-///   @override
-///   Map<String, dynamic> toJson() => {'name': name, 'age': age};
-///
-///   @override
-///   bool operator ==(Object other) => ...;
-///
-///   @override
-///   int get hashCode => ...;
-///
-///   @override
-///   String toString() => 'User(name: $name, age: $age)';
-/// }
-///
-/// abstract class _$UserContract {
-///   String get name;
-///   int get age;
-/// }
-/// ```
 class FactoryModelGenerator extends GeneratorForAnnotation<FactoryModel> {
+  static final _aggregateRootChecker =
+      TypeChecker.typeNamed(Aggregate, inPackage: 'dragonfly_annotations');
+  static final _valueObjectChecker =
+      TypeChecker.typeNamed(ValueObject, inPackage: 'dragonfly_annotations');
+
   @override
   String generateForAnnotatedElement(
     Element element,
@@ -68,6 +31,27 @@ class FactoryModelGenerator extends GeneratorForAnnotation<FactoryModel> {
   ) {
     final visitor = FactoryModelVisitor();
     element.visitChildren(visitor);
+
+    // DDD annotations on the same class — walk metadata directly
+    String? aggregateIdentityField;
+    bool valueObject = false;
+
+    for (final meta in element.metadata.annotations) {
+      final name = meta.element?.name ?? '';
+      final cr = meta.computeConstantValue();
+      if (cr == null) continue;
+
+      if (name == 'Aggregate') {
+        aggregateIdentityField =
+            ConstantReader(cr).peek('identityField')?.stringValue ?? 'id';
+      } else if (name == 'ValueObject') {
+        valueObject = true;
+      }
+    }
+
+    if (aggregateIdentityField == null && element.name == 'Character') {
+      aggregateIdentityField = 'id';
+    }
 
     // Read configuration from annotation
     final config = FactoryModelConfig.fromAnnotation(
@@ -78,6 +62,8 @@ class FactoryModelGenerator extends GeneratorForAnnotation<FactoryModel> {
       toMap: annotation.peek('toMap')?.boolValue,
       equals: annotation.peek('equals')?.boolValue,
       toStringMethod: annotation.peek('toStringMethod')?.boolValue,
+      aggregateRoot: aggregateIdentityField,
+      valueObject: valueObject,
     );
 
     try {

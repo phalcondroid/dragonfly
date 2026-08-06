@@ -25,7 +25,7 @@ lib/components/<component>/
 └── presentation/
     ├── states/       @StateModel    → .state.dart (StateModel mode only)
     ├── features/     @StateManager  → .state_manager.dart
-    └── screens/      @Screen + @StateView → .view.dart
+    └── screens/      @Screen(stateManager: X) → .view.dart
 ```
 
 Data flows one direction: **screen → state manager → use case → repository → network**.
@@ -59,9 +59,11 @@ awaits each entry's `dispose`.
 Debugging: `debugPrintRegisteredInstances()` prints a box-drawn table of every scope and
 entry kind. Use it first when DI misbehaves.
 
-**Two behaviours to know** (both in `known-gaps.md`):
-`_register` silently returns on a duplicate key instead of throwing, and `allReady()` /
-`allReadySync()` / `isReady()` are no-op stubs.
+`_register` **throws** `DragonflyException` on duplicate registrations (set
+`allowReassignment = true` to override). `allReady()` / `allReadySync()` /
+`isReady()` are implemented — they await / check completion of non-lazy async
+singletons across all scopes. `DragonflyContainer.reset()` clears all scopes
+for test teardown.
 
 ### How wiring gets generated
 
@@ -86,6 +88,9 @@ Registration kind is fixed per annotation, not configurable:
 | ---------- | ---- |
 | `@Repository` | lazy singleton |
 | `@UseCase` | factory |
+| `@Injectable` | factory |
+| `@Singleton` | eager singleton |
+| `@LazySingleton` | lazy singleton |
 | `@StateManager` delegate | factory |
 | `$XController` (generated) | lazy singleton, with `dispose` wired |
 

@@ -310,13 +310,15 @@ when the controller is disposed.
 
 Bind a screen to a manager with `@StateView` and mix in the generated `$Manager`
 mixin — the whole API is flattened onto the widget. **No provider wrapping, no
-`context.stateManager<T>()`** — the controller resolves from DI.
+`context.stateManager<T>()`** — the controller resolves from DI. The
+`stateManager:` parameter on `@Screen` triggers the view generator automatically —
+no separate `@StateView` annotation is needed on screen widgets.
 
 ```dart
 part 'character_screen.view.dart';
 
-@Screen(path: '/', initial: true, name: 'characters', access: AccessLevel.guest)
-@StateView(CharacterStateManager)
+@Screen(path: '/', initial: true, name: 'characters',
+       stateManager: CharacterStateManager, access: AccessLevel.guest)
 class CharacterScreen extends StatelessWidget with $CharacterStateManager {
   const CharacterScreen({super.key});
 
@@ -467,13 +469,14 @@ void main() async {
 }
 ```
 
-Only `@UseCase`, `@Repository`, and `@StateManager` are scanned for DI — a state
-manager registers **two** entries (the delegate factory and the controller lazy
-singleton). **`@Singleton`, `@LazySingleton`, and `@Injectable` are never registered** —
-register those manually on `DragonflyContainer.I`.
+Six annotations are scanned for DI: `@UseCase`, `@Repository`, `@StateManager`,
+`@Injectable`, `@Singleton`, and `@LazySingleton`. A `@StateManager` produces **two**
+entries (the delegate factory and the controller lazy singleton with `dispose`).
+Registrations carry `as`, `env`, `scope`, `order`, and `instanceName` support.
 
-Debug DI with `DragonflyContainer.I.debugPrintRegisteredInstances()`. Note that
-registering the same type+name twice is a **silent no-op**, not an error.
+Debug DI with `DragonflyContainer.I.debugPrintRegisteredInstances()`. Registering
+the same type+name twice **throws** `DragonflyException`. Set `allowReassignment = true`
+to override.
 
 ---
 

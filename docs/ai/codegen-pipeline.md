@@ -5,7 +5,7 @@ modifying a generator.
 
 ---
 
-## The eight builders
+## The nine builders
 
 Every builder is declared in **two** places. Both are required.
 
@@ -23,10 +23,21 @@ Every builder is declared in **two** places. Both are required.
 | `form_schema_generator`             | `formSchemaGenerator`            | `.form.dart`       | `PartBuilder`   |
 | `injectable_config_builder`         | `injectableConfigBuilder`        | `.config.dart`     | `LibraryBuilder`|
 | `router_generator`                  | `routerBuilder`                  | `.router.dart`     | `LibraryBuilder`|
+| `component_generator`               | `componentBuilder`               | `.dragonfly.dart`  | `LibraryBuilder`|
 
-All eight use `auto_apply: dependents` and `build_to: source`, so outputs land next to
-the source file and are committed to the repo. (`event_model_generator` and the two
-bloc generators were deleted in the v2 state-management clean break.)
+The five `PartBuilder`s use `applies_builders: ["source_gen|combining_builder"]` in
+`build.yaml`. The four `LibraryBuilder`s emit standalone files and do not. All nine
+use `auto_apply: dependents` and `build_to: source`. (`event_model_generator` and
+the two bloc generators were deleted in the v2 state-management clean break.)
+
+The `component_generator` is scoped to `config/injector.dart` anchor files (filtered
+in its `build()` method), so exactly one `.dragonfly.dart` barrel is produced per
+component directory, re-exporting all generated sources.
+
+`FactoryModelGenerator` also reads `@Aggregate` and `@ValueObject` annotations on the
+same class (via element metadata, not TypeChecker) to adjust equality semantics and
+add aggregate-root methods. `@DomainEvent` is a marker annotation — no generator
+processes it; the runtime `DomainEvent` interface is the contract.
 
 ### PartBuilder vs LibraryBuilder — the extension gotcha
 
@@ -170,10 +181,10 @@ Existing visitors and what they extract:
 | `UseCaseVisitor`        | Use-case call signatures                                        |
 
 Helper classes (`ParameterHelper`, `ReturnHelper`, `HeaderHelper`,
-`MedatadaExtractor` — note the spelling) do the string-level parsing.
+`MetadataExtractor` — note the spelling) do the string-level parsing.
 
-**`ReturnHelper` and `MedatadaExtractor` parse type *strings*, not type objects.**
-`MedatadaExtractor.getMethodType` literally does
+**`ReturnHelper` and `MetadataExtractor` parse type *strings*, not type objects.**
+`MetadataExtractor.getMethodType` literally does
 `item.toString().contains("@Get")`. This is fragile — an annotation named `@GetSomething`
 would match `@Get`. Prefer `TypeChecker` over string matching in anything new you write.
 

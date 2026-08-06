@@ -15,7 +15,7 @@ import 'package:example/components/characters/presentation/screens/character_scr
 import 'package:example/components/characters/presentation/screens/character_search_screen.dart';
 
 /// Generated router configuration with session/ACL support.
-mixin $AppRouterConfig {
+mixin $AppConfig {
   /// Map of route paths to widget builders.
   Map<String, WidgetBuilder> get routes => {
     '/login': (context) => const LoginScreen(),

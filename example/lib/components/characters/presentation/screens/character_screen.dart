@@ -11,9 +11,9 @@ part 'character_screen.view.dart';
   path: '/',
   initial: true,
   name: 'characters',
+  stateManager: CharacterStateManager,
   access: AccessLevel.guest,
 )
-@StateView(CharacterStateManager)
 class CharacterScreen extends StatelessWidget with $CharacterStateManager {
   const CharacterScreen({super.key});
 
@@ -61,9 +61,9 @@ class CharacterScreen extends StatelessWidget with $CharacterStateManager {
 @Screen(
   path: '/character-alt',
   name: 'characters-alt',
+  stateManager: CharacterStateManager,
   access: AccessLevel.guest,
 )
-@StateView(CharacterStateManager)
 class CharacterScreenAlternative extends StatelessWidget
     with $CharacterStateManager {
   const CharacterScreenAlternative({super.key});

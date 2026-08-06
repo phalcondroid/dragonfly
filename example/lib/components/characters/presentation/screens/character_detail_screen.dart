@@ -15,9 +15,9 @@ part 'character_detail_screen.view.dart';
 @Screen(
   path: '/character/:id',
   name: 'character-detail',
+  stateManager: CharacterStateManager,
   access: AccessLevel.guest,
 )
-@StateView(CharacterStateManager)
 class CharacterDetailScreen extends StatefulWidget {
   const CharacterDetailScreen({super.key, @PathParam('id') required this.id});
 

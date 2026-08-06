@@ -8,8 +8,7 @@ part 'character_search_screen.view.dart';
 
 /// Easy-mode demo: the state class (`CharacterSearchStateManagerState`) is
 /// generated entirely from the `@Event` methods — no `@StateModel` involved.
-@Screen(path: '/search', name: 'search', access: AccessLevel.guest)
-@StateView(CharacterSearchStateManager)
+@Screen(path: '/search', name: 'search', stateManager: CharacterSearchStateManager, access: AccessLevel.guest)
 class CharacterSearchScreen extends StatelessWidget
     with $CharacterSearchStateManager {
   const CharacterSearchScreen({super.key});

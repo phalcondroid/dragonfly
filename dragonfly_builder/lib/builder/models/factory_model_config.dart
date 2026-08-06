@@ -24,6 +24,14 @@ class FactoryModelConfig {
   /// Whether to generate a toString method.
   final bool toStringMethod;
 
+  /// Non-null when the class is an `@AggregateRoot` — the name of the
+  /// identity field. Equality, hashCode, and repository contract methods
+  /// are derived from this field rather than from all fields.
+  final String? aggregateRoot;
+
+  /// Whether the class is a `@ValueObject`. Ensures full value equality.
+  final bool valueObject;
+
   const FactoryModelConfig({
     this.isGeneric = false,
     this.isList = false,
@@ -32,6 +40,8 @@ class FactoryModelConfig {
     this.toMap = true,
     this.equals = true,
     this.toStringMethod = true,
+    this.aggregateRoot,
+    this.valueObject = false,
   });
 
   /// Creates a config from annotation values.
@@ -43,6 +53,8 @@ class FactoryModelConfig {
     bool? toMap,
     bool? equals,
     bool? toStringMethod,
+    String? aggregateRoot,
+    bool? valueObject,
   }) {
     return FactoryModelConfig(
       isGeneric: generic ?? false,
@@ -52,6 +64,8 @@ class FactoryModelConfig {
       toMap: toMap ?? true,
       equals: equals ?? true,
       toStringMethod: toStringMethod ?? true,
+      aggregateRoot: aggregateRoot,
+      valueObject: valueObject ?? false,
     );
   }
 }

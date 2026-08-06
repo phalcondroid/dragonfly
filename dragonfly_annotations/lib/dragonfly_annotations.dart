@@ -23,6 +23,8 @@ export 'annotations/component/injector/injector_config.dart';
 
 // Model annotations
 export 'annotations/component/models/factory_model.dart' show FactoryModel;
+export 'annotations/component/models/aggregate.dart'
+    show Aggregate, ValueObject, DomainEvent;
 export 'annotations/component/models/state_model.dart' show StateModel;
 export 'annotations/component/models/field.dart'
     show Field, JsonIgnore, JsonKey;

@@ -1,20 +1,20 @@
 import 'package:dragonfly/dragonfly.dart';
 import 'package:example/components/characters/config/app_config.dart';
-import 'package:example/config/router_config.dart';
 import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await DragonflyApp(config: AppConfig()).init();
+  final config = AppConfig();
+  await DragonflyApp(config: config).init();
 
-  runApp(const MyApp());
+  runApp(MyApp(config: config));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.config});
 
-  static final _router = AppRouterConfig();
+  final AppConfig config;
 
   @override
   Widget build(BuildContext context) {
@@ -24,8 +24,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      onGenerateRoute: _router.onGenerateRoute,
-      initialRoute: _router.initialRoute,
+      onGenerateRoute: config.onGenerateRoute,
+      initialRoute: config.initialRoute,
     );
   }
 }

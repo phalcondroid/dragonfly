@@ -16,8 +16,7 @@ LoginFormState _formOf(LoginState state) => state.when(
       error: (form, _) => form,
     );
 
-@Screen(path: '/login', name: 'login', access: AccessLevel.guest)
-@StateView(LoginStateManager)
+@Screen(path: '/login', name: 'login', stateManager: LoginStateManager, access: AccessLevel.guest)
 class LoginScreen extends StatelessWidget with $LoginStateManager {
   const LoginScreen({super.key});
 

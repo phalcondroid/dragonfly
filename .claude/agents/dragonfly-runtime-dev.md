@@ -58,3 +58,19 @@ generated files to confirm they still reference something real.
 
 Give before/after analyzer counts, list which subsystems you touched, and state plainly
 anything you could not fix.
+
+## After every change — sync the docs
+
+Read `.claude/skills/dragonfly-docs-sync/SKILL.md` and run its checklist. At minimum,
+when you touch the runtime library, update:
+
+- `docs/ai/architecture.md` — the subsystem section must describe the current shape
+- `docs/ai/annotation-matrix.md` — if a runtime type is newly exported or removed
+- `docs/ai/known-gaps.md` — if you fixed a gap or changed an error count
+- `dragonfly/ai/skills/dragonfly-app/SKILL.md` — if the consumer-facing API changed
+- `README.md` — if any public API, layout convention, or build command changed
+- `CLAUDE.md` / `AGENTS.md` — if a naming convention, hard rule, or environment changed
+- `dragonfly/lib/dragonfly.dart` — if you added a new public type, it must be
+  exported with an explicit `show` clause
+
+Documentation is not deferred. The change isn't done until every affected doc reflects it.

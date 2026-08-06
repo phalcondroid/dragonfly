@@ -100,9 +100,8 @@ library it cannot resolve. So:
 
 1. **Fix unrelated compile errors first.** A file that does not compile is skipped
    silently, taking its `@InjectableUseCase` with it.
-2. Check the annotation is one of the three `InjectableVisitor` actually looks for:
-   `@UseCase`, `@Repository`, `@StateManager`.
-   `@Singleton` / `@LazySingleton` / `@Injectable` are **never scanned**.
+2. Check the annotation is one of the six `InjectableVisitor` actually looks for:
+   `@UseCase`, `@Repository`, `@StateManager`, `@Injectable`, `@Singleton`, `@LazySingleton`.
 3. Widgets are deliberately excluded — anything extending `Widget` is skipped.
 4. A `@StateManager` produces **two** registrations: the delegate factory and the
    generated `$XController` lazy singleton. If the controller is missing, the visitor
@@ -165,8 +164,8 @@ reacting, kill it, `clean`, and restart — the asset graph occasionally goes st
 ## Known noise to ignore
 
 - `Your current analyzer version may not fully support your current SDK version` on every
-  build — analyzer is pinned to `^6.0.0` against a 3.12 SDK (`docs/ai/known-gaps.md` #8).
+  build — analyzer is resolved to `8.4.1` against a 3.12 SDK (`docs/ai/known-gaps.md` #8).
 - `annotate_overrides`, `no_leading_underscores_for_local_identifiers`, and
   `unused_element` **info/warning** lints from generated files. Cosmetic generator defects,
   not build failures.
-- 270 errors from `lib/components/auth/**`. Known broken subsystem.
+- 0 errors; 27 warnings from `lib/components/auth/**`. Known broken subsystem (form-validation).

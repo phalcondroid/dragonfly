@@ -49,11 +49,17 @@ run it after generating, and read the generated file to confirm it has real cont
    reintroduce them. Renamed annotations (`@UseCase`, `@InjectableInit`, `@Screen`,
    `@SessionConfig`, `@RouterConfig`) keep live deprecated aliases; never emit the old
    names in new code.
-5. **Do not rename the known typos** as a side effect of other work:
-   `MedatadaExtractor`, the `repositoriy/` directory, `inyectar.dart`,
-   `HttpAnnotations.unknow`. They are load-bearing identifiers.
-6. **Trust the source over `README.md`.** The README documents an API that in several
+5. **The historical typos were fixed in August 2026** — `MetadataExtractor`,
+   `repository/`, `inject.dart`, `unknown`. If you encounter the old spellings
+   in legacy references, update them. Do not reintroduce the old spellings.
+6. **Routing lives on the config class.** `@RouterConfig()` goes on the `DragonflyConfig` subclass — never in a separate file. One config object delivers DI, network, session, and routing.
+
+7. **Trust the source over `README.md`.** The README documents an API that in several
    places does not exist. `docs/ai/known-gaps.md` lists every verified discrepancy.
+8. **Every change updates the docs.** After any framework change, run the
+   checklist in `.claude/skills/dragonfly-docs-sync/SKILL.md`. Documentation is
+   not optional — an outdated doc is a bug. The change isn't done until all
+   affected docs match the new reality and the full verification gate passes.
 
 ## Current state
 

@@ -22,9 +22,9 @@ enum AccessLevel {
 ///
 /// Example:
 /// ```dart
-/// // Public screen (no auth required)
-/// @Screen(path: '/login', access: AccessLevel.guest)
-/// class LoginScreen extends StatelessWidget { ... }
+/// // Public screen with state manager binding (no separate @StateView needed)
+/// @Screen(path: '/characters', stateManager: CharacterStateManager)
+/// class CharacterScreen extends StatelessWidget with $CharacterStateManager { ... }
 ///
 /// // Protected screen (auth required)
 /// @Screen(path: '/home', access: AccessLevel.authenticated)
@@ -37,15 +37,11 @@ enum AccessLevel {
 ///   roles: ['admin', 'superadmin'],
 /// )
 /// class AdminScreen extends StatelessWidget { ... }
-///
-/// // Permission-based access
-/// @Screen(
-///   path: '/reports',
-///   access: AccessLevel.permissionsRequired,
-///   permissions: ['view_reports', 'export_data'],
-/// )
-/// class ReportsScreen extends StatelessWidget { ... }
 /// ```
+///
+/// When [stateManager] is set, the view generator runs automatically — no separate
+/// `@StateView` annotation is needed on screen widgets. For internal (non-route)
+/// widgets that bind to a state manager, use `@StateView` directly.
 @immutable
 @Target({TargetKind.classType})
 class Screen {
@@ -79,12 +75,18 @@ class Screen {
   /// Redirect path when not authenticated (defaults to session config).
   final String? redirectOnUnauthenticated;
 
+  /// Optional `@StateManager` class to bind this screen to. When set, the
+  /// view generator produces the `$Manager` flattening mixin — equivalent to
+  /// a separate `@StateView(Manager)` but without the extra annotation.
+  final Type? stateManager;
+
   const Screen({
     required this.path,
     this.name,
     this.initial = false,
     this.transition = ScreenTransition.fade,
     this.transitionDuration,
+    this.stateManager,
     this.access = AccessLevel.guest,
     this.roles = const [],
     this.permissions = const [],

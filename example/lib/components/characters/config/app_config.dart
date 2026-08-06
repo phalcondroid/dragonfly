@@ -1,7 +1,14 @@
 import 'package:dragonfly/dragonfly.dart';
+import 'package:dragonfly_annotations/dragonfly_annotations.dart';
 import 'package:example/components/characters/config/injector.dart';
 
-class AppConfig extends DragonflyConfig {
+import 'app_config.router.dart';
+
+@RouterConfig()
+class AppConfig extends DragonflyConfig with $AppConfig {
+  /// HTTP instance config
+  ///
+  ///
   @override
   List<DragonflyInstanceConfig> get instanceConfigs => [
     const DragonflyInstanceConfig(

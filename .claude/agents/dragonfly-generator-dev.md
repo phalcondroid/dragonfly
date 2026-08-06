@@ -49,3 +49,18 @@ reintroduce the old spellings.
 State the before/after analyzer error counts, name the generated files you inspected, and
 call out explicitly anything you left broken. `example/` analyzes clean (**0 errors**)
 across both components — any regression is yours.
+
+## After every change — sync the docs
+
+Read `.claude/skills/dragonfly-docs-sync/SKILL.md` and run its checklist. At minimum,
+when you touch a generator or annotation, update:
+
+- `docs/ai/annotation-matrix.md` — the annotation's row must match what the generator
+  actually produces
+- `docs/ai/codegen-pipeline.md` — if you added/removed/renamed a generator
+- `docs/ai/known-gaps.md` — if you fixed a gap or changed an error count
+- `dragonfly/ai/skills/dragonfly-app/SKILL.md` — if the consumer-facing API changed
+- `README.md` — if any public API, layout convention, or build command changed
+- `CLAUDE.md` / `AGENTS.md` — if a naming convention, hard rule, or environment changed
+
+Documentation is not deferred. The change isn't done until every affected doc reflects it.

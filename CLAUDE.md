@@ -121,12 +121,15 @@ Read these on demand rather than all at once:
 | File                                    | When to read it                                              |
 | --------------------------------------- | ------------------------------------------------------------ |
 | `docs/ai/architecture.md`               | Runtime layer internals: DI, network, state, session, router |
-| `docs/ai/codegen-pipeline.md`           | How the 10 builders wire together; part vs library builders  |
+| `docs/ai/codegen-pipeline.md`           | How the 9 builders wire together; part vs library builders   |
 | `docs/ai/annotation-matrix.md`          | Every annotation → its generator → its output. Lookup table. |
-| `docs/ai/known-gaps.md`                 | Verified drift, dead parameters, and broken subsystems       |
+| `docs/ai/known-gaps.md`                 | Verified drift, dead parameters, and constraints             |
+| `docs/dependencies.md`                  | What each package depends on and why; the analyzer cap       |
+| `docs/adr/`                             | Architecture Decision Records — why decisions were made      |
 | `.claude/skills/dragonfly-codegen/`     | Step-by-step: add a new annotation + generator               |
 | `.claude/skills/dragonfly-build-debug/` | Step-by-step: diagnose a generator that produced wrong code  |
 | `.claude/skills/dragonfly-runtime/`     | Step-by-step: change runtime library code safely             |
+| `.claude/skills/dragonfly-docs-sync/`   | **Read after every change.** Checklist of every doc that must stay in sync |
 
 ---
 
@@ -166,6 +169,43 @@ The four historically-misspelled identifiers (`repositoriy/`, `MedatadaExtractor
 `inyectar.dart`, `HttpAnnotations.unknow`) have all been corrected as a deliberate
 rename in August 2026. If you encounter legacy references, update them. Do not
 reintroduce the old spellings.
+
+### Every change updates the docs
+
+The `dragonfly-docs-sync` skill fires on every framework change and carries the
+documentation-checklist. The rule:
+
+- After ANY change to annotations, runtime, builder, generators, or example —
+  run the checklist in `.claude/skills/dragonfly-docs-sync/SKILL.md`.
+- Documentation is not optional and not deferred. An outdated doc is a bug.
+  The change isn't done until the docs match.
+- The verification gate — `dart analyze` and `flutter test` across all four
+  packages — must pass AND the docs must reflect the new reality.
+
+### Routing lives on the config class, not in a separate file
+
+`@RouterConfig()` must be placed on the `DragonflyConfig` subclass — the same
+class that declares `instanceConfigs`, `realtimeConfigs`, and the `injector`.
+One config object delivers everything: DI, network, session, and routing.
+
+```dart
+@RouterConfig()
+class AppConfig extends DragonflyConfig with $AppConfig {
+  // ... network, realtime, injector ...
+}
+```
+
+The generated `.router.dart` is a `LibraryBuilder` output — it is **imported**
+(not `part`-ed) into the config file:
+
+```dart
+import 'app_config.router.dart';
+```
+
+- **Never create a separate router file** like `lib/config/router_config.dart`.
+- `main.dart` passes the `AppConfig` instance to both `DragonflyApp.init()` and
+  `MaterialApp(onGenerateRoute: config.onGenerateRoute, initialRoute: config.initialRoute)`.
+- The example project demonstrates this: `example/lib/components/characters/config/app_config.dart`.
 
 ---
 

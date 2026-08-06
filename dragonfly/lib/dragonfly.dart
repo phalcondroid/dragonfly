@@ -73,6 +73,15 @@ export 'package:dragonfly/framework/state/state_controller.dart'
     show DragonflyController;
 export 'package:dragonfly/framework/state/state_builder.dart'
     show DragonflyStateBuilder;
+// DDD
+export 'package:dragonfly/framework/ddd/aggregate_root.dart'
+    show AggregateRoot;
+export 'package:dragonfly/framework/ddd/aggregate_repository.dart'
+    show AggregateRepository;
+export 'package:dragonfly/framework/ddd/domain_event.dart'
+    show DomainEvent;
+export 'package:dragonfly/framework/ddd/aggregate_exception.dart'
+    show AggregateException;
 export 'package:dragonfly/framework/state/action_scheduler.dart'
     show ActionScheduler;
 

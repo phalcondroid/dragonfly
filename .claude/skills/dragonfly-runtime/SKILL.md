@@ -36,7 +36,7 @@ A hit means you must update the generator's emitted string in the same change.
 | `DragonflyController<S>`, `DragonflyStateBuilder<S>`, `DragonflyContainer` | state manager + view generators |
 | `DragonflySessionManager.instance`, `checkAccess(...)` | router generator |
 | `AccessLevel.*` | router generator |
-| `FormFieldState`, `Validators`, `Validator`, `CrossFieldValidator`, `FormController` | form schema generator |
+| `DragonflyFormFieldState`, `Validators`, `Validator`, `CrossFieldValidator`, `FormController` | form schema generator |
 
 Changing any of these means changing a generator string too.
 
@@ -76,7 +76,7 @@ export 'package:dragonfly/framework/thing/my_thing.dart' show MyThing, MyThingCa
 The barrel uses explicit `show` on **every** export. A public type not listed there is
 invisible to consumers and to generated code, even though the package compiles.
 
-Watch for name collisions with Flutter. `FormFieldState` already collides with
+Watch for name collisions with Flutter. `DragonflyFormFieldState` already collides with
 `package:flutter/material.dart` and breaks every form screen
 (`docs/ai/known-gaps.md` #3.3). Before exporting a new name, check it against Material's
 exports; prefer a `Dragonfly` prefix for anything generic-sounding.
@@ -116,9 +116,10 @@ something real.
 
 ## Subsystem-specific cautions
 
-**DI container** — `_register` silently no-ops on a duplicate key; `allReady()` /
-`isReady()` are stubs returning immediately. If you fix either, expect fallout: code
-today relies on double registration being harmless.
+**DI container** — `_register` **throws** `DragonflyException` on duplicates (set
+`allowReassignment = true` to override). `allReady()`, `allReadySync()` and `isReady()`
+are implemented — they await / check completion of async singletons. `DragonflyContainer.reset()`
+clears all scopes for test teardown.
 
 **Network** — generated repositories look up the **concrete**
 `DragonflyNetworkHttpAdapter`, not the `DragonflyBaseNetworkAdapter` interface. A new

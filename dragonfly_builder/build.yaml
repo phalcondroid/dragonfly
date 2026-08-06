@@ -17,7 +17,7 @@ builders:
     build_to: source
     applies_builders: ["source_gen|combining_builder"]
 
-  # State model generator - generates BLoC state classes
+  # State model generator - generates sealed state classes
   state_model_generator:
     import: "package:dragonfly_builder/builder.dart"
     builder_factories: ["stateModelGenerator"]

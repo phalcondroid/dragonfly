@@ -39,18 +39,8 @@ no-op. Do not suggest them to users, and do not "use" them in examples.
 
 | Annotation | Notes |
 | ---------- | ----- |
-| `@Path(...)` | Parameter binding is unimplemented — gap #2 |
-| `@Query(...)` | Parameter binding is unimplemented — gap #2 |
-| `@Body()` | Request bodies are never sent |
-| `@Header(...)` | Method-level `@Get(headers:)` is parsed then dropped; `@Header` is not read at all |
-| `@Authenticated(...)` | No generator emits token injection |
-| `@Singleton()` | `InjectableVisitor` does not check for it |
-| `@LazySingleton()` | Same |
-| `@Injectable()` | Same |
 | `@SessionConfig(...)` | Session config is passed to `DragonflySessionManager.init()` at runtime instead |
-| `@PathParam(...)` / `@QueryParam(...)` | Route parameter extraction is not implemented |
-| `@JsonKey` / `@JsonIgnore` | Superseded by `@Field(field:)` / `@Field(ignore:)` |
-| `@Where(...)` | `annotations/where.dart`, never read |
+| `@DragonflyRoute` | Internal to `router_config.dart`; never read by any generator |
 
 ---
 

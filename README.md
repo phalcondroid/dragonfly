@@ -202,6 +202,33 @@ abstract interface class Character implements _$CharacterContract {
 `@Field(field: 'json_key')` renames the serialised key. `@Field(convertTo: 'type')`
 wires a type converter. `@Field(ignore: true)` omits the field.
 
+### DDD aggregates
+
+`@Aggregate` on a `@FactoryModel` marks it as an aggregate root with a unique
+identity. The generated class implements `AggregateRoot<T>` and gains identity-based
+equality, `sameIdentityAs`, and an `isNew` getter — two entities with the same
+identity are the same entity regardless of other state changes.
+
+```dart
+@FactoryModel(toJson: true)
+@Aggregate(identityField: 'id')
+abstract interface class Character implements _$CharacterContract {
+  factory Character({
+    required int id, required String name, required String status,
+  }) = _$Character;
+  factory Character.fromJson(Map<String, Object?> value) = _$Character.fromJson;
+}
+```
+
+Generated: `class _$Character implements FactoryModelWatcher, Character, AggregateRoot<int>`
+with `int get identity => id`, `bool get isNew => id == null`,
+`bool sameIdentityAs(Object other) => other is Character && id == other.id`, and
+identity-based `==`/`hashCode`.
+
+`@ValueObject()` marks a model as immutable and compared by all fields (no identity).
+`@DomainEvent()` is a marker annotation for event records implementing
+`DomainEvent`.
+
 ---
 
 ## Repositories
@@ -901,6 +928,22 @@ DragonflyStateBuilder<CharacterState>(
 )
 ```
 
+### `AggregateRoot<T>` (`framework/ddd/`)
+
+The contract interface for aggregate-root entities. Generated `@Aggregate` models
+implement this automatically: `T get identity`, `bool get isNew`, and
+`bool sameIdentityAs(Object other)`.
+
+### `AggregateRepository<T>`
+
+Base repository contract with `findById`, `save`, and `delete`. Implement the
+methods in your `@Repository` abstract class and the generator wires the calls —
+`isNew` determines POST vs PUT for `save`.
+
+### `DomainEvent`
+
+Marker interface for domain event records.
+
 ---
 
 ## Annotations reference
@@ -911,6 +954,9 @@ DragonflyStateBuilder<CharacterState>(
 |-----------|-------------|
 | `@FactoryModel(...)` | Generates fromJson, optional toJson/toMap/equals/copyWith |
 | `@Field(field:, value:, convertTo:, ignore:)` | Customises a model property's serialisation |
+| `@Aggregate(identityField:)` | Marks an aggregate root — identity-based equality, `sameIdentityAs`, `isNew`, `AggregateRoot<T>` |
+| `@ValueObject()` | Marks an immutable value object |
+| `@DomainEvent()` | Marks a domain event record |
 | `@StateModel()` | Generates a sealed state with when/maybeWhen and variant classes |
 
 ### Repositories

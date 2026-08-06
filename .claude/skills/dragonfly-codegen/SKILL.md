@@ -70,7 +70,7 @@ Remember `visitChildren` sees direct children only — use `element.allSupertype
 inherited members.
 
 Prefer `TypeChecker.fromRuntime(MyAnnotation)` over string matching. Do **not** copy
-`MedatadaExtractor.getMethodType`'s `toString().contains("@Get")` approach.
+`MetadataExtractor.getMethodType`'s `toString().contains("@Get")` approach.
 
 ### 3. Write the generator
 

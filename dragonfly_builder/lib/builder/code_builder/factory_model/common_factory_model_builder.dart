@@ -54,7 +54,20 @@ class CommonFactoryModelBuilder {
       cls
         ..name = '_\$${visitor.className}'
         ..implements.add(const cb.Reference('FactoryModelWatcher'))
-        ..implements.add(cb.Reference('${visitor.className}$genericSuffix'))
+        ..implements.add(cb.Reference('${visitor.className}$genericSuffix'));
+
+      // @AggregateRoot: implement AggregateRoot<identityType> contract
+      String? aggregateIdType;
+      if (config.aggregateRoot != null) {
+        final idField = properties.cast<FactoryModelField?>().firstWhere(
+          (p) => p!.name == config.aggregateRoot,
+          orElse: () => null,
+        );
+        aggregateIdType = idField?.type ?? 'Object';
+        cls.implements.add(cb.Reference('AggregateRoot<$aggregateIdType>'));
+      }
+
+      cls
         // Add fields
         ..fields.addAll(_buildFields(properties))
         // Add constructor
@@ -73,6 +86,7 @@ class CommonFactoryModelBuilder {
         properties,
         config,
         genericTypeNames,
+        aggregateIdType: aggregateIdType,
       );
     });
 
@@ -186,8 +200,9 @@ class CommonFactoryModelBuilder {
     String generatedClassName,
     List<FactoryModelField> properties,
     FactoryModelConfig config,
-    List<String> genericTypes,
-  ) {
+    List<String> genericTypes, {
+    String? aggregateIdType,
+  }) {
     // Add toJson method
     if (config.toJson) {
       cls.methods.add(ModelMethodBuilder.buildToJson(
@@ -208,9 +223,18 @@ class CommonFactoryModelBuilder {
 
     // Add equality operator and hashCode
     if (config.equals) {
-      cls.methods
-          .add(ModelMethodBuilder.buildEqualsOperator(className, properties));
-      cls.methods.add(ModelMethodBuilder.buildHashCode(properties));
+      if (config.aggregateRoot != null) {
+        // Identity-based equality — only the @AggregateRoot's identity field
+        cls.methods.add(_buildIdentityEquals(config.aggregateRoot!, className));
+        cls.methods.add(_buildIdentityHashCode(config.aggregateRoot!));
+        cls.methods.add(_buildSameIdentityAs(config.aggregateRoot!, className));
+        cls.methods.add(_buildIsNew(config.aggregateRoot!));
+        cls.methods.add(_buildIdentityGetter(config.aggregateRoot!, aggregateIdType!));
+      } else {
+        cls.methods
+            .add(ModelMethodBuilder.buildEqualsOperator(className, properties));
+        cls.methods.add(ModelMethodBuilder.buildHashCode(properties));
+      }
     }
 
     // Add toString method
@@ -237,5 +261,68 @@ class CommonFactoryModelBuilder {
         cls.methods.addAll(ModelMethodBuilder.buildEqualityHelpers());
       }
     }
+  }
+
+  /// Identity-based `==` — two aggregates are equal when their identity
+  /// field matches, regardless of other state.
+  cb.Method _buildIdentityEquals(String idField, String className) {
+    return cb.Method((m) => m
+      ..annotations.add(const cb.Reference('override'))
+      ..name = 'operator =='
+      ..returns = cb.refer('bool')
+      ..requiredParameters.add(cb.Parameter((p) => p
+        ..name = 'other'
+        ..type = const cb.Reference('Object')))
+      ..lambda = false
+      ..body = cb.Block.of([
+        cb.Code('return identical(this, other) ||'),
+        cb.Code('    other is $className && $idField == other.$idField;'),
+      ]));
+  }
+
+  /// Identity-based `hashCode` — only the identity field.
+  cb.Method _buildIdentityHashCode(String idField) {
+    return cb.Method((m) => m
+      ..annotations.add(const cb.Reference('override'))
+      ..name = 'hashCode'
+      ..type = cb.MethodType.getter
+      ..returns = cb.refer('int')
+      ..lambda = true
+      ..body = cb.Code('$idField.hashCode'));
+  }
+
+  /// `sameIdentityAs` — identity comparison.
+  cb.Method _buildSameIdentityAs(String idField, String className) {
+    return cb.Method((m) => m
+      ..annotations.add(const cb.Reference('override'))
+      ..name = 'sameIdentityAs'
+      ..returns = cb.refer('bool')
+      ..requiredParameters.add(cb.Parameter((p) => p
+        ..name = 'other'
+        ..type = const cb.Reference('Object')))
+      ..lambda = true
+      ..body = cb.Code('other is $className && $idField == other.$idField'));
+  }
+
+  /// `isNew` getter — true before persistence.
+  cb.Method _buildIsNew(String idField) {
+    return cb.Method((m) => m
+      ..annotations.add(const cb.Reference('override'))
+      ..name = 'isNew'
+      ..type = cb.MethodType.getter
+      ..returns = cb.refer('bool')
+      ..lambda = true
+      ..body = cb.Code('$idField == null'));
+  }
+
+  /// `identity` getter — returns the aggregate's unique identifier.
+  cb.Method _buildIdentityGetter(String idField, String idType) {
+    return cb.Method((m) => m
+      ..annotations.add(const cb.Reference('override'))
+      ..name = 'identity'
+      ..type = cb.MethodType.getter
+      ..returns = cb.refer(idType)
+      ..lambda = true
+      ..body = cb.Code(idField));
   }
 }

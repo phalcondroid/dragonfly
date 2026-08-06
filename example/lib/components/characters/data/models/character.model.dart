@@ -7,7 +7,8 @@ part of 'character.dart';
 // FactoryModelGenerator
 // **************************************************************************
 
-class _$Character implements FactoryModelWatcher, Character {
+class _$Character
+    implements FactoryModelWatcher, Character, AggregateRoot<int> {
   _$Character({
     required this.id,
     required this.name,
@@ -169,37 +170,20 @@ class _$Character implements FactoryModelWatcher, Character {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is Character &&
-        other.id == id &&
-        other.name == name &&
-        other.status == status &&
-        other.species == species &&
-        other.type == type &&
-        other.gender == gender &&
-        other.origin == origin &&
-        other.location == location &&
-        other.image == image &&
-        _listEquals(other.episode, episode) &&
-        other.url == url &&
-        other.created == created;
+    return identical(this, other) || other is Character && id == other.id;
   }
 
   @override
-  int get hashCode {
-    return id.hashCode ^
-        name.hashCode ^
-        status.hashCode ^
-        species.hashCode ^
-        type.hashCode ^
-        gender.hashCode ^
-        origin.hashCode ^
-        location.hashCode ^
-        image.hashCode ^
-        episode.hashCode ^
-        url.hashCode ^
-        created.hashCode;
-  }
+  int get hashCode => id.hashCode;
+
+  @override
+  bool sameIdentityAs(Object other) => other is Character && id == other.id;
+
+  @override
+  bool get isNew => id == null;
+
+  @override
+  int get identity => id;
 
   @override
   String toString() {
