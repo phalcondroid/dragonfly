@@ -22,14 +22,21 @@ class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
 
   DragonflyLogManager get _log => DragonflyLogManager.instance;
 
+  @override
+  Future<void> connect() async {}
+
+  @override
+  Future<void> disconnect() async {}
+
   /// The `source` tag used in log output. Overridden by subclasses.
   @protected
   String get logSource => 'DragonflyNetworkHttpAdapter';
 
   /// Builds the headers for a request: JSON defaults, then the configured
   /// headers, then the per-request [headers] on top. Overridden by
-  /// [AuthenticatedNetworkAdapter] to inject the session token.
+  /// [DragonflyAuthenticatedAdapter] to inject the session token.
   @protected
+  @override
   Map<String, String> buildHeaders(Map<String, String>? headers) {
     final Map<String, String> merged = {
       'Content-Type': 'application/json',
@@ -51,10 +58,12 @@ class DragonflyNetworkHttpAdapter implements DragonflyBaseNetworkAdapter {
 
   /// Hook run before the request is sent (token refresh, etc.).
   @protected
+  @override
   Future<void> beforeRequest() async {}
 
   /// Hook run after a response arrives (401 handling, etc.).
   @protected
+  @override
   Future<void> afterResponse(http.Response response) async {}
 
   /// Build the final URL with query parameters. Entries with `null` values

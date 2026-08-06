@@ -79,4 +79,66 @@ run it after generating, and read the generated file to confirm it has real cont
 - `analyzer` is capped at 8.x because the Flutter SDK pins `meta 1.18.0` (see
   `CLAUDE.md` "Environment").
 
+## Network adapter architecture (pluggable since Aug 2026)
+
+Network adapters follow an ORM-dialect pattern — a common interface with
+pluggable implementations. Built-in adapters handle HTTP and WebSocket;
+the community can add WebRTC, gRPC, GraphQL, MQTT, etc.
+
+### Core types
+
+| Type | File | Role |
+|------|------|------|
+| `DragonflyBaseNetworkAdapter` | `framework/network/adapter/dragonfly_base_network_adapter.dart` | Abstract contract: `requestObject`, `requestList`, `callForList`, `callForObject` + hooks (`beforeRequest`, `afterResponse`, `buildHeaders`) + lifecycle (`connect`, `disconnect`) |
+| `DragonflyRealtimeAdapter` | `framework/network/adapter/dragonfly_realtime_adapter.dart` | Streaming contract: `subscribeToObject`, `subscribeToList`, `publish` |
+| `DragonflyNetworkHttpAdapter` | `framework/network/adapter/dragonfly_network_http_adapter.dart` | HTTP transport (implements `DragonflyBaseNetworkAdapter`) |
+| `DragonflyWebSocketAdapter` | `framework/network/adapter/dragonfly_web_socket_adapter.dart` | WebSocket transport (implements `DragonflyRealtimeAdapter`) |
+| `DragonflyAuthenticatedAdapter` | `framework/session/authenticated_network_adapter.dart` | Generic decorator wrapping any `DragonflyBaseNetworkAdapter` to inject auth |
+| `DragonflyAdapterConfig` | `framework/config/dragonfly_config.dart` | Abstract base for adapter configs — users subclass to register custom adapters |
+| `DragonflyHttpAdapterConfig` | `framework/config/dragonfly_config.dart` | Registers HTTP + authenticated adapters |
+| `DragonflyWebSocketAdapterConfig` | `framework/config/dragonfly_config.dart` | Registers WebSocket adapter |
+
+### How adapters are resolved
+
+Generated repositories resolve adapters from the DI container by type + name:
+- HTTP methods → `DragonflyContainer.I.get<DragonflyBaseNetworkAdapter>(instanceName: connectionName)`
+- `@Authenticated` methods → `instanceName: '$connectionName:authenticated'`
+- `@Subscribe` methods → `DragonflyContainer.I.get<DragonflyRealtimeAdapter>(instanceName: realtimeConnection)`
+
+### Registering a custom adapter
+
+```dart
+class WebRTCAdapterConfig extends DragonflyAdapterConfig {
+  final String connectionName;
+  const WebRTCAdapterConfig({required this.connectionName});
+
+  @override
+  void initConfig(DragonflyContainer container) {
+    container.registerSingleton<DragonflyBaseNetworkAdapter>(
+      WebRTCAdapter(),
+      instanceName: connectionName,
+    );
+  }
+}
+
+// In AppConfig:
+@override
+List<DragonflyAdapterConfig> get adapters => [
+  DragonflyHttpAdapterConfig(...),
+  WebRTCAdapterConfig(connectionName: 'webrtc'),
+];
+```
+
+### Migration from deprecated config
+
+| Old (deprecated) | New (preferred) |
+|---|---|
+| `DragonflyInstanceConfig` | `DragonflyHttpAdapterConfig` |
+| `DragonflyRealtimeInstanceConfig` | `DragonflyWebSocketAdapterConfig` |
+| `config.instanceConfigs` | `config.adapters` |
+| `config.realtimeConfigs` | `config.adapters` |
+| `AuthenticatedNetworkAdapter` | `DragonflyAuthenticatedAdapter` (for custom adapters) |
+
+See `example/lib/components/characters/config/app_config.dart` for the new pattern.
+
 Details: `docs/ai/known-gaps.md`.

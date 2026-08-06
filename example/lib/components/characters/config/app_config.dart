@@ -6,29 +6,23 @@ import 'app_config.router.dart';
 
 @RouterConfig()
 class AppConfig extends DragonflyConfig with $AppConfig {
-  /// HTTP instance config
+  /// Unified adapter configs — HTTP + WebSocket.
   ///
-  ///
+  /// Each adapter registers its transport(s) in the DI container during
+  /// [DragonflyApp.init]. Custom adapters (WebRTC, gRPC, GraphQL, etc.)
+  /// subclass [DragonflyAdapterConfig] and are added to this list.
   @override
-  List<DragonflyInstanceConfig> get instanceConfigs => [
-    const DragonflyInstanceConfig(
-      options: DragonflyHttpBaseOptions(
-        baseUrl: "https://rickandmortyapi.com/api/",
+  List<DragonflyAdapterConfig> get adapters => [
+    DragonflyHttpAdapterConfig(
+      connectionName: 'defaultHttpNetwork',
+      options: const DragonflyHttpBaseOptions(
+        baseUrl: 'https://rickandmortyapi.com/api/',
       ),
     ),
-  ];
-
-  /// Realtime transport backing `CharacterRepository`'s `@Subscribe` methods.
-  ///
-  /// The connection name must match `@Repository(realtimeConnection: "events")`.
-  /// The socket is opened lazily, on the first `listen`, so declaring it here
-  /// costs nothing until a stream is actually used.
-  @override
-  List<DragonflyRealtimeInstanceConfig> get realtimeConfigs => [
-    const DragonflyRealtimeInstanceConfig(
-      connectionName: "events",
-      config: DragonflyRealtimeConfig(
-        url: "wss://echo.websocket.org",
+    DragonflyWebSocketAdapterConfig(
+      connectionName: 'events',
+      config: const DragonflyRealtimeConfig(
+        url: 'wss://echo.websocket.org',
       ),
     ),
   ];
@@ -37,8 +31,6 @@ class AppConfig extends DragonflyConfig with $AppConfig {
   DragonflyInjector? get injector => DragonflyInjector(
     inject: (DragonflyContainer injector) async {
       await initDragonflyContainer();
-      // Routing is driven entirely by the generated AppRouterConfig mixin
-      // (see main.dart) — there is no runtime router singleton to configure.
     },
   );
 }

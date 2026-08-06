@@ -27,12 +27,10 @@ class DragonflyApp {
   });
 
   Future<void> init() async {
-    // Initialize logging
     final log = DragonflyLogManager.instance;
     log.setEnabled(enableLogging);
     log.setMinLevel(minLogLevel);
 
-    // Show banner
     if (showBanner && enableLogging) {
       log.printBanner(version: version);
     }
@@ -41,14 +39,26 @@ class DragonflyApp {
       log.info('Initializing Dragonfly Framework...', source: 'DragonflyApp');
     }
 
-    // Initialize instance configurations
-    List<DragonflyInstanceConfig> instanceConfig = config.instanceConfigs;
-    for (DragonflyInstanceConfig config in instanceConfig) {
-      config.initConfig();
+    final container = DragonflyContainer.I;
+
+    // ── Unified adapters (preferred, extensible) ──────────────────────────
+    for (final adapter in config.adapters) {
+      adapter.initConfig(container);
+      if (enableLogging && adapter is DragonflyWebSocketAdapterConfig) {
+        log.info(
+          'Realtime connection registered: ${adapter.connectionName} '
+          '(${adapter.config.url})',
+          source: 'DragonflyApp',
+        );
+      }
     }
 
-    // Register realtime transports before the DI graph, so repositories that
-    // resolve one at construction time find it.
+    // ── Backward compat: deprecated instanceConfigs ───────────────────────
+    for (final c in config.instanceConfigs) {
+      c.initConfig();
+    }
+
+    // ── Backward compat: deprecated realtimeConfigs ──────────────────────
     for (final realtime in config.realtimeConfigs) {
       realtime.initConfig();
       if (enableLogging) {
@@ -60,11 +70,12 @@ class DragonflyApp {
       }
     }
 
-    // Run custom injection
-    await config.injector?.inject!(DragonflyContainer.I);
+    // ── Custom injection ─────────────────────────────────────────────────
+    await config.injector?.inject!(container);
 
     if (enableLogging) {
-      log.success('Dragonfly Framework initialized successfully!', source: 'DragonflyApp');
+      log.success('Dragonfly Framework initialized successfully!',
+          source: 'DragonflyApp');
       log.divider();
     }
   }

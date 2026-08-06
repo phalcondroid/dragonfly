@@ -8,8 +8,11 @@ export 'package:dragonfly/framework/config/dragonfly_config.dart'
     show
         DragonflyConfig,
         DragonflyInjector,
-        DragonflyInstanceConfig,
         DragonflyHttpBaseOptions,
+        DragonflyAdapterConfig,
+        DragonflyHttpAdapterConfig,
+        DragonflyWebSocketAdapterConfig,
+        DragonflyInstanceConfig,
         DragonflyRealtimeInstanceConfig;
 export 'package:dragonfly/framework/config/dragonfly_local_storage_config.dart'
     show DragonflyLocalStorageConfig;
@@ -98,7 +101,9 @@ export 'package:dragonfly/framework/session/dragonfly_session_manager.dart'
         AccessDeniedCallback,
         dragonflySession;
 export 'package:dragonfly/framework/session/authenticated_network_adapter.dart'
-    show AuthenticatedNetworkAdapter, AuthenticatedHttpException;
+    show
+        DragonflyAuthenticatedAdapter,
+        AuthenticatedNetworkAdapter;
 
 // Form validation framework
 export 'package:dragonfly/framework/form/form_field_state.dart'

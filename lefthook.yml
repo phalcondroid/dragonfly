@@ -1,0 +1,38 @@
+# Lefthook — git hooks manager for the Dragonfly monorepo.
+# Install: https://github.com/evilmartians/lefthook#install
+# Then run: lefthook install
+#
+# skip hooks:    git commit --no-verify
+# skip pre-push: git push --no-verify
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.dart"
+      run: dart format --set-exit-if-changed {staged_files}
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: .githooks/commit-msg {1}
+
+pre-push:
+  parallel: true
+  commands:
+    analyze-annotations:
+      run: cd dragonfly_annotations && dart analyze
+    analyze-builder:
+      run: cd dragonfly_builder && dart analyze
+    analyze-runtime:
+      run: cd dragonfly && flutter analyze
+    analyze-example:
+      run: cd example && flutter analyze
+    test-annotations:
+      run: cd dragonfly_annotations && dart test
+    test-builder:
+      run: cd dragonfly_builder && dart test
+    test-runtime:
+      run: cd dragonfly && flutter test --exclude-tags golden
+    test-example:
+      run: cd example && flutter test --exclude-tags golden

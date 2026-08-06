@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-@Tags(['golden'])
 void main() {
   group('Example app golden smoke', () {
     testWidgets('Material theme renders correctly', (tester) async {
