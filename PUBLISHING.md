@@ -114,3 +114,71 @@ changes, and you won't be able to develop across packages.
 
 Make sure `dart analyze` / `flutter analyze` passes before every publish.
 `pub publish --dry-run` catches most issues before upload.
+
+---
+
+## CI pipeline
+
+On every push and PR to `main`, GitHub Actions runs (free for public repos):
+
+| Job | What it runs |
+|-----|-------------|
+| `dart-packages` | `dart format`, `dart analyze`, `dart test` on both `dragonfly_annotations` and `dragonfly_builder` |
+| `flutter-runtime` | `flutter analyze`, `flutter test` on `dragonfly` |
+| `example` | `build_runner build` → `flutter analyze` → `flutter test` (widget + golden) on `example/` |
+
+The workflow file is at `.github/workflows/ci.yaml`.
+
+### Running tests locally
+
+```bash
+# Unit & widget tests (all packages)
+cd dragonfly_annotations && dart test
+cd dragonfly_builder    && dart test
+cd dragonfly            && flutter test
+cd example              && flutter test
+
+# Example: full build + analyze gate (the real signal)
+cd example
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs
+flutter analyze
+
+# Golden tests — regenerate reference images after UI changes
+cd dragonfly && flutter test --update-goldens
+cd example   && flutter test --update-goldens
+```
+
+### Test structure
+
+```
+dragonfly/test/
+├── dragonfly_test.dart
+├── state/
+│   ├── state_controller_test.dart        # DragonflyController unit tests
+│   └── action_scheduler_test.dart        # ActionScheduler debounce/throttle
+├── network/
+│   └── web_socket_adapter_test.dart      # WebSocket adapter unit tests
+├── goldens/
+│   ├── dragonfly_state_builder_golden_test.dart
+│   └── *.png                             # Committed reference images
+└── test_helpers/
+    └── mock_controller.dart              # Reusable mock DragonflyController
+
+example/test/
+├── widget_test.dart                      # Integration smoke test (app builds)
+├── goldens/
+│   ├── example_material_golden_test.dart
+│   └── *.png
+└── test_helpers/
+    └── mock_controller.dart
+```
+
+### What's still needed (future work)
+
+- **Builder tests**: Test that each generator emits correct code for given annotations
+  (e.g., `@FactoryModel` with `toJson: true` produces a `toJson()` method).
+  Currently only a smoke test verifies factory functions exist.
+- **Expanded example golden tests**: Test screens like `CharacterScreen` after
+  DI container initialization with mocked network adapters.
+- **Coverage reporting**: Add `--coverage` and upload to codecov.io (free for public repos).

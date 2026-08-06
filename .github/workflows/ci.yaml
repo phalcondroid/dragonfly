@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dart-packages:
+    name: "Dart: ${{ matrix.package }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [dragonfly_annotations, dragonfly_builder]
+    defaults:
+      run:
+        working-directory: ${{ matrix.package }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ matrix.package }}/.dart_tool
+            ~/.pub-cache
+          key: dart-${{ matrix.package }}-${{ runner.os }}-${{ hashFiles(format('{0}/pubspec.yaml', matrix.package)) }}
+          restore-keys: |
+            dart-${{ matrix.package }}-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib test
+
+      - name: Static analysis
+        run: dart analyze --fatal-infos
+
+      - name: Run tests
+        run: dart test
+
+  flutter-runtime:
+    name: "Flutter: dragonfly (runtime)"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dragonfly
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            dragonfly/.dart_tool
+            ~/.pub-cache
+          key: flutter-runtime-${{ runner.os }}-${{ hashFiles('dragonfly/pubspec.yaml') }}
+          restore-keys: |
+            flutter-runtime-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed lib test
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
+  example:
+    name: "Example app (build → analyze → test → golden)"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: example
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Cache pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            example/.dart_tool
+            ~/.pub-cache
+          key: example-${{ runner.os }}-${{ hashFiles('example/pubspec.yaml') }}
+          restore-keys: |
+            example-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Widget & integration tests
+        run: flutter test --exclude-tags golden
+
+      - name: Golden tests
+        run: flutter test --tags golden
