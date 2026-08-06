@@ -15,7 +15,7 @@
 /// For generic models:
 /// ```dart
 /// @FactoryModel(generic: true)
-/// abstract interface class ServiceResponse<T> implements _$ServiceResponseContract<T> {
+/// abstract interface class `ServiceResponse<T>` implements `_$ServiceResponseContract<T>` {
 ///   factory ServiceResponse({required T data}) = _$ServiceResponse;
 ///   factory ServiceResponse.fromJson(
 ///     Map<String, Object?> json,

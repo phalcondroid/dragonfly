@@ -1,7 +1,9 @@
 name: dragonfly_annotations
 description: "Annotations consumed by dragonfly_builder to generate Dragonfly framework code."
 version: 0.0.1
-homepage:
+homepage: https://github.com/nodelorien/dragonfly/
+repository: https://github.com/nodelorien/dragonfly/
+issue_tracker: https://github.com/nodelorien/dragonfly/issues
 
 # Pure Dart package: contains only const annotation classes and enums.
 # It must not depend on Flutter, so that dragonfly_builder can stay Flutter-free

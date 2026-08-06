@@ -27,7 +27,7 @@ export 'annotations/component/models/aggregate.dart'
     show Aggregate, ValueObject, DomainEvent;
 export 'annotations/component/models/state_model.dart' show StateModel;
 export 'annotations/component/models/field.dart'
-    show Field, JsonIgnore, JsonKey;
+    show Field;
 
 // Repository annotations
 export 'annotations/component/repository/repository.dart' show Repository;

@@ -1,7 +1,9 @@
 name: dragonfly_builder
 description: "Code generators for the Dragonfly framework."
 version: 0.0.1
-homepage:
+homepage: https://github.com/nodelorien/dragonfly/
+repository: https://github.com/nodelorien/dragonfly/
+issue_tracker: https://github.com/nodelorien/dragonfly/issues
 
 # Pure Dart package. It emits references to package:dragonfly types as strings
 # and must never depend on the runtime or on Flutter.

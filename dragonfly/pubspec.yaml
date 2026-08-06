@@ -1,7 +1,9 @@
 name: dragonfly
 description: "Runtime library for the Dragonfly Flutter framework: DI, networking, state management, session/ACL, forms and logging."
 version: 0.0.1
-homepage:
+homepage: https://github.com/nodelorien/dragonfly/
+repository: https://github.com/nodelorien/dragonfly/
+issue_tracker: https://github.com/nodelorien/dragonfly/issues
 
 environment:
   sdk: ^3.8.0
