@@ -65,6 +65,9 @@ with a working `characters` component (0 errors).
 | `Either<L, R>` — functional error handling | ✅ Stable | runtime | fold, when, map, tryCatch |
 | `controllerTest` — TDD test API | ✅ Stable | runtime | 3-parameter, AI-optimized |
 | `ControllerStates` — manual test lifecycle | ✅ Stable | runtime | interleaved act/assert |
+| i18n adapter system | ✅ Stable | runtime | `DragonflyI18nAdapter`, ARB + JSON adapters, custom adapters |
+| `DragonflyValidationMessages` — localized form/ACL text | ✅ Stable | runtime | 40+ translatable messages, `DragonflyConfig.validationMessages` |
+| `@I18n` annotation (codegen) | 🟡 Planned | annotations | Annotation declared; builder planned for v0.2.0 |
 | Auth component example | 🔴 Broken | example | 224 errors in `components/auth/` |
 | Component barrel files | ✅ Stable | builder | `*.dragonfly.dart` per component |
 | Golden tests | 🟡 Partial | test | framework widgets only, no screen integration |
@@ -83,6 +86,9 @@ with a working `characters` component (0 errors).
 - [ ] **Resolve dead annotations** — `@SessionConfig`, field-level
   `@PathParam`/`@QueryParam`. Either wire them or deprecate with migration
   guidance (see [known-gaps.md](docs/ai/known-gaps.md) #1).
+- [x] **i18n adapter system** — `DragonflyI18nAdapter` with ARB + JSON adapters,
+  custom adapter support, Flutter `LocalizationsDelegate` integration
+  (see [ADR 0008](docs/adr/0008-internationalization.md)).
 - [ ] **Publish to pub.dev** — all three packages following
   [PUBLISHING.md](PUBLISHING.md) workflow.
 - [ ] **Verify CI passes on all packages** — current `example` job skips golden
@@ -95,6 +101,8 @@ with a working `characters` component (0 errors).
 - [ ] **Builder integration tests** — verify each generator emits correct output
   for given annotations. Critical gap: no test confirms `@FactoryModel` with
   `toJson: true` actually produces a `toJson()` method.
+- [ ] **`@I18n` code generator** — scan `.arb`/`.json` files and emit typed
+  `DragonflyI18n` subclasses. Annotation exists; builder pending.
 - [ ] **`DragonflyContainer` unit tests** — registration, resolution, scopes,
   duplicates, reset, async singletons.
 - [ ] **`DragonflySessionManager` tests** — login/logout, token injection, ACL

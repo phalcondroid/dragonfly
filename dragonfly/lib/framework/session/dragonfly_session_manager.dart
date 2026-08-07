@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:dragonfly/framework/form/dragonfly_validation_messages.dart';
 import 'package:dragonfly/framework/logging/dragonfly_log_manager.dart';
 import 'package:dragonfly/framework/session/session_storage.dart';
 import 'package:dragonfly_annotations/dragonfly_annotations.dart'
@@ -116,6 +117,17 @@ class DragonflySessionManager {
   DragonflySessionManager._();
 
   static DragonflySessionManager? _instance;
+
+  /// Internationalized validation messages for ACL access-denied reasons.
+  ///
+  /// Set during [DragonflyApp.init] from [DragonflyConfig.validationMessages].
+  /// If null, English messages are used.
+  static DragonflyValidationMessages? _messages;
+
+  /// Sets the validation messages used for ACL access-denied reasons.
+  static void setValidationMessages(DragonflyValidationMessages messages) {
+    _messages = messages;
+  }
 
   /// Get the singleton instance.
   static DragonflySessionManager get instance {
@@ -543,7 +555,7 @@ class DragonflySessionManager {
       case AccessLevel.authenticated:
         if (!isAuthenticated) {
           _notifyAccessDenied(
-            'Authentication required',
+            _messages?.authenticationRequired ?? 'Authentication required',
             customRedirectOnUnauthenticated ?? _config.loginPath,
           );
           return customRedirectOnUnauthenticated ?? _config.loginPath;
@@ -553,14 +565,14 @@ class DragonflySessionManager {
       case AccessLevel.rolesRequired:
         if (!isAuthenticated) {
           _notifyAccessDenied(
-            'Authentication required',
+            _messages?.authenticationRequired ?? 'Authentication required',
             customRedirectOnUnauthenticated ?? _config.loginPath,
           );
           return customRedirectOnUnauthenticated ?? _config.loginPath;
         }
         if (!hasAnyRole(requiredRoles)) {
           _notifyAccessDenied(
-            'Required roles: ${requiredRoles.join(", ")}',
+            _messages?.requiredRoles(requiredRoles) ?? 'Required roles: ${requiredRoles.join(", ")}',
             customRedirectOnDenied ?? _config.unauthorizedPath,
           );
           return customRedirectOnDenied ?? _config.unauthorizedPath;
@@ -570,14 +582,14 @@ class DragonflySessionManager {
       case AccessLevel.permissionsRequired:
         if (!isAuthenticated) {
           _notifyAccessDenied(
-            'Authentication required',
+            _messages?.authenticationRequired ?? 'Authentication required',
             customRedirectOnUnauthenticated ?? _config.loginPath,
           );
           return customRedirectOnUnauthenticated ?? _config.loginPath;
         }
         if (!hasAnyPermission(requiredPermissions)) {
           _notifyAccessDenied(
-            'Required permissions: ${requiredPermissions.join(", ")}',
+            _messages?.requiredPermissions(requiredPermissions) ?? 'Required permissions: ${requiredPermissions.join(", ")}',
             customRedirectOnDenied ?? _config.unauthorizedPath,
           );
           return customRedirectOnDenied ?? _config.unauthorizedPath;

@@ -116,3 +116,6 @@ export 'annotations/network/put.dart' show Put;
 export 'annotations/network/body.dart' show Body;
 export 'annotations/network/header.dart' show Header;
 export 'annotations/network/subscribe.dart' show Subscribe;
+
+// Internationalization
+export 'annotations/i18n/i18n.dart' show I18n;

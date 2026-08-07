@@ -2,6 +2,7 @@ import 'package:dragonfly/framework/config/dragonfly_interceptor.dart';
 import 'package:dragonfly/framework/config/dragonfly_network_config.dart';
 import 'package:dragonfly/framework/di/dragonfly_container.dart';
 import 'package:dragonfly/framework/exceptions/dragonfly_exception.dart';
+import 'package:dragonfly/framework/form/dragonfly_validation_messages.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_base_network_adapter.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_network_http_adapter.dart';
 import 'package:dragonfly/framework/network/adapter/dragonfly_realtime_adapter.dart';
@@ -282,9 +283,20 @@ class DragonflyConfig {
 
   final DragonflyInjector? injector;
 
+  /// Translated validation error messages and UI labels.
+  ///
+  /// Set this to a locale-specific [DragonflyValidationMessages] instance
+  /// (e.g., from your [DragonflyI18n] subclass) to localize all form
+  /// validation errors, the submit button label, and ACL access-denied
+  /// messages.
+  ///
+  /// If null (default), English messages are used.
+  final DragonflyValidationMessages? validationMessages;
+
   const DragonflyConfig({
     this.injector,
     this.adapters = const [],
+    this.validationMessages,
     @Deprecated('Use adapters instead')
     this.instanceConfigs = const [],
     @Deprecated('Use adapters instead')

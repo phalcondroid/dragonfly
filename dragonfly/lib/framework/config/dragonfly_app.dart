@@ -1,5 +1,6 @@
 import 'package:dragonfly/dragonfly.dart';
 import 'package:dragonfly/framework/config/dragonfly_config.dart';
+import 'package:dragonfly/framework/form/dragonfly_validation_messages.dart';
 import 'package:dragonfly/framework/logging/dragonfly_log_manager.dart';
 
 class DragonflyApp {
@@ -40,6 +41,12 @@ class DragonflyApp {
     }
 
     final container = DragonflyContainer.I;
+
+    // ── Validation messages (i18n) ────────────────────────────────────────
+    if (config.validationMessages != null) {
+      Validators.setMessages(config.validationMessages!);
+      DragonflySessionManager.setValidationMessages(config.validationMessages!);
+    }
 
     // ── Unified adapters (preferred, extensible) ──────────────────────────
     for (final adapter in config.adapters) {

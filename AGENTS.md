@@ -143,6 +143,23 @@ See `example/lib/components/characters/config/app_config.dart` for the new patte
 
 A complete gRPC adapter example is in `docs/topics/adapters.md`.
 
+## i18n adapter system
+
+Internationalization follows the same adapter pattern as network transports
+(ADR 0008). `DragonflyI18nAdapter` is the abstract contract; built-in adapters
+handle ARB and JSON files. Community adapters can read translations from any
+source (REST API, CMS, database).
+
+The `DragonflyI18n` runtime class extends `LocalizationsDelegate` and integrates
+with Flutter's `Localizations` widget. Use `AppI18n.of(context).key` for typed
+access. No pub.dev dependencies beyond Flutter SDK.
+
+Rule: **do not add pub.dev packages for i18n**. Use only `dart:convert` and
+`package:flutter`'s `LocalizationsDelegate`. Custom adapters implement the
+`DragonflyI18nAdapter` interface.
+
+See `docs/topics/i18n.md` for the full guide.
+
 ## TDD testing
 
 The TDD API (`controllerTest`, `ControllerStates`, `pump`) is documented in
